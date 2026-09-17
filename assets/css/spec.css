@@ -88,6 +88,30 @@ body {
 }
 .topnav a.gh-link svg { flex-shrink: 0; }
 
+/* ---------- 访客计数器 ---------- */
+.vc-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 10px;
+  line-height: 1;
+}
+.vc-stat:hover { border-color: var(--accent); }
+.vc-icon { color: var(--accent); }
+.vc-label { color: var(--muted); }
+.vc-count {
+  color: var(--accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.vc-unit { color: var(--faint); font-size: 12px; }
+
 /* ---------- 布局 ---------- */
 .layout { display: flex; max-width: 1180px; margin: 0 auto; }
 aside {
