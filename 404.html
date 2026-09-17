@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/404.html">
+<meta name="description" content="404 Not Found —— CAT API 状态码对照：客户端请求的资源在本系统中不存在。当事猫建议确认 URI 或返回首页。">
+<meta name="robots" content="noindex">
+<title>404 · CAT API</title>
+<link rel="stylesheet" href="assets/css/spec.css">
+<link rel="stylesheet" href="assets/css/livecat.css">
+<style>
+  body { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+  .card {
+    max-width: 560px;
+    text-align: center;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 44px 36px 40px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.05);
+  }
+  .code {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 68px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .code .x { color: var(--danger); }
+  .ttl {
+    font-size: 17px;
+    color: var(--muted);
+    margin-top: 16px;
+    line-height: 1.75;
+  }
+  .ttl strong { color: var(--ink); font-weight: 600; }
+  .meta {
+    margin-top: 26px;
+    padding: 16px 18px;
+    background: var(--code-bg);
+    border-radius: 10px;
+    text-align: left;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12.5px;
+    color: var(--code-ink);
+    line-height: 1.85;
+  }
+  .meta .k { color: var(--faint); }
+  .meta .v { color: var(--ink); }
+  .meta .danger { color: var(--danger); font-weight: 700; }
+  .actions { margin-top: 26px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block;
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    background: var(--ink);
+    color: #fff;
+    transition: transform .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .note { margin-top: 22px; font-size: 12.5px; color: var(--faint); line-height: 1.75; }
+  .note a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed var(--line); }
+  .note a:hover { border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="code"><span class="x">4</span>04</div>
+  <div class="ttl">
+    <strong>Not Found</strong>。客户端请求的资源在本系统中不存在。
+  </div>
+
+  <div class="meta">
+    <div><span class="k">status:</span> <span class="danger">404 Not Found</span></div>
+    <div><span class="k">meaning:</span> <span class="v">URI 未映射到任何已部署的领地</span></div>
+    <div><span class="k">retry_after:</span> <span class="v">无意义——重新请求同一资源不会改变结果</span></div>
+    <div><span class="k">cat_note:</span> <span class="v">本路径未被纳入领地协议。建议确认 URI 或返回首页。</span></div>
+  </div>
+
+  <div class="actions">
+    <a class="btn" href="index.html">回到首页</a>
+    <a class="btn ghost" href="spec/cat.html">阅读正文</a>
+    <a class="btn ghost" href="reference/errors.html">查全部状态码</a>
+  </div>
+
+  <div class="note">
+    想了解 404 在 CAT API 里的完整定义，看 <a href="reference/errors.html">状态码对照</a>。<br>
+    404 表示资源不存在；如果你认为是我们的问题，欢迎到 <a href="https://github.com/lijinhongucl-pixel/cat-api-spec/issues">GitHub Issues</a> 提一个 issue。
+  </div>
+</div>
+
+<script src="assets/js/expression.js"></script>
+<script src="assets/js/livecat.js"></script>
+
+</body>
+</html>

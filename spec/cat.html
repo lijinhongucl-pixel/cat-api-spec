@@ -3,6 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/spec/cat.html">
+<meta name="description" content="CAT API 完整正文 16 章：§0 关于本文档 → §1 系统概述 → §2 权限模型（无 Owner）→ §3 领地协议 → §4 通信接口 → §5 睡眠子系统 → §6 狩猎序列 → §7 进食协议 → §8 外设总线 → §9 排泄协议 → §10 表情接口 EXPR v1 → §11 状态码 → §12 一只猫的生活意见 → §13 量化参数 → §14 速查卡 → §15 附录。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CAT API — 猫咪接口规范 · 正文">
+<meta property="og:description" content="CAT API 完整正文 16 章：§0 关于本文档 → §1 系统概述 → §2 权限模型（无 Owner）→ §3 领地协议 → §4 通信接口 → §5 睡眠子系统 → §6 狩猎序列 → §7 进食协议 → §8 外设总线 → §9 排泄协议 → §10 表情接口 EXPR v1 → §11 状态码 → §12 一只猫的生活意见 → §13 量化参数 → §14 速查卡 → §15 附录。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/spec/cat.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CAT API — 猫咪接口规范 · 正文">
+<meta name="twitter:description" content="CAT API 完整正文 16 章：§0 关于本文档 → §1 系统概述 → §2 权限模型（无 Owner）→ §3 领地协议 → §4 通信接口 → §5 睡眠子系统 → §6 狩猎序列 → §7 进食协议 → §8 外设总线 → §9 排泄协议 → §10 表情接口 EXPR v1 → §11 状态码 → §12 一只猫的生活意见 → §13 量化参数 → §14 速查卡 → §15 附录。">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <title>CAT API — 猫咪接口规范 · 正文</title>
 <link rel="stylesheet" href="../assets/css/spec.css">
 <link rel="stylesheet" href="../assets/css/livecat.css">
@@ -548,26 +561,34 @@
 </div>
 
 <script>
-// 侧边栏滚动高亮
-const navLinks = document.querySelectorAll('aside nav a');
-const sections = [];
-navLinks.forEach(a => {
-  const id = a.getAttribute('href');
-  if (id && id.startsWith('#')) {
-    const el = document.querySelector(id);
-    if (el) sections.push({ el, link: a });
+// 侧边栏滚动高亮（ES5，与 expression.js 保持一致）
+(function () {
+  var navLinks = document.querySelectorAll('aside nav a');
+  var sections = [];
+  for (var i = 0; i < navLinks.length; i++) {
+    var a = navLinks[i];
+    var id = a.getAttribute('href');
+    if (id && id.charAt(0) === '#') {
+      var el = document.querySelector(id);
+      if (el) sections.push({ el: el, link: a });
+    }
   }
-});
-function updateActive() {
-  let active = null;
-  for (const s of sections) {
-    const rect = s.el.getBoundingClientRect();
-    if (rect.top < 120) active = s;
+  function updateActive() {
+    var active = null;
+    for (var i = 0; i < sections.length; i++) {
+      var s = sections[i];
+      var rect = s.el.getBoundingClientRect();
+      if (rect.top < 120) active = s;
+    }
+    for (var j = 0; j < sections.length; j++) {
+      var on = sections[j] === active;
+      if (on) sections[j].link.classList.add('active');
+      else sections[j].link.classList.remove('active');
+    }
   }
-  sections.forEach(s => s.link.classList.toggle('active', s === active));
-}
-window.addEventListener('scroll', updateActive);
-updateActive();
+  window.addEventListener('scroll', updateActive);
+  updateActive();
+})();
 </script>
 
 <script src="../assets/js/expression.js"></script>
