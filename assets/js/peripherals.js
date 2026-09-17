@@ -64,6 +64,40 @@
   /* ---------- 猫薄荷反应基因 ---------- */
   // 约 50-70% 的实例有反应（常染色体显性）
 
+  /* ---------- 弃用清单：出现即拉黑 ----------
+     不是「门槛不通过」，而是「这一类本就不该出现在清单里」。
+     与 GATES 不同，这里没有「可能不违规」的灰区——出现即拒。
+  */
+  var RETIRED = [
+    { code: "SHOCK_COLLAR",  name: "电击/震动项圈",  reason: "用疼痛做负反馈。会引发应激性攻击转移与泛化恐惧，长期破坏 Staff 信任。已被多国立法禁止。", severity: "P0" },
+    { code: "BELL_COLLAR",  name: "铃铛项圈",       reason: "铃铛贴近耳道持续高频声响。猫的高频听觉比人灵敏 3-5 倍，长期佩戴导致慢性压力与听觉钝化。", severity: "P1" },
+    { code: "DECLAW_BOOT",  name: "防抓护套/指甲套", reason: "把爪子封进塑料套，掩盖但不解决抓挠需求。阻碍正常伸缩，引发焦虑与咬指甲代偿。", severity: "P1" },
+    { code: "AUTO_LASER",    name: "自动激光机器人", reason: "把「无 KILL BITE 对象」自动化了。比手动激光更糟——永远不会自行收尾。", severity: "P1" },
+    { code: "MILK_TREAT",    name: "牛奶零食",       reason: "绝大多数成年猫乳糖不耐。用猫薄荷或冻干零食替代。", severity: "P2" },
+    { code: "RAW_PORK",      name: "生猪肉零食",     reason: "伪狂犬病毒载体。猫不敏感但人类是。", severity: "P1" }
+  ];
+
+  /* ---------- 来源等级 ----------
+     引擎里每一条规则的证据强度。DOG API 用同名表标识规则可信度，
+     让用户知道某个判定是「同行评议」还是「社区经验」。
+  */
+  var SOURCES = [
+    { code: "A", name: "来源等级 A", desc: "同行评议或大规模临床实测", rules: ["G01", "G02", "G03", "G05", "G06", "G10"] },
+    { code: "B", name: "来源等级 B", desc: "临床指南共识或行业规范",   rules: ["G04", "G08", "G09", "G11", "G12"] },
+    { code: "C", name: "来源等级 C", desc: "社区经验或本项目定义的复合指标", rules: ["G07", "G13"] }
+  ];
+
+  /* ---------- 顶层分诊覆盖 ----------
+     DOG API 的 Triage 是一个独立的输入框（让用户先选「这只猫现在 P0」），
+     选中后整个页面进入硬停模式——任何建议都被「先解决 P0 再说」覆盖。
+     这里沿用同样语义：profile.triage 如果是 P0/P1，就覆盖引擎算出来的 triage。
+  */
+  function triageOverride(engineTriage, profileTriage) {
+    if (profileTriage === "P0") return "P0";
+    if (profileTriage === "P1" && engineTriage !== "P0") return "P1";
+    return engineTriage;
+  }
+
   /* ---------- 核心：评估外设清单 ---------- */
   function evaluate(profile, env, peripherals) {
     var weight = profile.weight || 4.5;       // kg
@@ -74,6 +108,16 @@
     var huntDrive = profile.huntDrive || 3;         // 1-5
     var nipReactive = profile.nipReactive !== false; // ~60% 默认有反应
     var catCount = profile.catCount || 1;
+
+    // baseline：今日基线活动（没外设时本来就有的部分）。
+    // 用法：baselinePatrol + 互动外设分钟数 → 算「整体活动覆盖度」。
+    // DOG API 有这个输入但一直没有为猫实现；猫的自发活动主要集中在
+    // 巡视、自发狩猎（扑虫 / 影子）、自我梳理、睡眠这四档。
+    var baseline = profile.baseline || {};
+    var baselinePatrol   = Math.max(0, baseline.patrol   || 0); // 分钟
+    var baselineSelfHunt = Math.max(0, baseline.selfHunt || 0); // 分钟
+    var baselineGroom    = Math.max(0, baseline.groom    || 0); // 分钟
+    var baselineSleep    = Math.max(0, baseline.sleep    || 14); // 小时，猫默认 12-16h
 
     // env 描述「房子本身」，与「外设」分开。
     // 此前这个参数在函数体里一次都没被读过（页面也就顺手传了 {}），
@@ -269,6 +313,19 @@
     var playCovered = Math.min(wandMinutes + (laserMinutes * 0.7), dailyPlayNeed);
     var playGap = Math.max(0, dailyPlayNeed - playCovered);
 
+    // 基线活动汇总：算「整体活动预算」时把自发巡视 + 自发狩猎也并进来。
+    // 外设不能创造配额，只能转移负荷——所以这三项只决定「还有多少可补充空间」，
+    // 不会让 healthScore 凭空上升。
+    var baselineTotal = baselinePatrol + baselineSelfHunt;
+    var activityBudget = {
+      patrol:    { label: "自发巡视",    value: baselinePatrol,   unit: "min" },
+      selfHunt:  { label: "自发狩猎",    value: baselineSelfHunt, unit: "min" },
+      groom:     { label: "自我梳理",    value: baselineGroom,    unit: "min" },
+      sleep:     { label: "睡眠",        value: baselineSleep,    unit: "h"   },
+      peripheralsContribute: { label: "外设贡献互动", value: Math.round(wandMinutes + (laserMinutes * 0.7)), unit: "min" },
+      totalInteractive: { label: "总互动覆盖", value: Math.round(baselineTotal + wandMinutes + (laserMinutes * 0.7)), unit: "min" }
+    };
+
     // 多猫环境
     var scratchNeed = catCount + 1;
     var scratchGap = hasScratch ? 0 : scratchNeed;
@@ -336,8 +393,29 @@
     var gateFailCount = gates.filter(function (g) { return g.status === "FAIL"; }).length;
     var gateNaCount = gates.filter(function (g) { return g.status === "NA"; }).length;
 
+    // 弃用清单命中：扫外设里的每一件，看它的 cls 是不是出现在 RETIRED 表。
+    // 这一步独立于门槛判定——RETIRED 是「这一类根本不该用」，跟「这件具体产品不合格」是两件事。
+    var retiredHits = peripherals
+      .map(function (d, i) {
+        var hit = RETIRED.find(function (r) { return r.code === d.cls; });
+        return hit ? Object.assign({}, hit, { device: i }) : null;
+      })
+      .filter(Boolean);
+    retiredHits.forEach(function (h) {
+      var sev = h.severity;
+      failures.push({ device: h.device, gate: "RETIRED", mode: h.code.toLowerCase(), severity: sev,
+        msg: h.name + "：" + h.reason });
+    });
+
+    // 顶层分诊覆盖：profile.triage 是 Staff 手动判定的全局状态，
+    // 优先级高于引擎算出来的分诊。
+    var profileTriage = profile.triage || "";
+    triage = triageOverride(triage, profileTriage);
+
     return {
-      profile: { weight: weight, ageMonths: ageMonths, isKitten: isKitten, isSenior: isSenior },
+      profile: { weight: weight, ageMonths: ageMonths, isKitten: isKitten, isSenior: isSenior, triage: profileTriage },
+      baseline: { patrol: baselinePatrol, selfHunt: baselineSelfHunt, groom: baselineGroom, sleep: baselineSleep },
+      activityBudget: activityBudget,
       stages: stagesCovered,
       seqComplete: seqComplete,
       seqPartial: seqPartial,
@@ -353,10 +431,12 @@
       gates: gates,
       gateFailCount: gateFailCount,
       gateNaCount: gateNaCount,
+      retiredHits: retiredHits,
       env: { floor: envFloor, surface: envGrip },
       quota: quota,
       healthScore: healthScore,
       triage: triage,
+      triageOverridden: profileTriage && profileTriage !== "",
       boxWarning: boxWarning,
       waterWarning: waterWarning,
       nipWarning: nipWarning,
@@ -379,6 +459,8 @@
     GATES: GATES,
     SEQUENCE: SEQUENCE,
     FAILURE_MODES: FAILURE_MODES,
+    RETIRED: RETIRED,
+    SOURCES: SOURCES,
     evaluate: evaluate,
     cls: cls
   };
