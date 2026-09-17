@@ -159,7 +159,7 @@
   // 一个简化的 8-bit 风格侧视角猫，所有部位分组以便单独动画
   function svgCat() {
     return '' +
-    '<svg class="lc2-body" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">' +
+    '<svg class="lc2-body" width="100" height="70" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
       // 尾巴（独立分组，可单独动画）
       '<g class="lc2-tail">' +
         '<path d="M 86 38 Q 96 30 96 22 Q 96 14 90 12" stroke="#3a3a38" stroke-width="5" fill="none" stroke-linecap="round"/>' +
