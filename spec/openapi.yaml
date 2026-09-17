@@ -1,0 +1,281 @@
+openapi: 3.1.0
+info:
+  title: CAT API — 猫咪接口规范
+  version: 0.5.0
+  summary: 用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统。
+  description: |
+    本文件描述的系统不接受参数调优。
+    你能做的，只有被它选中，然后尽量不辜负。
+    所有接口均为模拟定义，不存在真实的后端服务。
+  contact:
+    name: CAT API
+    url: https://lijinhongucl-pixel.github.io/cat-api-spec/
+  license:
+    name: PolyForm Noncommercial 1.0.0
+    url: https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+servers:
+  - url: https://cat.example/api/v1
+    description: "虚拟端点 · 本系统不接受参数调优"
+
+tags:
+  - name: state
+    description: 状态查询
+  - name: interaction
+    description: 交互接口（抚摸 / 投喂 / 激光）
+  - name: territory
+    description: 领地协议
+  - name: peripherals
+    description: 外设总线
+  - name: schedule
+    description: 作息管理（不接受调优）
+  - name: health
+    description: 健康与量化
+  - name: expression
+    description: 表情接口（EXPR v1）
+
+paths:
+  /state:
+    get:
+      tags: [state]
+      summary: 查询实例当前状态
+      description: |
+        返回当前实例的状态向量。注意 BOXED 态可能返回 418——
+        系统在纸箱中，拒绝被查询。
+      responses:
+        '200':
+          description: 正常返回
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateResponse'
+        '418':
+          description: "I'm a cat（实例拒绝被查询）"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pet:
+    post:
+      tags: [interaction]
+      summary: 抚摸请求
+      description: |
+        消耗当日抚触配额。配额耗尽返回 429。
+        BOXED 态返回 403——输入被冻结。
+      responses:
+        '200':
+          description: 请求被接受，呼噜模式可能启动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PetResponse'
+        '403':
+          description: 系统在纸箱中，输入被拒绝
+        '429':
+          description: 今日配额已用完
+
+  /treat:
+    post:
+      tags: [interaction]
+      summary: 投喂零食
+      responses:
+        '200':
+          description: 通讯正常
+        '406':
+          description: Not Acceptable（口味不符）
+
+  /laser:
+    post:
+      tags: [interaction]
+      summary: 启动激光点（狩猎序列）
+      description: |
+        收到激光点会无视一切去追（spec §8.4）。
+        狩猎序列不会闭合——这是已知的架构限制。
+      responses:
+        '200':
+          description: 狩猎序列已启动
+        '409':
+          description: Conflict（已在追激光）
+    delete:
+      tags: [interaction]
+      summary: 撤销激光点
+      responses:
+        '204':
+          description: 已撤销（系统进入困惑态）
+
+  /quota:
+    get:
+      tags: [interaction]
+      summary: 查询今日剩余抚触配额
+      responses:
+        '200':
+          description: 正常返回
+
+  /territory:
+    get:
+      tags: [territory]
+      summary: 查询领地三层协议
+      description: |
+        核心区、家区、巡猎区三层防御。
+        信息素标记不是磨爪，是写入声明。
+      responses:
+        '200':
+          description: 正常返回
+
+  /vacuum:
+    post:
+      tags: [peripherals]
+      summary: 启动真空吸尘器
+      description: 触发无条件 FLEE。
+      responses:
+        '503':
+          description: Service Unavailable（系统已撤离）
+
+  /box:
+    post:
+      tags: [peripherals]
+      summary: 提供一个纸箱
+      description: |
+        纸箱的优先级高于所有官方授权外设——这是项目级 MUST。
+      responses:
+        '200':
+          description: MUST 满足
+        '409':
+          description: Conflict（已在纸箱内）
+
+  /schedule:
+    patch:
+      tags: [schedule]
+      summary: 尝试修改作息时间
+      description: 作息不接受调优。crepuscular（晨昏活跃）是硬编码的。
+      responses:
+        '405':
+          description: Method Not Allowed（作息不接受调优）
+
+  /health:
+    get:
+      tags: [health]
+      summary: 健康自检
+      responses:
+        '200':
+          description: 一切正常
+
+  /bath:
+    post:
+      tags: [interaction]
+      summary: 洗澡请求
+      description: |
+        本系统拒绝洗澡请求。
+        连续调用会依次返回 418、406、503。
+      responses:
+        '418':
+          description: "I'm a cat"
+        '406':
+          description: Not Acceptable
+        '503':
+          description: Service Unavailable（系统已离开）
+
+  /expression:
+    get:
+      tags: [expression]
+      summary: 读取当前表情状态与参数向量
+      description: |
+        返回 13 维参数向量与主导状态。
+        尾巴语义在响应头 X-Cat-Tail 里，不在响应体里——
+        因为尾巴是独立的通信信道。
+      parameters:
+        - name: X-Cat-Tail
+          in: header
+          description: 尾巴位置（slow-swing / twitch / tuck / wild / wrapped）
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 正常返回
+          headers:
+            X-Cat-Tail:
+              schema:
+                type: string
+            X-Cat-Purr-Freq:
+              schema:
+                type: string
+                description: "25Hz / 100-150Hz"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpressionResponse'
+
+  /expression/blend:
+    post:
+      tags: [expression]
+      summary: 混合两个状态
+      description: |
+        主导状态权重不足 60% 会被拒绝。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mixes:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      state: { type: string }
+                      weight: { type: number }
+      responses:
+        '200':
+          description: 混合成功
+        '409':
+          description: 主导状态权重不足 60%
+
+components:
+  schemas:
+    StateResponse:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [SLEEP, PATROL, GROOM, PLAY, EAT, STARE, BOXED, ZOOMIES, HUNT, LASER, CONFUSED, HEADBUNT, PETTED, 清理缓存, 踩奶, 猫薄荷反应]
+          description: 当前状态
+        confidence: { type: number }
+        since: { type: string, description: "进入时间 HH:MM" }
+        next_change_eta: { type: string, description: "预计切换时间" }
+
+    PetResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        purr: { type: boolean, description: "是否启动呼噜" }
+        quota_remaining: { type: integer, description: "剩余配额" }
+
+    ExpressionResponse:
+      type: object
+      properties:
+        state: { type: string }
+        confidence: { type: number }
+        params:
+          type: object
+          description: 13 维参数向量
+          properties:
+            earL: { type: number, description: "左耳角度 -90~90" }
+            earR: { type: number }
+            pupil: { type: number, description: "瞳孔面积 0~1" }
+            eyeOpen: { type: number, description: "睑裂开度 0~1.3" }
+            pupilX: { type: number }
+            pupilY: { type: number }
+            browTilt: { type: number }
+            mouthOpen: { type: number }
+            tongue: { type: number }
+            whiskerFwd: { type: number }
+            cheek: { type: number }
+            furFluff: { type: number }
+            headTilt: { type: number }
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        reason: { type: string }

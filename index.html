@@ -44,8 +44,11 @@
   <a class="btn ghost" href="sdk/demo.html" style="margin-left:8px;">SDK 控制台</a>
   <a class="btn ghost" href="reference/opinions.html" style="margin-left:8px;">一只猫的生活意见</a>
   <a class="btn ghost" href="reference/vitals.html" style="margin-left:8px;">生理速查</a>
+  <a class="btn ghost" href="tools/charts.html" style="margin-left:8px;">图表图鉴</a>
+  <a class="btn ghost" href="tools/adoption.html" style="margin-left:8px;">领养组件</a>
   <a class="btn ghost" href="reference/cheatsheet.html" style="margin-left:8px;">速查卡</a>
   <a class="btn ghost" href="reference/errors.html" style="margin-left:8px;">错误码对照</a>
+  <a class="btn ghost" href="versions.html" style="margin-left:8px;">历史版本</a>
 
   <div class="stat-row">
     <div class="stat"><div class="n">16</div><div class="l">CAT 正文章节</div></div>
@@ -66,6 +69,18 @@
     <h3>CAT API — 猫咪接口规范</h3>
     <p>权限模型反转、领地三层协议、喵叫的双声部语义、呼噜的自愈频率、纸箱优先级 MUST、凌晨三点会议时间，以及一份从架构层面否定 Owner 角色的接口定义。</p>
     <div class="foot">16 章 + 附录 A–C · 31 条当事猫意见</div>
+  </a>
+  <a class="card" href="spec/openapi.yaml">
+    <div class="kicker">OpenAPI 3.1 · 机器可读</div>
+    <h3>CAT API OpenAPI 描述</h3>
+    <p>所有端点的 OpenAPI 3.1 描述：state / pet / treat / laser / territory / vacuum / box / schedule / health / bath / quota / expression。喂给 Swagger UI 即可直接调试。</p>
+    <div class="foot">spec/openapi.yaml · 12 个端点</div>
+  </a>
+  <a class="card" href="spec/quantified-api.yaml">
+    <div class="kicker">OpenAPI 3.1 · 量化派生</div>
+    <h3>量化指标 OpenAPI</h3>
+    <p>RER / DER / 饮水量 / DNS / HRI / VSI / 免疫 / 寄生虫 / 分诊的 OpenAPI 描述。含 422 短路语义——某些查询在客户端就能算完，不该往服务端发。</p>
+    <div class="foot">spec/quantified-api.yaml · 9 个量化端点</div>
   </a>
 </div>
 
@@ -191,6 +206,18 @@
     <p>点击即可"调用"任一接口，观察返回码与话术。纯模拟，零网络请求，零数据收集。试试连点两次 POST /api/bath。</p>
     <div class="foot">sdk/demo.html · 内核 sdk/cat-api-client.js</div>
   </a>
+  <a class="card" href="tools/charts.html">
+    <div class="kicker">手绘 SVG · 灰阶</div>
+    <h3>图表图鉴</h3>
+    <p>基于真实量化引擎与表情引擎产出的数据，手工绘制的 19 张灰阶图：状态分布、DER 曲线、DNS 雷达、置信度对照、年龄热力、表情参数矩阵。打印不耗墨。</p>
+    <div class="foot">tools/charts.html · 引擎 assets/js/charts.js</div>
+  </a>
+  <a class="card" href="tools/adoption.html">
+    <div class="kicker">领养即安装</div>
+    <h3>领养组件</h3>
+    <p>填入你的名字，生成一行 curl 安装命令。本系统不返回 401，所以那张牌不是通行证——是来源标注。</p>
+    <div class="foot">tools/adoption.html</div>
+  </a>
 </div>
 
 <div class="section-title">参考</div>
@@ -212,6 +239,18 @@
     <h3>术语表</h3>
     <p>符号约定、规范强度（MUST / SHOULD / MAY / HEURISTIC / WON'T FIX）、Staff 与 Owner 的边界、ZOOMIES 的定义。</p>
     <div class="foot">符号 · 强度 · 约定</div>
+  </a>
+  <a class="card" href="versions.html">
+    <div class="kicker">v0.1 → v0.5.0</div>
+    <h3>历史版本</h3>
+    <p>从单文件 v0.1 到当前 16 章正典 + 8 个工具页面的完整变更轴。每一版都写了什么、砍了什么、为什么砍。</p>
+    <div class="foot">versions.html · 5 个里程碑</div>
+  </a>
+  <a class="card" href="docs/CHANGELOG.md">
+    <div class="kicker">逐条记录</div>
+    <h3>变更日志</h3>
+    <p>每个版本的完整提交记录与破坏性变更标注。附贡献指南——所有 PR 都会被当事猫过一遍。</p>
+    <div class="foot">docs/CHANGELOG.md · docs/CONTRIBUTING.md</div>
   </a>
 </div>
 

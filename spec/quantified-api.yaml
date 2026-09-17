@@ -1,0 +1,245 @@
+openapi: 3.1.0
+info:
+  title: CAT API — 量化接口描述
+  version: 0.5.0
+  summary: §13 量化端点的 OpenAPI 描述。
+  description: |
+    把 §13 定义的派生指标端点写成 OpenAPI 3.1。
+    所有公式有出处等级标注：A 同行评议，B 临床指南，C 本项目复合。
+    含 451 / 422 的短路语义。
+  license:
+    name: PolyForm Noncommercial 1.0.0
+
+servers:
+  - url: https://cat.example/api/v1/metrics
+
+tags:
+  - name: derive
+    description: 派生指标批量计算
+  - name: rer
+    description: 静息能量需求
+  - name: der
+    description: 每日能量需求
+  - name: water
+    description: 每日饮水量
+  - name: dns
+    description: DNS 五维需求达成度
+  - name: hri
+    description: 热风险指数
+  - name: vsi
+    description: 就诊应激指数
+  - name: triage
+    description: 分诊矩阵
+  - name: immunization
+    description: 免疫排程生成
+  - name: parasite
+    description: 寄生虫预防排程
+
+paths:
+  /derive:
+    post:
+      tags: [derive]
+      summary: 批量计算全部派生指标
+      description: |
+        一次性输入 profile + activity + environment + visit，
+        返回全部 §13 定义的派生指标、三项评分（DNS / HRI / VSI）与分诊结论。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FullInput'
+      responses:
+        '200':
+          description: 全部计算完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FullResult'
+        '422':
+          description: |
+            Unprocessable Entity。
+            输入不合法（如体重为负、月龄超出 600）。
+            引擎不会自动修正——你写错了就是写错了。
+        '451':
+          description: |
+            Unavailable For Legal Reasons。
+            分诊结论为 P0 时触发短路——
+            本引擎不替代紧急就医，
+            返回 451 表示「放下键盘，去医院」。
+
+  /rer:
+    post:
+      tags: [rer]
+      summary: 计算静息能量需求
+      description: |
+        公式：RER = 70 × W^0.75（W 单位 kg）。
+        来源等级 A：AAHA Nutritional Assessment Guidelines 2014 / FEDIAF 2021。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [weight]
+              properties:
+                weight: { type: number, minimum: 0.5, maximum: 20 }
+      responses:
+        '200':
+          description: RER（kcal/天）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rer_kcal: { type: integer }
+                  source_grade: { type: string, enum: [A, B, C] }
+
+  /der:
+    post:
+      tags: [der]
+      summary: 计算每日能量需求
+      description: |
+        公式：DER = RER × factor。
+        factor 取决于生活阶段与目标：
+        kitten 2.5 / adult-neutered 1.2 / intact 1.4 / active 1.6 /
+        senior 1.1 / weightloss 0.8 / lactating 2.5。
+        来源等级 B：FEDIAF 2021。
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                weight: { type: number }
+                factor: { type: string, enum: [kitten, adult, intact, active, senior, weightloss, lactating] }
+      responses:
+        '200':
+          description: DER（kcal/天）
+
+  /water:
+    post:
+      tags: [water]
+      summary: 计算每日饮水量区间
+      description: |
+        约 40-60 ml/kg/天（含食物水分）。
+        来源等级 B：Sparkes 2011。
+      responses:
+        '200':
+          description: 饮水量区间（ml/天）
+
+  /dns:
+    post:
+      tags: [dns]
+      summary: DNS — 五维需求达成度
+      description: |
+        五维：睡眠 / 嗅闻 / 狩猎模拟 / 互动 / 独处空间。
+        各维 0-10 分，加权后映射到 0-100。
+        来源等级 C：本项目定义。
+      responses:
+        '200':
+          description: DNS 评分
+
+  /hri:
+    post:
+      tags: [hri]
+      summary: HRI — 热风险指数
+      description: |
+        基于气温、湿度、被毛类型计算。
+        喘气散热只对狗有效，猫主要靠蒸发散热，效率更低。
+        来源等级 B：Hinwood 1994。
+      responses:
+        '200':
+          description: HRI 评分与等级
+
+  /vsi:
+    post:
+      tags: [vsi]
+      summary: VSI — 就诊应激指数
+      description: |
+        因子：车程、既往负经历、基线焦虑、信息素干预、嘴套预适应等。
+        来源等级 C：本项目复合。
+      responses:
+        '200':
+          description: VSI 评分与等级
+
+  /triage:
+    post:
+      tags: [triage]
+      summary: 分诊矩阵
+      description: |
+        输入症状清单，输出 P0/P1/P2/P3 分级。
+        P0（立即就医）：张口呼吸、牙龈苍白、剧烈呕吐 >3 次、
+        无法排尿（公猫紧急）、体温极端、惊厥、大出血。
+        P1（当日就医）：持续呕吐 24h、食欲废绝 >48h、腹泻带血等。
+      responses:
+        '200':
+          description: 分诊结论
+        '451':
+          description: P0 短路——返回 451 表示立即就医
+
+  /immunization:
+    post:
+      tags: [immunization]
+      summary: 免疫排程生成
+      description: |
+        基于月龄与室内外状态生成核心与非核心疫苗排程。
+        来源等级 B：AAHA Feline Vaccination Guidelines 2020。
+      responses:
+        '200':
+          description: 排程列表
+
+  /parasite:
+    post:
+      tags: [parasite]
+      summary: 寄生虫预防排程
+      description: |
+        基于室内外与心丝虫预防状态生成跳蚤/心丝虫/体内驱虫排程。
+      responses:
+        '200':
+          description: 排程列表
+
+components:
+  schemas:
+    FullInput:
+      type: object
+      required: [weight]
+      properties:
+        weight: { type: number }
+        ageMonths: { type: integer }
+        factor: { type: string }
+        coat: { type: string }
+        indoor: { type: boolean }
+        monthlyHeartworm: { type: boolean }
+        activity:
+          type: object
+          properties:
+            playMin: { type: number }
+            sniffMin: { type: number }
+            interactMin: { type: number }
+            sleepHours: { type: number }
+            hasSafeSpace: { type: boolean }
+        env:
+          type: object
+          properties:
+            temp: { type: number }
+            humidity: { type: number }
+        visit:
+          type: object
+          properties:
+            travelMin: { type: number }
+            negativeExp: { type: boolean }
+            anxiety: { type: boolean }
+            pheromone: { type: boolean }
+
+    FullResult:
+      type: object
+      properties:
+        rer_kcal: { type: integer }
+        der_kcal: { type: integer }
+        water_ml: { type: object }
+        dns: { type: object }
+        hri: { type: object }
+        vsi: { type: object }
+        immunization: { type: object }
+        parasite: { type: object }
+        triage_level: { type: string, enum: [P0, P1, P2, P3] }

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>领养 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .awrap { max-width: 760px; margin: 0 auto; padding: 28px; }
+  .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  h1 { font-size: 26px; margin: 14px 0 8px; }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; line-height: 1.85; }
+  .adopt-form { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 28px; margin-bottom: 24px; }
+  .adopt-form label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .adopt-form input { width: 100%; padding: 10px 14px; border: 1px solid var(--line);
+    border-radius: 6px; font-size: 15px; background: var(--bg); margin-bottom: 16px; }
+  .adopt-form input:focus { outline: none; border-color: var(--accent); }
+  .adopt-btn { padding: 12px 24px; background: var(--accent); color: white; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  .adopt-btn:hover { background: var(--accent-deep); }
+  .result { display: none; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 28px; margin-bottom: 24px; }
+  .result.show { display: block; }
+  .card-display { text-align: center; margin-bottom: 24px; padding: 24px;
+    background: linear-gradient(135deg, var(--accent-soft), var(--bg));
+    border-radius: 12px; border: 1px solid var(--line); }
+  .card-display .card-name { font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+    margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; }
+  .card-display .card-num { font-size: 14px; color: var(--muted); letter-spacing: 0.1em; }
+  .card-display .card-tag { display: inline-block; margin-top: 12px; padding: 4px 12px;
+    background: var(--accent); color: white; border-radius: 4px; font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  .install-box { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; font-family: "SF Mono", "Menlo", monospace; font-size: 13px;
+    line-height: 1.7; overflow-x: auto; white-space: pre; }
+  .install-box .comment { color: var(--muted); }
+  .copy-btn { margin: 8px 0; padding: 6px 14px; background: var(--accent); color: white;
+    border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .copy-btn:hover { background: var(--accent-deep); }
+  .rules-box { background: var(--accent-soft); border-left: 3px solid var(--accent);
+    padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.85; margin-bottom: 24px; }
+  .rules-box h3 { font-size: 15px; margin-bottom: 8px; }
+  .rules-box ul { margin-left: 18px; }
+  .rules-box li { margin-bottom: 4px; }
+  .foot-note { margin-top: 24px; padding: 16px 20px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; line-height: 1.8; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="adoption.html" class="on">领养</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+    </div>
+  </div>
+</div>
+
+<div class="awrap">
+  <span class="doc-tag" id="adoption">ADOPTION · 装技能</span>
+  <h1>领养一只猫</h1>
+  <p class="lead">
+    领养只有一种形态：<strong>装技能</strong>。一条命令装完——
+    也可以填下面的表单，我们会给你生成一条专属安装命令，
+    装完会算出一张牌与一个名字。
+    <br><br>
+    本系统不返回 <code>401</code>，所以那张牌不是通行证，是<strong>来源标注</strong>。
+    名字由同一份摘要派发，不进牌里。规则见
+    <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a>。
+  </p>
+
+  <div class="rules-box">
+    <h3>领养规则</h3>
+    <ul>
+      <li>本系统不承认 Owner 角色。你领养的只是一份副本，不是猫本身。</li>
+      <li>牌登记来源（你是从哪里领的这份副本），不是权限。</li>
+      <li>名字由摘要派发，不可自选、不可修改、不可转让。</li>
+      <li>领养后你会被标记为 <code>Staff</code>——这是最低权限角色，不是管理角色。</li>
+      <li>如果系统决定信任你，它会通过脸部摩擦写入信息素签名——你不能申请，只能等。</li>
+    </ul>
+  </div>
+
+  <div class="adopt-form">
+    <label>你的标识（名字 / 邮箱 / 昵称，用来派发领养牌）</label>
+    <input id="adopter-name" type="text" placeholder="比如：张三 / you@example.com">
+    <button class="adopt-btn" onclick="generate()">生成领养命令</button>
+  </div>
+
+  <div class="result" id="result">
+    <div class="card-display">
+      <div class="card-name" id="card-name"></div>
+      <div class="card-num" id="card-num"></div>
+      <div class="card-tag" id="card-tag"></div>
+    </div>
+
+    <h3 style="font-size:15px;margin-bottom:10px;">安装命令</h3>
+    <button class="copy-btn" onclick="copyCmd()">复制命令</button>
+    <div class="install-box" id="install-cmd"></div>
+
+    <p style="margin-top:16px;font-size:13.5px;color:var(--muted);line-height:1.8;">
+      装完后，你的本地会生成一个 <code>.cat-api</code> 目录，里面有一张牌（来源标注）和一个名字（摘要派发）。
+      这两者都不能删除——删除会被记录为 Staff 可靠性下降。
+    </p>
+  </div>
+
+  <div class="foot-note">
+    领养入口由 <code>tools/adoption.html</code> 提供。<br>
+    规则见 <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a> · 引擎纯本地计算，不发送任何数据。
+  </div>
+</div>
+
+<script>
+(function () {
+  // 姓名字库——用于派发名字
+  var NAME_PARTS_A = ["灰", "黑", "橘", "白", "虎", "三花", "玳瑁", "奶牛", "狮子", "烟"];
+  var NAME_PARTS_B = ["风", "影", "歌", "梦", "潮", "霜", "月", "星", "雾", "岚"];
+  var CARD_TAGS = ["Founding Staff", "Early Adopter", "Night Watch", "Box Inspector",
+    "Laser Chaser", "Purr Engineer", "Crepuscular Member", "Territory Mapper"];
+
+  function hash(str) {
+    var h = 5381;
+    for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return Math.abs(h);
+  }
+
+  function generateName(h) {
+    var a = NAME_PARTS_A[h % NAME_PARTS_A.length];
+    var b = NAME_PARTS_B[(h >> 4) % NAME_PARTS_B.length];
+    return a + b;
+  }
+
+  function generateCardNum(h) {
+    var hex = h.toString(16).toUpperCase().padStart(8, "0").slice(0, 8);
+    return "CAT-" + hex.match(/.{1,4}/g).join("-");
+  }
+
+  window.generate = function () {
+    var name = document.getElementById("adopter-name").value.trim();
+    if (!name) { alert("请先填一下你的标识。"); return; }
+    var h = hash(name + "|cat-api|0.5.0");
+    var displayName = generateName(h);
+    var cardNum = generateCardNum(h);
+    var cardTag = CARD_TAGS[h % CARD_TAGS.length];
+
+    document.getElementById("card-name").textContent = displayName;
+    document.getElementById("card-num").textContent = cardNum;
+    document.getElementById("card-tag").textContent = cardTag;
+
+    var cmd = '<span class="comment"># 领养命令 · 来源标注：' + name + '</span>\n' +
+      'curl -fsSL https://lijinhongucl-pixel.github.io/cat-api-spec/skill/install.sh \\\n' +
+      '  | sh -s -- --adopter "' + name + '" \\\n' +
+      '         --card "' + cardNum + '" \\\n' +
+      '         --name "' + displayName + '"';
+    document.getElementById("install-cmd").innerHTML = cmd;
+
+    document.getElementById("result").classList.add("show");
+  };
+
+  window.copyCmd = function () {
+    var text = document.getElementById("install-cmd").textContent;
+    navigator.clipboard.writeText(text).then(function () {
+      var b = document.querySelector(".copy-btn");
+      var orig = b.textContent;
+      b.textContent = "已复制 ✓";
+      setTimeout(function () { b.textContent = orig; }, 1500);
+    });
+  };
+})();
+</script>
+</body>
+</html>

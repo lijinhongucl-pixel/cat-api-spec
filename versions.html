@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<title>历史版本 — CAT API</title>
+<link rel="stylesheet" href="assets/css/spec.css">
+<style>
+  .vwrap { max-width: 980px; margin: 0 auto; padding: 28px; }
+  .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  h1 { font-size: 26px; margin: 14px 0 8px; }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; max-width: 740px; }
+  .ver-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px 24px; margin-bottom: 18px; }
+  .ver-card.latest { border-color: var(--accent); border-width: 2px; }
+  .ver-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+  .ver-num { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .ver-name { font-size: 14px; color: var(--muted); font-style: italic; }
+  .ver-date { font-size: 13px; color: var(--faint); margin-left: auto; font-variant-numeric: tabular-nums; }
+  .ver-body { font-size: 14.5px; line-height: 1.8; }
+  .ver-body h4 { font-size: 14px; margin: 12px 0 6px; color: var(--accent-deep); }
+  .ver-body ul { margin-left: 18px; margin-bottom: 8px; }
+  .ver-body li { margin-bottom: 3px; }
+  .ver-body code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  .tag-new { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px;
+    font-weight: 700; background: #dcfce7; color: var(--ok); margin-left: 6px; }
+  .archive-box { margin-top: 36px; padding: 20px; background: var(--accent-soft);
+    border-radius: 8px; border: 1px solid var(--line); }
+  .archive-box h3 { font-size: 16px; margin-bottom: 8px; }
+  .archive-box p { font-size: 14px; color: var(--muted); line-height: 1.8; }
+  .axis-note { margin: 28px 0; padding: 16px 20px; background: var(--panel);
+    border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="index.html">首页</a>
+      <a href="spec/cat.html">正文</a>
+      <a href="versions.html" class="on">历史版本</a>
+      <a href="docs/CHANGELOG.md">变更日志</a>
+    </div>
+  </div>
+</div>
+
+<div class="vwrap">
+  <span class="doc-tag">REVISION HISTORY</span>
+  <h1>历史版本</h1>
+  <p class="lead">
+    每个版本做了什么、三个互不相干的版本轴，以及 v0.5 之前单文件形态的存档入口。
+  </p>
+
+  <div class="axis-note">
+    <strong>版本轴说明：</strong>本项目有三个独立的版本轴——
+    <code>spec</code>（正文与章节结构）、
+    <code>tools</code>（可运行工具与引擎）、
+    <code>livecat</code>（活猫行为引擎）。
+    下表的合并版本号取三者最大值。
+  </div>
+
+  <div class="ver-card latest">
+    <div class="ver-head">
+      <span class="ver-num">v0.5.0</span>
+      <span class="ver-name">"Full Spec Release"</span>
+      <span class="tag-new">最新</span>
+      <span class="ver-date">2026-09-17</span>
+    </div>
+    <div class="ver-body">
+      <p>工程页面全面补齐，版本升级为 Full Spec Release。</p>
+      <h4>新增工具</h4>
+      <ul>
+        <li>量化评估器 <code>tools/quantifier.html</code> + <code>assets/js/quantify.js</code></li>
+        <li>生理指标速查 <code>reference/vitals.html</code></li>
+        <li>SDK 控制台 <code>sdk/demo.html</code> + <code>sdk/cat-api-client.js</code></li>
+        <li>表情联系表 <code>tools/expression-sheet.html</code></li>
+        <li>图表图鉴 <code>tools/charts.html</code></li>
+        <li>领养组件 <code>tools/adoption.html</code></li>
+      </ul>
+      <h4>新增工程文档</h4>
+      <ul>
+        <li>OpenAPI 描述 <code>spec/openapi.yaml</code></li>
+        <li>量化接口 OpenAPI <code>spec/quantified-api.yaml</code></li>
+        <li>变更日志与贡献指南 <code>docs/CHANGELOG.md</code> / <code>docs/CONTRIBUTING.md</code></li>
+        <li>本页 <code>versions.html</code></li>
+      </ul>
+      <h4>变更</h4>
+      <ul>
+        <li>隐藏全部 Dog API 引用（导航栏 / hero / 页脚 / meta）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver-card">
+    <div class="ver-head">
+      <span class="ver-num">v0.4.2</span>
+      <span class="ver-name">"Staff Release"</span>
+      <span class="ver-date">2026-09-17</span>
+    </div>
+    <div class="ver-body">
+      <p>活猫对照 spec 行为学大整改——12 条行为准则落地率从 6/12 提升到 12/12。</p>
+      <h4>新增</h4>
+      <ul>
+        <li>抚摸配额系统（规则 6+7）：每日 5 次，429 限流</li>
+        <li>修正状态权重：SLEEP 50% / GROOM 20%（真实猫作息分布）</li>
+        <li>钻纸箱输入冻结（规则 4）</li>
+        <li>激光追逐（规则 11）：Shift+点击放激光</li>
+        <li>踩奶独立态（§4.4）：连续戳 3 次触发</li>
+        <li>猫薄荷交互（§8.3）</li>
+        <li>缓慢眨眼（§4.2）/ 蹭人腿（§4.3）/ 呼噜可视化（§4.1）</li>
+        <li>呕吐毛球随机事件</li>
+        <li>中央撤离（规则 12）</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver-card">
+    <div class="ver-head">
+      <span class="ver-num">v0.4.0</span>
+      <span class="ver-name">"Live Cat"</span>
+      <span class="ver-date">2026-09-16</span>
+    </div>
+    <div class="ver-body">
+      <p>活猫 v2 上线，在整个页面上自由活动。</p>
+      <ul>
+        <li><code>assets/js/livecat.js</code> 自由活动猫引擎</li>
+        <li>7 状态加权轮转 + crepuscular</li>
+        <li>SVG 身体 + CSS 动画</li>
+        <li>移动端适配 + reduced-motion</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver-card">
+    <div class="ver-head">
+      <span class="ver-num">v0.3.0</span>
+      <span class="ver-name">"Expression Engine"</span>
+      <span class="ver-date">2026-09-16</span>
+    </div>
+    <div class="ver-body">
+      <p>表情渲染引擎与外设控制台完成。</p>
+      <ul>
+        <li><code>assets/js/expression.js</code> 13 维参数向量渲染引擎（14 状态 · 逐像素 SVG）</li>
+        <li><code>tools/expression.html</code> 拖滑块改参数实时看效果</li>
+        <li><code>tools/peripherals.html</code> 外设控制台</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver-card">
+    <div class="ver-head">
+      <span class="ver-num">v0.2.0</span>
+      <span class="ver-name">"Spec Complete"</span>
+      <span class="ver-date">2026-09-16</span>
+    </div>
+    <div class="ver-body">
+      <p>正文章节与参考页全部写完。</p>
+      <ul>
+        <li><code>spec/cat.html</code> 16 章 + 附录 A-C</li>
+        <li><code>reference/</code> 口吻 / 生活意见 / 速查卡 / 错误码 / 术语表</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ver-card">
+    <div class="ver-head">
+      <span class="ver-num">v0.1.0</span>
+      <span class="ver-name">"First Purr"</span>
+      <span class="ver-date">2026-09-16</span>
+    </div>
+    <div class="ver-body">
+      <p>项目初始化。</p>
+      <ul>
+        <li>项目骨架 + <code>index.html</code> + <code>README.md</code></li>
+        <li><code>LICENSE</code> PolyForm Noncommercial 1.0.0</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="archive-box">
+    <h3>存档</h3>
+    <p>
+      v0.5.0 之前本项目不存在单文件形态的存档——因为 v0.1 到 v0.5 全部在同一天完成。
+      如果未来有人想看「最初的样子」，<code>git log</code> 可以回到任何一个 commit。
+    </p>
+    <p style="margin-top:12px;">
+      <a href="https://github.com/lijinhongucl-pixel/cat-api-spec/releases">查看 GitHub Releases →</a>
+    </p>
+  </div>
+</div>
+
+</body>
+</html>

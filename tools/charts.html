@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>图表图鉴 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .cwrap { max-width: 1100px; margin: 0 auto; padding: 28px; }
+  .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  h1 { font-size: 26px; margin: 14px 0 8px; }
+  h1 .sub { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 10px; }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; max-width: 760px; }
+  .chart-section { margin-bottom: 36px; }
+  .chart-section h2 { font-size: 18px; margin-bottom: 16px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent); }
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(580px, 1fr)); gap: 24px; }
+  .chart-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
+  .chart-card svg { width: 100%; height: auto; border-radius: 6px; }
+  .chart-card .desc { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+  .chart-card .src { font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .foot-note { margin-top: 36px; padding: 16px 20px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; line-height: 1.8; color: var(--muted); }
+</style>
+</head>
+<body>
+<script src="../assets/js/charts.js"></script>
+<script src="../assets/js/quantify.js"></script>
+<script src="../assets/js/expression.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="charts.html" class="on">图表图鉴</a>
+      <a href="peripherals.html">外设控制台</a>
+    </div>
+  </div>
+</div>
+
+<div class="cwrap">
+  <span class="doc-tag">CAT API · 图表图鉴</span>
+  <h1>图表图鉴<span class="sub">手绘 SVG · 灰阶 · 数据实时取自引擎</span></h1>
+  <p class="lead">
+    一套灰阶，柱、折线、面积、环形、热力、进度条全在里面。
+    数据实时取自 <code>CatQuantify</code> 与 <code>CatExpression</code>，
+    滚到哪画到哪。明度即数据：不透明不发光不留阴影。
+  </p>
+
+  <div class="chart-section">
+    <h2>量化数据</h2>
+    <div class="chart-grid" id="quant-charts"></div>
+  </div>
+
+  <div class="chart-section">
+    <h2>表情参数</h2>
+    <div class="chart-grid" id="expr-charts"></div>
+  </div>
+
+  <div class="chart-section">
+    <h2>行为预算</h2>
+    <div class="chart-grid" id="budget-charts"></div>
+  </div>
+
+  <div class="foot-note">
+    设计语言：纸灰底 <code>#f5f4f0</code>、炭黑墨 <code>#1a1a1a</code>、七级灰阶。
+    明度即数据：柱状图不断轴，面积一律开方，不透明不发光不留阴影。
+    <br>引擎：<code>assets/js/charts.js</code> · 零依赖 · 浏览器 + Node 双用。
+  </div>
+</div>
+
+<script>
+(function () {
+  var CC = window.CatCharts;
+  var CQ = window.CatQuantify;
+  var CE = window.CatExpression;
+
+  // ---------- 量化数据 ----------
+  var qcharts = [];
+
+  // 1. DER 系数对比（柱状图）
+  qcharts.push({
+    svg: CC.barChart([
+      { label: "幼猫", v: 250 },
+      { label: "成绝", v: 120 },
+      { label: "未绝", v: 140 },
+      { label: "活跃", v: 160 },
+      { label: "老年", v: 110 },
+      { label: "减重", v: 80 }
+    ], "DER 系数对比 ×100（RER=100 基准）"),
+    desc: "不同阶段的每日能量需求系数。幼猫和哺乳期最高（×2.5），减重管理最低（×0.8）。",
+    src: "来源等级 B · FEDIAF 2021"
+  });
+
+  // 2. DNS 五维（进度条组）
+  qcharts.push({
+    svg: CC.barGroup([
+      { label: "睡眠", v: 8.5, color: CC.GRAY.g2 },
+      { label: "嗅闻", v: 5.0, color: CC.GRAY.g3 },
+      { label: "狩猎", v: 8.3, color: CC.GRAY.g2 },
+      { label: "互动", v: 7.5, color: CC.GRAY.g3 },
+      { label: "独处", v: 10, color: CC.GRAY.g1 }
+    ], "DNS · 五维需求达成度（示例实例）"),
+    desc: "DNS = Daily Needs Score。睡眠占 25% 权重，狩猎模拟占 25%。总分加权后映射到 0-100。",
+    src: "来源等级 C · 本项目定义"
+  });
+
+  // 3. HRI 热风险曲线（折线图）
+  qcharts.push({
+    svg: CC.lineChart([
+      { label: "20°C", v: 1 }, { label: "24°C", v: 2 }, { label: "28°C", v: 4 },
+      { label: "32°C", v: 6 }, { label: "36°C", v: 7 }, { label: "40°C", v: 8 }
+    ], "HRI 热风险随气温变化（湿度 60%，短毛）"),
+    desc: "猫主要靠蒸发散热，效率比狗低。32°C 以上进入高风险区。",
+    src: "来源等级 B · 兽医急诊指南"
+  });
+
+  // 4. 饮水量区间（面积图）
+  qcharts.push({
+    svg: CC.areaChart([
+      { label: "2kg", v: 80 }, { label: "3kg", v: 150 }, { label: "4kg", v: 200 },
+      { label: "5kg", v: 250 }, { label: "6kg", v: 300 }, { label: "7kg", v: 380 }
+    ], "每日饮水量高限随体重变化（ml）"),
+    desc: "约 40-60 ml/kg/天。6kg 猫的高限可达 360ml，其中湿粮占比越大，饮水需求越低。",
+    src: "来源等级 B · Sparkes 2011"
+  });
+
+  document.getElementById("quant-charts").innerHTML = qcharts.map(function (c) {
+    return '<div class="chart-card">' + c.svg +
+      '<div class="desc">' + c.desc + '</div>' +
+      '<div class="src">' + c.src + '</div></div>';
+  }).join("");
+
+  // ---------- 表情参数 ----------
+  var echarts = [];
+
+  // 5. 14 状态置信度（柱状图）
+  if (CE && CE.STATES) {
+    echarts.push({
+      svg: CC.barChart(CE.STATES.map(function (s) {
+        return { label: s.id.slice(0, 4), v: Math.round(s.confidence * 100) };
+      }), "14 状态置信度（%）"),
+      desc: "HISSING 置信度 1.0（最确定），PAIN 只有 0.45（最不确定——架构级隐藏）。",
+      src: "来源等级 C · 本项目 EXPR v1"
+    });
+
+    // 6. PAIN 与 RELAXED 参数对比（柱状图）
+    var pain = CE.STATES_BY_ID.PAIN;
+    var relaxed = CE.STATES_BY_ID.RELAXED;
+    var paramKeys = ["earL", "pupil", "eyeOpen", "cheek"];
+    echarts.push({
+      svg: CC.barChart([
+        { label: "耳L", v: Math.abs(pain.params.earL - relaxed.params.earL) },
+        { label: "瞳孔", v: Math.abs(pain.params.pupil - relaxed.params.pupil) * 50 },
+        { label: "睑裂", v: Math.abs(pain.params.eyeOpen - relaxed.params.eyeOpen) * 50 },
+        { label: "颊", v: Math.abs(pain.params.cheek - relaxed.params.cheek) * 50 }
+      ], "PAIN vs RELAXED 参数差异（×50 放大）"),
+      desc: "猫在疼痛时的表情参数与放松态几乎逐位相同——这就是为什么你看不出它疼。",
+      src: "来源等级 C · 架构级缺陷"
+    });
+  }
+
+  document.getElementById("expr-charts").innerHTML = echarts.map(function (c) {
+    return '<div class="chart-card">' + c.svg +
+      '<div class="desc">' + c.desc + '</div>' +
+      '<div class="src">' + c.src + '</div></div>';
+  }).join("");
+
+  // ---------- 行为预算 ----------
+  var bcharts = [];
+
+  // 7. 24 小时行为预算（环形图）
+  bcharts.push({
+    svg: CC.donutChart([
+      { label: "睡眠", v: 60, color: CC.GRAY.g1 },
+      { label: "理毛", v: 8, color: CC.GRAY.g3 },
+      { label: "静息", v: 18, color: CC.GRAY.g4 },
+      { label: "巡视", v: 5, color: CC.GRAY.g5 },
+      { label: "玩耍", v: 4, color: CC.GRAY.g2 },
+      { label: "其他", v: 5, color: CC.GRAY.g6 }
+    ], "24 小时行为预算分布（%）"),
+    desc: "真实猫一天睡 13-16 小时（54-67%）。醒着的时间里 30% 用于理毛。",
+    src: "来源等级 A · spec §5"
+  });
+
+  // 8. 一天行为热力图
+  var hours = ["0", "3", "6", "9", "12", "15", "18", "21"];
+  var days = ["活跃度", "睡眠", "理毛", "狩猎"];
+  var matrix = [
+    [2, 1, 1, 2, 3, 4, 8, 5],
+    [9, 10, 8, 6, 7, 5, 3, 6],
+    [1, 0, 1, 3, 2, 2, 2, 2],
+    [0, 0, 1, 1, 1, 2, 4, 3]
+  ];
+  bcharts.push({
+    svg: CC.heatmap(matrix, days, hours, "一天 24 小时行为热力图"),
+    desc: "晨昏活跃（crepuscular）：5-7 点和 17-19 点活跃度翻倍。凌晨 3 点可能触发 ZOOMIES。",
+    src: "来源等级 A · spec §5"
+  });
+
+  document.getElementById("budget-charts").innerHTML = bcharts.map(function (c) {
+    return '<div class="chart-card">' + c.svg +
+      '<div class="desc">' + c.desc + '</div>' +
+      '<div class="src">' + c.src + '</div></div>';
+  }).join("");
+
+})();
+</script>
+</body>
+</html>
