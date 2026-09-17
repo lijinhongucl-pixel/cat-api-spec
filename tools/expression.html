@@ -346,7 +346,7 @@
       return Math.abs(p[k] - X.BASE[k]) > 0.01;
     });
     if (nonZero.length === 0) return "（纯基线）";
-    return nonZero.slice(0, 6).map(function (k) { return k + "=" + fmt(p[k]); }).join(" ") + (nonZero.length > 6 ? …" : "");
+    return nonZero.slice(0, 6).map(function (k) { return k + "=" + fmt(p[k]); }).join(" ") + (nonZero.length > 6 ? " …" : "");
   }
 
   /* ---------- 输出 ---------- */
