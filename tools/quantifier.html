@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>量化评估器 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .qwrap { max-width: 1280px; margin: 0 auto; padding: 28px; }
+  .qhead { margin-bottom: 28px; }
+  .qhead .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  .qhead h1 { font-size: 26px; margin: 12px 0 8px; letter-spacing: -0.02em; }
+  .qhead p { color: var(--muted); font-size: 15px; max-width: 740px; }
+  .qcols { display: grid; grid-template-columns: 380px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 920px) { .qcols { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 22px; margin-bottom: 18px; }
+  .panel h3 { font-size: 16px; margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--line); }
+  .fld { margin-bottom: 12px; }
+  .fld label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .fld input, .fld select { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 6px; font-size: 14px; background: var(--bg); color: var(--ink); }
+  .fld input:focus, .fld select:focus { outline: none; border-color: var(--accent); }
+  .fld .row { display: flex; gap: 12px; }
+  .fld .row > div { flex: 1; }
+  .chk { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+  .chk input { width: auto; }
+  .out-section { margin-bottom: 28px; }
+  .out-section h3 { font-size: 16px; margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent); display: inline-block; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .metric-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px 16px; }
+  .metric-card .k { font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+  .metric-card .v { font-size: 22px; font-weight: 700; margin-top: 4px;
+    font-variant-numeric: tabular-nums; }
+  .metric-card .u { font-size: 12px; color: var(--faint); margin-left: 4px; font-weight: 400; }
+  .metric-card.warn { border-color: var(--warn); }
+  .metric-card.danger { border-color: var(--danger); }
+  .metric-card .tag { font-size: 11px; padding: 2px 8px; border-radius: 3px; display: inline-block; margin-top: 4px; }
+  .tag.p0 { background: #fee2e2; color: var(--danger); }
+  .tag.p1 { background: #fef3c7; color: var(--warn); }
+  .tag.p2 { background: #fef9e7; color: var(--muted); }
+  .tag.p3 { background: #f0fdf4; color: var(--ok); }
+  .bars { margin-top: 8px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+  .bar-row .lab { width: 80px; color: var(--muted); }
+  .bar-row .bar { flex: 1; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar-row .fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .3s; }
+  .bar-row .num { width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+  table.tbl { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13.5px; }
+  table.tbl th, table.tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.tbl th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; }
+  pre.json { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; font-size: 12.5px; line-height: 1.7; overflow-x: auto; font-family: "SF Mono", "Menlo", monospace; }
+  .copy-btn { margin: 8px 0; padding: 6px 14px; background: var(--accent); color: white;
+    border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .copy-btn:hover { background: var(--accent-deep); }
+  .advice-box { background: var(--accent-soft); border-left: 3px solid var(--accent);
+    padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 13.5px; margin-top: 8px; }
+  .disclaimer { font-size: 12px; color: var(--faint); margin-top: 24px; padding: 12px;
+    border: 1px dashed var(--line); border-radius: 6px; }
+</style>
+</head>
+<body>
+<script src="../assets/js/quantify.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html" class="on">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+    </div>
+  </div>
+</div>
+
+<div class="qwrap">
+  <div class="qhead">
+    <span class="doc-tag">TOOL / 实算</span>
+    <h1>CAT API 量化评估器</h1>
+    <p>
+      左侧填入一份档案与当日实际值，右侧立刻产出 §13 定义的全部派生指标、三项评分与分诊结论。
+      计算全部由 <code>assets/js/quantify.js</code> 完成——页面上没有任何写死的数字。
+    </p>
+    <p style="font-size:13.5px;color:var(--faint);margin-top:12px;">
+      全部评分为<strong>偏差提示</strong>，不是诊断。分诊结论为 P0 时，本页会自动触发短路规则。
+    </p>
+  </div>
+
+  <div class="qcols">
+    <!-- 左侧：输入 -->
+    <div>
+      <div class="panel">
+        <h3>① 档案 · Profile</h3>
+        <div class="fld"><label>名字</label><input id="f-name" type="text" value="某只猫"></div>
+        <div class="fld"><label>体重（kg）<span style="color:#b91c1c">*</span></label><input id="f-weight" type="number" step="0.1" value="4.5"></div>
+        <div class="fld"><label>月龄</label><input id="f-age" type="number" value="36"></div>
+        <div class="fld">
+          <label>阶段 / 因子</label>
+          <select id="f-factor">
+            <option value="kitten">幼猫（&lt;12 月）×2.5</option>
+            <option value="adult" selected>成年绝育室内 ×1.2</option>
+            <option value="intact">成年未绝育 ×1.4</option>
+            <option value="active">活跃 / 室外 ×1.6</option>
+            <option value="senior">老年（&gt;7 岁）×1.1</option>
+            <option value="weightloss">减重管理 ×0.8</option>
+            <option value="lactating">哺乳期 ×2.5</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label>被毛</label>
+          <select id="f-coat">
+            <option value="short" selected>短毛</option>
+            <option value="long">长毛</option>
+            <option value="hairless">无毛 / 极短</option>
+          </select>
+        </div>
+        <div class="chk"><input type="checkbox" id="f-indoor" checked> <label for="f-indoor">室内猫</label></div>
+        <div class="chk"><input type="checkbox" id="f-hw"> <label for="f-hw">每月心丝虫预防</label></div>
+      </div>
+
+      <div class="panel">
+        <h3>② 今日实际 · Activity</h3>
+        <div class="fld"><label>主动游戏（分钟）</label><input id="f-play" type="number" value="25"></div>
+        <div class="fld"><label>嗅闻 / 探索（分钟）</label><input id="f-sniff" type="number" value="15"></div>
+        <div class="fld"><label>直接互动（分钟）</label><input id="f-interact" type="number" value="15"></div>
+        <div class="fld"><label>睡眠（小时）</label><input id="f-sleep" type="number" value="15"></div>
+        <div class="chk"><input type="checkbox" id="f-space" checked> <label for="f-space">有专属安全空间（高处 / 纸箱）</label></div>
+      </div>
+
+      <div class="panel">
+        <h3>③ 环境 · Environment</h3>
+        <div class="fld"><label>气温（°C）</label><input id="f-temp" type="number" value="24"></div>
+        <div class="fld"><label>相对湿度（%）</label><input id="f-humid" type="number" value="55"></div>
+      </div>
+
+      <div class="panel">
+        <h3>④ 就诊条件 · Vet Visit</h3>
+        <div class="fld"><label>车程（分钟）</label><input id="f-travel" type="number" value="20"></div>
+        <div class="chk"><input type="checkbox" id="f-negexp"> <label for="f-negexp">既往就诊有负经历</label></div>
+        <div class="chk"><input type="checkbox" id="f-anx"> <label for="f-anx">基线焦虑（分离 / 噪音恐惧史）</label></div>
+        <div class="chk"><input type="checkbox" id="f-owner"> <label for="f-owner">我现在很紧张</label></div>
+        <div class="chk"><input type="checkbox" id="f-phero"> <label for="f-phero">已使用信息素</label></div>
+        <div class="chk"><input type="checkbox" id="f-happy"> <label for="f-happy">做过「快乐到访」</label></div>
+        <div class="chk"><input type="checkbox" id="f-fast"> <label for="f-fast">空腹到院，以零食换强化</label></div>
+        <div class="chk"><input type="checkbox" id="f-carwait"> <label for="f-carwait">车内等待，避开候诊区</label></div>
+      </div>
+    </div>
+
+    <!-- 右侧：输出 -->
+    <div>
+      <div class="out-section">
+        <h3>派生指标</h3>
+        <div class="metric-grid" id="m-derived"></div>
+      </div>
+
+      <div class="out-section">
+        <h3>DNS · 五维需求达成度</h3>
+        <div id="dns-bars" class="bars"></div>
+        <div class="advice-box" id="dns-advice"></div>
+      </div>
+
+      <div class="out-section">
+        <h3>HRI · 热风险</h3>
+        <div class="metric-grid" id="m-hri"></div>
+        <div class="advice-box" id="hri-advice"></div>
+      </div>
+
+      <div class="out-section">
+        <h3>VSI · 就诊应激</h3>
+        <div class="metric-grid" id="m-vsi"></div>
+        <div class="advice-box" id="vsi-advice"></div>
+      </div>
+
+      <div class="out-section">
+        <h3>排程计划</h3>
+        <h4 style="margin:12px 0 6px;font-size:14px;color:var(--muted);">免疫序列</h4>
+        <table class="tbl" id="t-imm"></table>
+        <h4 style="margin:16px 0 6px;font-size:14px;color:var(--muted);">寄生虫预防</h4>
+        <table class="tbl" id="t-para"></table>
+      </div>
+
+      <div class="out-section">
+        <h3>输出 JSON（对应 POST /api/v1/metrics/derive 的响应）</h3>
+        <button class="copy-btn" onclick="copyJson()">复制 JSON</button>
+        <pre class="json" id="json-out"></pre>
+      </div>
+
+      <div class="disclaimer">
+        所有评分均为偏差提示，不是诊断。<br>
+        来源等级：A = 同行评议或大规模实测，B = 临床指南共识，C = 本项目定义的复合指标。
+        本页不发送任何网络请求，不保存任何数据 · 计算内核 <code>assets/js/quantify.js</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function read() {
+    return {
+      weight: +document.getElementById("f-weight").value,
+      ageMonths: +document.getElementById("f-age").value,
+      factor: document.getElementById("f-factor").value,
+      coat: document.getElementById("f-coat").value,
+      indoor: document.getElementById("f-indoor").checked,
+      monthlyHeartworm: document.getElementById("f-hw").checked,
+      activity: {
+        playMin: +document.getElementById("f-play").value,
+        sniffMin: +document.getElementById("f-sniff").value,
+        interactMin: +document.getElementById("f-interact").value,
+        sleepHours: +document.getElementById("f-sleep").value,
+        hasSafeSpace: document.getElementById("f-space").checked
+      },
+      env: {
+        temp: +document.getElementById("f-temp").value,
+        humidity: +document.getElementById("f-humid").value
+      },
+      visit: {
+        travelMin: +document.getElementById("f-travel").value,
+        negativeExp: document.getElementById("f-negexp").checked,
+        anxiety: document.getElementById("f-anx").checked,
+        ownerStress: document.getElementById("f-owner").checked,
+        pheromone: document.getElementById("f-phero").checked,
+        happyVisit: document.getElementById("f-happy").checked,
+        fastSwap: document.getElementById("f-fast").checked,
+        carWait: document.getElementById("f-carwait").checked
+      }
+    };
+  }
+
+  function render() {
+    var Q = window.CatQuantify;
+    var r = Q.evaluate(read());
+
+    // 派生指标
+    var derived = [
+      { k: "RER", v: r.rer, u: "kcal/天", note: "A 级" },
+      { k: "DER", v: r.der, u: "kcal/天", note: "B 级" },
+      { k: "饮水量低限", v: r.waterLow, u: "ml/天", note: "B 级" },
+      { k: "饮水量高限", v: r.waterHigh, u: "ml/天", note: "B 级" }
+    ];
+    document.getElementById("m-derived").innerHTML = derived.map(function (m) {
+      return '<div class="metric-card"><div class="k">' + m.k + '</div><div class="v">' + m.v +
+        '<span class="u">' + m.u + '</span></div><span class="tag p3">' + m.note + '</span></div>';
+    }).join("");
+
+    // DNS
+    var d = r.dns;
+    var dims = [
+      { lab: "睡眠", v: d.sleep }, { lab: "嗅闻", v: d.sniff },
+      { lab: "狩猎模拟", v: d.hunt }, { lab: "互动", v: d.social },
+      { lab: "独处空间", v: d.alone }
+    ];
+    document.getElementById("dns-bars").innerHTML = dims.map(function (b) {
+      return '<div class="bar-row"><span class="lab">' + b.lab + '</span>' +
+        '<div class="bar"><div class="fill" style="width:' + (b.v * 10) + '%"></div></div>' +
+        '<span class="num">' + b.v + '</span></div>';
+    }).join("") + '<div style="margin-top:10px;font-size:14px;">DNS 总分：<strong>' +
+      d.total + '/100</strong>（等级 ' + d.grade + '）</div>';
+    document.getElementById("dns-advice").textContent =
+      d.total >= 80 ? "当日需求达成度高。维持现有节奏。" :
+      d.total >= 60 ? "中等。建议补充狩猎模拟或互动时间。" :
+      "达成度不足。睡眠 / 互动 / 安全空间至少一项有较大缺口。";
+
+    // HRI
+    var h = r.hri;
+    var hriCls = h.level === "P0" ? "danger" : h.level === "P1" ? "warn" : "";
+    document.getElementById("m-hri").innerHTML =
+      '<div class="metric-card ' + hriCls + '"><div class="k">HRI 热风险</div><div class="v">' +
+      h.score + '<span class="u">/9</span></div><span class="tag ' + h.level.toLowerCase() + '">' + h.level + '</span></div>';
+    document.getElementById("hri-advice").textContent = h.advice;
+
+    // VSI
+    var v = r.vsi;
+    var vsiCls = v.level === "P1" ? "warn" : "";
+    document.getElementById("m-vsi").innerHTML =
+      '<div class="metric-card ' + vsiCls + '"><div class="k">VSI 就诊应激</div><div class="v">' +
+      v.score + '<span class="u">/100</span></div><span class="tag ' + v.level.toLowerCase() + '">' + v.level + '</span></div>';
+    document.getElementById("vsi-advice").textContent = v.advice;
+
+    // 免疫
+    var immRows = r.immunization.core.concat(r.immunization.nonCore);
+    document.getElementById("t-imm").innerHTML = "<thead><tr><th>项目</th><th>说明</th><th>优先级</th></tr></thead><tbody>" +
+      immRows.map(function (x) {
+        return "<tr><td>" + x.name + "</td><td>" + x.note + "</td><td><span class='tag " + x.due.toLowerCase() + "'>" + x.due + "</span></td></tr>";
+      }).join("") + "</tbody>";
+
+    // 寄生虫
+    document.getElementById("t-para").innerHTML = "<thead><tr><th>项目</th><th>频次</th><th>优先级</th></tr></thead><tbody>" +
+      r.parasite.map(function (x) {
+        return "<tr><td>" + x.name + "</td><td>" + x.freq + "</td><td><span class='tag " + x.due.toLowerCase() + "'>" + x.due + "</span></td></tr>";
+      }).join("") + "</tbody>";
+
+    // JSON
+    document.getElementById("json-out").textContent = JSON.stringify({
+      rer_kcal: r.rer, der_kcal: r.der,
+      water_ml: { low: r.waterLow, high: r.waterHigh },
+      dns: d, hri: h, vsi: v,
+      immunization: r.immunization, parasite: r.parasite
+    }, null, 2);
+  }
+
+  window.copyJson = function () {
+    var t = document.getElementById("json-out").textContent;
+    navigator.clipboard.writeText(t).then(function () {
+      var b = document.querySelector(".copy-btn");
+      var orig = b.textContent;
+      b.textContent = "已复制 ✓";
+      setTimeout(function () { b.textContent = orig; }, 1500);
+    });
+  };
+
+  document.querySelectorAll("input, select").forEach(function (el) {
+    el.addEventListener("input", render);
+    el.addEventListener("change", render);
+  });
+  render();
+})();
+</script>
+</body>
+</html>

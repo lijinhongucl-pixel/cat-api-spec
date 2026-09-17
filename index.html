@@ -6,16 +6,16 @@
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 <link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/">
 <title>CAT API — 猫咪接口规范</title>
-<meta name="description" content="受《DOG API — 狗狗接口规范》启发，本项目用同一套工程文体处理另一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta name="description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="CAT API — 猫咪接口规范">
-<meta property="og:description" content="受《DOG API — 狗狗接口规范》启发，本项目用同一套工程文体处理另一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta property="og:description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
 <meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/">
 <meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <meta property="og:site_name" content="CAT API">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CAT API — 猫咪接口规范">
-<meta name="twitter:description" content="受《DOG API — 狗狗接口规范》启发，本项目用同一套工程文体处理另一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta name="twitter:description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
 <meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <link rel="stylesheet" href="assets/css/spec.css">
 <link rel="stylesheet" href="assets/css/livecat.css">
@@ -32,15 +32,18 @@
   <span class="doc-tag">CAT API / 状态：持续 Revising</span>
   <h1>CAT API — 猫咪接口规范</h1>
   <p class="lead">
-    受《<a href="https://nullurl.github.io/dog-api-spec/">DOG API — 狗狗接口规范</a>》启发，本项目用同一套工程文体处理另一种已经大规模部署、
+    本项目用同一套工程文体处理一种已经大规模部署、
     却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。区别在于，这次我们把权限模型写反了——
     系统从架构层面否认 Owner 角色的存在。
   </p>
   <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
-  <a class="btn ghost" href="tools/expression.html" style="margin-left:8px;">打开表情渲染器</a>
+  <a class="btn ghost" href="tools/expression.html" style="margin-left:8px;">表情渲染器</a>
+  <a class="btn ghost" href="tools/expression-sheet.html" style="margin-left:8px;">表情联系表</a>
+  <a class="btn ghost" href="tools/quantifier.html" style="margin-left:8px;">量化评估器</a>
   <a class="btn ghost" href="tools/peripherals.html" style="margin-left:8px;">外设控制台</a>
+  <a class="btn ghost" href="sdk/demo.html" style="margin-left:8px;">SDK 控制台</a>
   <a class="btn ghost" href="reference/opinions.html" style="margin-left:8px;">一只猫的生活意见</a>
-  <a class="btn ghost" href="reference/voice.html" style="margin-left:8px;">口吻与文体</a>
+  <a class="btn ghost" href="reference/vitals.html" style="margin-left:8px;">生理速查</a>
   <a class="btn ghost" href="reference/cheatsheet.html" style="margin-left:8px;">速查卡</a>
   <a class="btn ghost" href="reference/errors.html" style="margin-left:8px;">错误码对照</a>
 
@@ -90,11 +93,33 @@
     <p>14 个可观测状态、13 维参数向量、实时 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，看它变脸。两个状态混合时权重不够会被拒绝。</p>
     <div class="foot">tools/expression.html · 引擎 assets/js/expression.js</div>
   </a>
+  <a class="card" href="tools/expression-sheet.html">
+    <div class="kicker">14 帧一次平铺</div>
+    <h3>表情联系表</h3>
+    <p>14 帧一次性平铺，每格附置信度与「它与基线差在哪一行」。带橙边的 PAIN 没有专属参数——那不是漏了，那是架构级缺陷。</p>
+    <div class="foot">tools/expression-sheet.html · 由引擎实时渲染</div>
+  </a>
   <a class="card" href="spec/cat.html#expr">
     <div class="kicker">§10 正文</div>
     <h3>表情接口定义（EXPR v1）</h3>
     <p>为什么猫的尾巴语义跟狗完全相反、为什么写操作一律 405、为什么 PAIN 状态的置信度只有 0.45——以及为什么它看起来和 RELAXED 一模一样。</p>
     <div class="foot">13 维向量 · 14 状态 · 6 端点 · 7 状态码</div>
+  </a>
+</div>
+
+<div class="section-title">量化</div>
+<div class="grid">
+  <a class="card" href="tools/quantifier.html">
+    <div class="kicker">可运行 · 算真数</div>
+    <h3>量化评估器</h3>
+    <p>填入体重、阶段、环境与当日行为，实时算出 RER/DER、DNS 五维达成度、热风险指数、就诊应激指数、免疫排程与分诊等级。参数直接读引擎，可复制 JSON 输出。</p>
+    <div class="foot">tools/quantifier.html · 引擎 assets/js/quantify.js</div>
+  </a>
+  <a class="card" href="reference/vitals.html">
+    <div class="kicker">一页查完 · 可打印</div>
+    <h3>生理指标速查</h3>
+    <p>体温、心率、呼吸、CRT、皮肤回弹、血压、BCS 的参考区间与家庭测量方法，附「什么时候该去医院」的 P0/P1/P2/P3 分档。</p>
+    <div class="foot">reference/vitals.html · 8 项 A 级指标</div>
   </a>
 </div>
 
@@ -158,6 +183,16 @@
   </a>
 </div>
 
+<div class="section-title">开发者</div>
+<div class="grid">
+  <a class="card" href="sdk/demo.html">
+    <div class="kicker">可运行 · 纯模拟</div>
+    <h3>SDK 控制台</h3>
+    <p>点击即可"调用"任一接口，观察返回码与话术。纯模拟，零网络请求，零数据收集。试试连点两次 POST /api/bath。</p>
+    <div class="foot">sdk/demo.html · 内核 sdk/cat-api-client.js</div>
+  </a>
+</div>
+
 <div class="section-title">参考</div>
 <div class="grid">
   <a class="card" href="reference/cheatsheet.html">
@@ -193,17 +228,12 @@
       这份文档有两个人说话：规范编写组给事实，<strong>当事猫给结论</strong>。
       后者的声部收录在 <a href="reference/opinions.html">《一只猫的生活意见》</a> 里。
     </p>
-    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
-      本项目致敬 <a href="https://nullurl.github.io/dog-api-spec/">DOG API</a> 和 HUMAN API。
-      它们在同一套文体下处理了另外两种系统。而猫，可能是这套文体唯一写不动的系统——
-      <strong>因为它不接受被写成任何东西</strong>。
-    </p>
   </div>
 </div>
 
 <div class="end-note" style="max-width:940px;margin:20px auto 80px;padding:0 28px;">
   CAT API · 静态站点，无构建步骤，无外部依赖 · 打开 index.html 即可阅读<br>
-  <span style="color:var(--faint);">v0.4.2 "Staff Release" · 致敬 DOG API · 致敬 HUMAN API</span>
+  <span style="color:var(--faint);">v0.5.0 "Full Spec Release"</span>
   <div style="margin-top:18px;">
     <a href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener"
        style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);

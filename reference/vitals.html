@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>生理指标速查 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .doc-wrap { max-width: 980px; margin: 0 auto; padding: 28px; }
+  .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  h1 { font-size: 26px; margin: 14px 0 8px; }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; max-width: 740px; }
+  table.vital { width: 100%; border-collapse: collapse; margin-bottom: 28px; font-size: 14.5px; }
+  table.vital th { text-align: left; padding: 10px 14px; background: var(--accent-soft);
+    color: var(--accent-deep); font-weight: 600; font-size: 13px; letter-spacing: 0.04em;
+    border-bottom: 2px solid var(--accent); }
+  table.vital td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.vital tr:hover td { background: var(--bg); }
+  .lvl { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+  .lvl.a { background: #fef3c7; color: var(--warn); }
+  .lvl.p0 { background: #fee2e2; color: var(--danger); }
+  .lvl.ok { background: #f0fdf4; color: var(--ok); }
+  .note-box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px 20px; margin-bottom: 24px; }
+  .note-box h3 { font-size: 15px; margin-bottom: 8px; }
+  .note-box p { font-size: 14px; line-height: 1.8; color: var(--ink); }
+  .alert { background: #fff7ed; border-color: #fed7aa; border-left: 3px solid var(--warn); }
+  .alert h3 { color: var(--warn); }
+  .disclaimer { font-size: 12px; color: var(--faint); margin-top: 24px; padding: 12px;
+    border: 1px dashed var(--line); border-radius: 6px; }
+  @media print { .topbar { display: none; } .doc-wrap { max-width: 100%; padding: 0; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="vitals.html" class="on">生理速查</a>
+      <a href="cheatsheet.html">速查卡</a>
+      <a href="errors.html">状态码</a>
+      <a href="glossary.html">术语表</a>
+    </div>
+  </div>
+</div>
+
+<div class="doc-wrap">
+  <span class="doc-tag">REFERENCE / VITALS · 可打印</span>
+  <h1>生理指标速查</h1>
+  <p class="lead">
+    体温、心率、呼吸、CRT、皮肤回弹、血压、BCS 的参考区间与家庭测量方法。
+    附「什么时候该去医院」的分档。
+    所有数值出自公开信源，等级标注：A 同行评议，B 临床指南，C 本项目定义。
+  </p>
+
+  <table class="vital">
+    <thead>
+      <tr>
+        <th style="width:120px;">指标</th>
+        <th>参考区间</th>
+        <th style="width:160px;">家庭测量方法</th>
+        <th style="width:80px;">等级</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>体温</strong><br><span style="color:var(--faint);font-size:12px;">体温</span></td>
+        <td>38.0 – 39.2 °C<br><span style="color:var(--warn);font-size:12px;">&lt; 37.2 或 &gt; 39.5 需就医</span></td>
+        <td>电子体温计，直肠或耳道。不要用汞柱。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>心率</strong><br><span style="color:var(--faint);font-size:12px;">心率</span></td>
+        <td>120 – 240 bpm（居家静息通常 140-220）</td>
+        <td>手放左胸壁肘后，数 15 秒 ×4。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>呼吸</strong><br><span style="color:var(--faint);font-size:12px;">呼吸频率</span></td>
+        <td>16 – 40 次/分（静息）<br><span style="color:var(--warn);font-size:12px;">睡眠时 &gt; 30 次/分 提示心衰风险</span></td>
+        <td>看胸腔起伏，数 15 秒 ×4。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>CRT</strong><br><span style="color:var(--faint);font-size:12px;">毛细血管再充盈</span></td>
+        <td>&lt; 2 秒<br><span style="color:var(--warn);font-size:12px;">&gt; 2 秒 = 休克 / 脱水 / 贫血</span></td>
+        <td>按压上唇牙龈变白，松手后粉红恢复用时。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>皮肤回弹</strong><br><span style="color:var(--faint);font-size:12px;">皮肤弹性</span></td>
+        <td>立即复位（&lt; 1 秒）<br><span style="color:var(--warn);font-size:12px;">回落慢 = 脱水</span></td>
+        <td>捏起肩胛间皮肤，松手看复位速度。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>收缩压</strong><br><span style="color:var(--faint);font-size:12px;">血压</span></td>
+        <td>120 – 160 mmHg<br><span style="color:var(--warn);font-size:12px;">&gt; 180 = 靶器官损伤风险</span></td>
+        <td>家庭难测——建议医院 Doppler 或 HDO。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>BCS</strong><br><span style="color:var(--faint);font-size:12px;">体况评分</span></td>
+        <td>理想 4-5 / 9<br><span style="color:var(--warn);font-size:12px;">&lt; 3 过瘦，&gt; 6 肥胖</span></td>
+        <td>摸肋骨：能感觉到但看不见 = 理想。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+      <tr>
+        <td><strong>水合</strong><br><span style="color:var(--faint);font-size:12px;">水分摄入</span></td>
+        <td>40 – 60 ml/kg/天（含食物）</td>
+        <td>测饮水量，加上湿粮水分。</td>
+        <td><span class="lvl a">A</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="note-box alert">
+    <h3>P0 · 必须立即就医（分钟级）</h3>
+    <p>
+      张口呼吸、牙龈苍白或发绀、剧烈呕吐 &gt; 3 次、无法排尿（公猫尤其紧急）、
+      体温 &gt; 41.1°C 或 &lt; 35°C、惊厥、大出血。
+    </p>
+  </div>
+
+  <div class="note-box alert">
+    <h3>P1 · 当日就医（小时级）</h3>
+    <p>
+      持续呕吐 24 小时、食欲废绝 &gt; 48 小时（胖猫 &gt; 24 小时即危险——脂肪肝）、
+      腹泻带血、跛行 &gt; 24 小时、饮水量骤变、呼噜模式异常。
+    </p>
+  </div>
+
+  <div class="note-box">
+    <h3>P2 · 72 小时就医</h3>
+    <p>行为改变、如厕姿势异常但能排、体重持续下降、毛色暗哑。</p>
+  </div>
+
+  <div class="note-box">
+    <h3>P3 · 常规</h3>
+    <p>年度体检、疫苗排程、驱虫、牙齿清洁。</p>
+  </div>
+
+  <div class="disclaimer">
+    所有数值来自公开临床指南（AAHA、ISFM、AAFP、FEDIAF 等），仅作参考。<br>
+    本页不替代兽医诊断。如有疑问请就近就医。
+  </div>
+</div>
+</body>
+</html>

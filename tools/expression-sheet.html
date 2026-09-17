@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>表情联系表 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .swrap { max-width: 1100px; margin: 0 auto; padding: 28px; }
+  .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
+    letter-spacing: 0.06em; font-weight: 600; }
+  h1 { font-size: 26px; margin: 14px 0 8px; }
+  h1 .sub { font-size: 14px; color: var(--muted); font-weight: 400; margin-left: 10px; }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; max-width: 760px; }
+  .grid-sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 18px; }
+  .frame { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px; transition: all .15s; }
+  .frame:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  .frame.pain { border-color: var(--warn); }
+  .frame svg { display: block; margin: 0 auto 12px; background: var(--bg);
+    border-radius: 6px; width: 120px; height: 120px; }
+  .frame h4 { font-size: 14px; margin-bottom: 4px; }
+  .frame .meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .frame .params { font-family: "SF Mono", "Menlo", monospace; font-size: 11px;
+    color: var(--muted); line-height: 1.6; }
+  .frame .conf { display: inline-block; padding: 1px 6px; border-radius: 3px;
+    background: var(--accent-soft); color: var(--accent-deep); font-size: 11px; margin-left: 4px; }
+  .foot-note { margin-top: 36px; padding: 16px 20px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; line-height: 1.8; color: var(--muted); }
+</style>
+</head>
+<body>
+<script src="../assets/js/expression.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="expression-sheet.html" class="on">表情联系表</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+    </div>
+  </div>
+</div>
+
+<div class="swrap">
+  <span class="doc-tag">CAT API §10 · 表情联系表</span>
+  <h1>表情联系表<span class="sub">14 状态 · 13 维参数 · 24×24 网格</span></h1>
+  <p class="lead">
+    每格是一帧的确定性渲染结果。带橙边的 <code>PAIN</code> 没有专属参数——
+    它的向量与健康基线<strong>几乎逐位相同</strong>，因为表情系统工作正常，只是内容与事实不符。
+    猫在疼痛时仍会看起来放松，这才是架构级缺陷。鼠标移上去可以看清它与基线差在哪一行。
+  </p>
+
+  <div class="grid-sheet" id="sheet"></div>
+
+  <div class="foot-note">
+    由 <code>assets/js/expression.js</code> 生成。渲染内核零依赖，浏览器与 Node 双用。<br>
+    规格正文见 <a href="../spec/cat.html#expr">CAT API §10 表情接口定义</a>。
+    可单独打开 <a href="expression.html">表情渲染器</a> 拖滑块改 13 维参数实时看效果。
+  </div>
+</div>
+
+<script>
+(function () {
+  var CE = window.CatExpression;
+  var sheet = document.getElementById("sheet");
+  var states = CE.STATES || [];
+  var html = "";
+
+  states.forEach(function (s) {
+    var params = s.params || CE.BASE;
+    var svg = CE.toSVG(params);
+    var isPain = s.id === "PAIN";
+    var diff = diffFromBase(params);
+
+    html += '<div class="frame' + (isPain ? ' pain' : '') + '" title="' + (s.note || '') + '">';
+    html += svg;
+    html += '<h4>' + s.id + '<span class="conf">conf ' + s.confidence + '</span></h4>';
+    html += '<div class="meta">' + (s.class || '') + ' · ' + (s.title || '') + '</div>';
+    if (isPain) {
+      html += '<div class="params">(与基线几乎逐位相同——架构级缺陷)</div>';
+    } else {
+      html += '<div class="params">' + diff.join(' · ') + '</div>';
+    }
+    html += '</div>';
+  });
+
+  sheet.innerHTML = html;
+
+  function diffFromBase(p) {
+    var out = [];
+    Object.keys(p).forEach(function (k) {
+      var base = CE.BASE[k];
+      if (base !== undefined && p[k] !== base) {
+        out.push(k + '=' + p[k]);
+      }
+    });
+    if (out.length === 0) out.push("(基线)");
+    return out.slice(0, 8);
+  }
+})();
+</script>
+</body>
+</html>
