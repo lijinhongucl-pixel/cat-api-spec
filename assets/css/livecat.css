@@ -50,7 +50,7 @@
 .state-walk .lc2-front-leg2 { animation-delay: 0.25s; }
 .state-walk .lc2-back-leg2 { animation-delay: 0s; }
 .state-walk .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   animation: lc2-tail-swish 1.2s ease-in-out infinite;
 }
 @keyframes lc2-walk-leg {
@@ -73,7 +73,7 @@
 .state-run .lc2-back-leg { animation-delay: 0.09s; }
 .state-run .lc2-front-leg2 { animation-delay: 0.09s; }
 .state-run .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   animation: lc2-tail-swish 0.4s ease-in-out infinite;
 }
 
@@ -86,7 +86,7 @@
 .state-sleep .lc2-eyes { opacity: 0.25; }
 .state-sleep .lc2-pupil-l, .state-sleep .lc2-pupil-r { height: 0.5px; y: 24; }
 .state-sleep .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   transform: rotate(40deg);
 }
 @keyframes lc2-breathe {
@@ -99,7 +99,7 @@
   transform: translateY(-4px);
 }
 .state-sit .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   animation: lc2-tail-swish 2s ease-in-out infinite;
 }
 
@@ -108,7 +108,7 @@
   animation: lc2-hop 0.7s cubic-bezier(.5,0,.5,1) infinite;
 }
 .state-play .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   animation: lc2-tail-swish 0.3s ease-in-out infinite;
 }
 @keyframes lc2-hop {
@@ -142,7 +142,7 @@
   animation: lc2-shake 0.18s ease-in-out infinite;
 }
 .state-zoom .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   transform: rotate(35deg);
 }
 @keyframes lc2-shake {
@@ -157,18 +157,18 @@
   transition: transform .2s ease;
 }
 .state-pet .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   transform: rotate(20deg);
 }
 
 /* §4.1 呼噜可视化（正向呼噜 25Hz → 节奏约 2.4 秒）
    触发条件：.lc2-purring（由 tick 在 SLEEP / PETTED 时挂上）
    三圈波纹错开 0.8 秒，从身体中心向外扩散并淡出。
-   transform-origin 等于身体中心 (50, 42) —— SVG 内坐标系。 */
+   transform-origin 等于呼噜波纹圆心 (52, 42) —— SVG 内坐标系。 */
 .lc2-purring .lc2-purr-r1,
 .lc2-purring .lc2-purr-r2,
 .lc2-purring .lc2-purr-r3 {
-  transform-origin: 50px 42px;
+  transform-origin: 52px 42px;
   animation: lc2-purr-ring 2.4s ease-out infinite;
 }
 .lc2-purring .lc2-purr-r2 { animation-delay: 0.8s; }
@@ -187,7 +187,7 @@
   animation: lc2-bunt-rub 1.4s ease-in-out infinite;
 }
 .state-bunt .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   transform: rotate(35deg);
   animation: lc2-tail-swish 1.8s ease-in-out infinite;
 }
@@ -202,7 +202,7 @@
   transform-origin: 50% 70%;
 }
 .state-hack .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   transform: rotate(-15deg);
   animation: lc2-tail-swish 0.6s ease-in-out infinite;
 }
@@ -325,7 +325,7 @@
   animation: lc2-ears-back 1.2s ease-in-out;
 }
 .lc2-annoyed .lc2-tail {
-  transform-origin: 86px 38px;
+  transform-origin: 72px 46px;
   animation: lc2-tail-swish 0.25s ease-in-out infinite;
 }
 @keyframes lc2-ears-back {

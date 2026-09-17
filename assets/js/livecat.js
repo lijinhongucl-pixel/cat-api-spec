@@ -418,74 +418,84 @@
     document.addEventListener("visibilitychange", onVisibility);
   }
 
-  /* ---------- SVG 猫身体 ---------- */
-  // 一个简化的 8-bit 风格侧视角猫，所有部位分组以便单独动画
+  /* ---------- SVG 猫身体 v3（AtomCode 打磨版）---------- */
+  // 贝塞尔曲线身体轮廓 + 圆角矩形腿 + 爪垫 + 虎斑纹 + 腹部渐变
+  // 头身比 1:1.5，6 根胡须，金色竖瞳，粉色鼻头
   function svgCat() {
     return '' +
     '<svg class="lc2-body" width="100" height="70" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
-      // 呼噜波纹层（§4.1）：默认不可见，state-sleep / state-pet 时由
-      // .lc2-purring class 触发 CSS 动画——三个同心圆从身体中心扩散
-      // 放在身体下层，z 序最低
+      '<defs>' +
+        '<linearGradient id="lc2-belly-grad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#3a3a38"/>' +
+          '<stop offset="1" stop-color="#5a5a55"/>' +
+        '</linearGradient>' +
+        '<clipPath id="lc2-body-clip">' +
+          '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z"/>' +
+        '</clipPath>' +
+      '</defs>' +
+      // 呼噜波纹层（§4.1）
       '<g class="lc2-purr">' +
-        '<circle class="lc2-purr-r1" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
-        '<circle class="lc2-purr-r2" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
-        '<circle class="lc2-purr-r3" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r1" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r2" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r3" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
       '</g>' +
-      // 尾巴（独立分组，可单独动画）
-      '<g class="lc2-tail">' +
-        '<path d="M 86 38 Q 96 30 96 22 Q 96 14 90 12" stroke="#3a3a38" stroke-width="5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M 86 38 Q 96 30 96 22 Q 96 14 90 12" stroke="#5a5a55" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+      // 尾巴：三次贝塞尔曲线
+      '<path class="lc2-tail" d="M72 46 C84 50 93 42 90 30 C88 22 80 22 81 30" fill="none" stroke="#2d2d2b" stroke-width="6" stroke-linecap="round"/>' +
+      // 后腿：圆角矩形
+      '<rect class="lc2-back-leg" x="61" y="50" width="8.5" height="16" rx="4.25" fill="#2d2d2b"/>' +
+      '<rect class="lc2-back-leg2" x="71.5" y="50" width="8.5" height="16" rx="4.25" fill="#2d2d2b"/>' +
+      // 身体：贝塞尔曲线轮廓
+      '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z" fill="#2d2d2b"/>' +
+      // 腹部渐变
+      '<path fill="url(#lc2-belly-grad)" clip-path="url(#lc2-body-clip)" d="M36 58 C40 50 64 50 68 56 C70 61 66 65 52 65 C40 65 34 62 36 58 Z"/>' +
+      // 虎斑条纹 ×3
+      '<g clip-path="url(#lc2-body-clip)" fill="none" stroke="#4d4d4d" stroke-width="4.5" stroke-linecap="round">' +
+        '<path d="M40 16 C34 26 33 44 37 61"/>' +
+        '<path d="M53 13 C55 26 52 44 52 63"/>' +
+        '<path d="M66 16 C72 26 73 44 69 61"/>' +
       '</g>' +
-      // 后腿
-      '<g class="lc2-leg lc2-back-leg">' +
-        '<rect x="64" y="48" width="8" height="14" rx="3" fill="#3a3a38"/>' +
-        '<rect x="62" y="58" width="12" height="4" rx="2" fill="#2a2a28"/>' +  // 爪
+      // 前腿：圆角矩形
+      '<rect class="lc2-front-leg" x="36" y="52" width="7.5" height="14" rx="3.75" fill="#2d2d2b"/>' +
+      '<rect class="lc2-front-leg2" x="45.5" y="52" width="7.5" height="14" rx="3.75" fill="#2d2d2b"/>' +
+      // 爪垫
+      '<g fill="#f7a6b4">' +
+        '<circle cx="39.75" cy="64" r="1.9"/>' +
+        '<circle cx="49.25" cy="64" r="1.9"/>' +
+        '<circle cx="65.25" cy="64" r="1.9"/>' +
+        '<circle cx="75.75" cy="64" r="1.9"/>' +
       '</g>' +
-      // 身体
-      '<ellipse cx="50" cy="42" rx="32" ry="14" fill="#3a3a38"/>' +
-      '<ellipse cx="50" cy="40" rx="32" ry="13" fill="#4a4a45"/>' +  // 高光
-      // 前腿
-      '<g class="lc2-leg lc2-front-leg">' +
-        '<rect x="28" y="48" width="8" height="14" rx="3" fill="#3a3a38"/>' +
-        '<rect x="26" y="58" width="12" height="4" rx="2" fill="#2a2a28"/>' +
-      '</g>' +
-      '<g class="lc2-leg lc2-front-leg2">' +
-        '<rect x="40" y="48" width="7" height="14" rx="3" fill="#2a2a28"/>' +
-      '</g>' +
-      '<g class="lc2-leg lc2-back-leg2">' +
-        '<rect x="76" y="48" width="7" height="14" rx="3" fill="#2a2a28"/>' +
-      '</g>' +
-      // 头部（分组，可转头）
+      // 头部
       '<g class="lc2-head">' +
         // 耳朵
-        '<path class="lc2-ear lc2-ear-l" d="M 14 22 L 18 8 L 24 18 Z" fill="#3a3a38"/>' +
-        '<path class="lc2-ear lc2-ear-l-inner" d="M 16 19 L 19 12 L 22 17 Z" fill="#ffb3b3"/>' +
-        '<path class="lc2-ear lc2-ear-r" d="M 26 18 L 32 8 L 34 22 Z" fill="#3a3a38"/>' +
-        '<path class="lc2-ear lc2-ear-r-inner" d="M 28 16 L 31 12 L 32 19 Z" fill="#ffb3b3"/>' +
-        // 头
-        '<circle cx="22" cy="26" r="13" fill="#3a3a38"/>' +
-        '<circle cx="22" cy="24" r="12" fill="#4a4a45"/>' +
-        // 眼睛
+        '<path class="lc2-ear lc2-ear-l" d="M 6 12 L 11 0 L 17 10 Z" fill="#2d2d2b"/>' +
+        '<path class="lc2-ear lc2-ear-l-inner" d="M 8 10 L 11.5 3 L 15 10 Z" fill="#ffb3b3"/>' +
+        '<path class="lc2-ear lc2-ear-r" d="M 17 10 L 23 0 L 28 12 Z" fill="#2d2d2b"/>' +
+        '<path class="lc2-ear lc2-ear-r-inner" d="M 19 10 L 23 3 L 26 10 Z" fill="#ffb3b3"/>' +
+        // 头：贝塞尔曲线轮廓（微心形）
+        '<path d="M 3 19 C 3 8 10 4 17 4 C 24 4 31 8 31 19 C 31 27 26 34 17 34 C 7 34 3 27 3 19 Z" fill="#2d2d2b"/>' +
+        '<path d="M 5 18 C 5 10 11 6 17 6 C 23 6 29 10 29 18 C 29 25 25 31 17 31 C 9 31 5 25 5 18 Z" fill="#3a3a38"/>' +
+        // 眼睛：大椭圆金色
         '<g class="lc2-eyes">' +
-          '<ellipse class="lc2-eye lc2-eye-l" cx="17" cy="24" rx="2.5" ry="3" fill="#ffd75e"/>' +
-          '<ellipse class="lc2-eye lc2-eye-r" cx="27" cy="24" rx="2.5" ry="3" fill="#ffd75e"/>' +
-          // 竖线瞳孔（可缩放）
-          '<rect class="lc2-pupil lc2-pupil-l" x="16.4" y="22" width="1.2" height="4" fill="#0a0a08"/>' +
-          '<rect class="lc2-pupil lc2-pupil-r" x="26.4" y="22" width="1.2" height="4" fill="#0a0a08"/>' +
+          '<ellipse class="lc2-eye lc2-eye-l" cx="12" cy="17" rx="3.5" ry="4.5" fill="#ffd75e"/>' +
+          '<ellipse class="lc2-eye lc2-eye-r" cx="22" cy="17" rx="3.5" ry="4.5" fill="#ffd75e"/>' +
+          '<rect class="lc2-pupil lc2-pupil-l" x="11.2" y="13" width="1.6" height="8" fill="#0a0a08"/>' +
+          '<rect class="lc2-pupil lc2-pupil-r" x="21.2" y="13" width="1.6" height="8" fill="#0a0a08"/>' +
         '</g>' +
         // 鼻头
-        '<path d="M 21 29 L 23 29 L 22 31 Z" fill="#ff8080"/>' +
+        '<path d="M 16 23 L 18 23 L 17 25 Z" fill="#ff8080"/>' +
         // 嘴
-        '<path class="lc2-mouth" d="M 22 31 Q 19 33 17 32 M 22 31 Q 25 33 27 32" stroke="#1a1a18" stroke-width="1" fill="none" stroke-linecap="round"/>' +
-        // 胡须
+        '<path class="lc2-mouth" d="M 17 25 Q 14 27 12 26 M 17 25 Q 20 27 22 26" stroke="#1a1a18" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+        // 胡须：6 根
         '<g class="lc2-whiskers" stroke="#aaa" stroke-width="0.5" fill="none">' +
-          '<line x1="12" y1="28" x2="4" y2="26"/>' +
-          '<line x1="12" y1="30" x2="4" y2="30"/>' +
-          '<line x1="32" y1="28" x2="40" y2="26"/>' +
-          '<line x1="32" y1="30" x2="40" y2="30"/>' +
+          '<line x1="8" y1="21" x2="0" y2="18"/>' +
+          '<line x1="8" y1="23" x2="0" y2="23"/>' +
+          '<line x1="8" y1="25" x2="0" y2="28"/>' +
+          '<line x1="26" y1="21" x2="34" y2="18"/>' +
+          '<line x1="26" y1="23" x2="34" y2="23"/>' +
+          '<line x1="26" y1="25" x2="34" y2="28"/>' +
         '</g>' +
         // 虎斑 M 纹
-        '<path d="M 18 16 L 20 19 L 22 16 L 24 19 L 26 16" stroke="#1a1a18" stroke-width="1" fill="none"/>' +
+        '<path d="M 13 10 L 15 13 L 17 10 L 19 13 L 21 10" stroke="#1a1a18" stroke-width="1" fill="none"/>' +
       '</g>' +
     '</svg>';
   }
