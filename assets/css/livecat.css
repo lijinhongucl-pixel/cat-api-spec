@@ -1,314 +1,258 @@
 /* =========================================================================
-   LIVECAT — 活猫样式表 v1
-   一只活在页面右下角的猫。状态机驱动，身体姿势 + 表情联动。
+   LIVECAT v2 — 自由活动猫样式
    ========================================================================= */
 
-.livecat {
+.lc2-wrap {
   position: fixed;
-  right: 26px;
-  bottom: 26px;
+  top: 0; left: 0;
+  width: 0; height: 0;
   z-index: 9999;
-  pointer-events: none;      /* 整个容器默认不挡操作；交互按钮自己打开 */
+  pointer-events: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   user-select: none;
+  transition: opacity .3s ease;
+}
+.lc2-wrap.lc2-hidden { opacity: 0; }
+
+/* ---------- 猫本体 ---------- */
+.lc2-cat {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100px;
+  height: 70px;
+  pointer-events: auto;
+  cursor: pointer;
+  transform-origin: center center;
+  will-change: transform;
+  transition: filter .3s ease;
+  z-index: 2;
+}
+.lc2-cat:hover { filter: brightness(1.08); }
+
+.lc2-body {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18));
+}
+
+/* ---------- 状态对应身体姿势 ---------- */
+
+/* 走路：腿来回摆动 */
+.state-walk .lc2-front-leg,
+.state-walk .lc2-front-leg2,
+.state-walk .lc2-back-leg,
+.state-walk .lc2-back-leg2 {
+  transform-origin: 50% 0%;
+  animation: lc2-walk-leg 0.5s ease-in-out infinite;
+}
+.state-walk .lc2-back-leg { animation-delay: 0.25s; }
+.state-walk .lc2-front-leg2 { animation-delay: 0.25s; }
+.state-walk .lc2-back-leg2 { animation-delay: 0s; }
+.state-walk .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 1.2s ease-in-out infinite;
+}
+@keyframes lc2-walk-leg {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-18deg); }
+}
+@keyframes lc2-tail-swish {
+  0%, 100% { transform: rotate(-10deg); }
+  50% { transform: rotate(15deg); }
+}
+
+/* 跑步：腿更快 */
+.state-run .lc2-front-leg,
+.state-run .lc2-front-leg2,
+.state-run .lc2-back-leg,
+.state-run .lc2-back-leg2 {
+  transform-origin: 50% 0%;
+  animation: lc2-walk-leg 0.18s ease-in-out infinite;
+}
+.state-run .lc2-back-leg { animation-delay: 0.09s; }
+.state-run .lc2-front-leg2 { animation-delay: 0.09s; }
+.state-run .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 0.4s ease-in-out infinite;
+}
+
+/* 睡觉：身体趴下、呼吸 */
+.state-sleep .lc2-body {
+  transform-origin: center 70%;
+  transform: scaleY(0.7) translateY(8px);
+  animation: lc2-breathe 3.6s ease-in-out infinite;
+}
+.state-sleep .lc2-eyes { opacity: 0.25; }
+.state-sleep .lc2-pupil-l, .state-sleep .lc2-pupil-r { height: 0.5px; y: 24; }
+.state-sleep .lc2-tail {
+  transform-origin: 86px 38px;
+  transform: rotate(40deg);
+}
+@keyframes lc2-breathe {
+  0%, 100% { transform: scaleY(0.7) translateY(8px); }
+  50% { transform: scaleY(0.74) translateY(6px); }
+}
+
+/* 坐姿：身体略抬高 */
+.state-sit .lc2-body {
+  transform: translateY(-4px);
+}
+.state-sit .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 2s ease-in-out infinite;
+}
+
+/* 玩耍 / 弹跳 */
+.state-play .lc2-body {
+  animation: lc2-hop 0.7s cubic-bezier(.5,0,.5,1) infinite;
+}
+.state-play .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 0.3s ease-in-out infinite;
+}
+@keyframes lc2-hop {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-14px); }
+  60% { transform: translateY(-14px); }
+}
+
+/* 吃东西：身体前倾、嘴动 */
+.state-eat .lc2-body {
+  transform: translateY(3px) rotate(-3deg);
+}
+.state-eat .lc2-mouth {
+  animation: lc2-chew 0.4s ease-in-out infinite;
+}
+@keyframes lc2-chew {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.5); }
+}
+
+/* 钻纸箱：身体变小、不动 */
+.state-box .lc2-body {
+  transform: scale(0.7) translateY(12px);
+  transition: transform .8s ease;
+}
+.state-box .lc2-eyes { opacity: 0.4; }
+.state-box .lc2-tail { opacity: 0.3; }
+
+/* 疯跑：身体快速抖动 */
+.state-zoom .lc2-body {
+  animation: lc2-shake 0.18s ease-in-out infinite;
+}
+.state-zoom .lc2-tail {
+  transform-origin: 86px 38px;
+  transform: rotate(35deg);
+}
+@keyframes lc2-shake {
+  0% { transform: translateX(-2px); }
+  50% { transform: translateX(2px); }
+  100% { transform: translateX(-2px); }
+}
+
+/* 被摸：身体微微拱起 */
+.state-pet .lc2-body {
+  transform: translateY(-3px) scaleY(1.04);
+  transition: transform .2s ease;
+}
+.state-pet .lc2-tail {
+  transform-origin: 86px 38px;
+  transform: rotate(20deg);
 }
 
 /* ---------- 气泡 ---------- */
-.lc-bubble {
-  position: absolute;
-  bottom: 100%;
-  right: 50%;
-  transform: translateX(50%) translateY(-8px) scale(0.9);
-  transform-origin: center bottom;
+.lc2-bubble {
+  position: fixed;
   background: var(--ink, #1f2430);
   color: #fff;
-  padding: 8px 13px;
+  padding: 9px 14px;
   border-radius: 14px;
   font-size: 12.5px;
   line-height: 1.5;
-  white-space: nowrap;
-  max-width: 240px;
+  max-width: 260px;
   opacity: 0;
+  transform: translate(-50%, -100%) scale(0.9);
   transition: opacity .25s ease, transform .25s cubic-bezier(.2,.9,.3,1.2);
   pointer-events: none;
   box-shadow: 0 8px 22px rgba(0,0,0,.18);
+  z-index: 3;
+  white-space: normal;
 }
-.lc-bubble.show {
+.lc2-bubble.show {
   opacity: 1;
-  transform: translateX(50%) translateY(-12px) scale(1);
-}
-.lc-bubble::after {
-  content: "";
-  position: absolute;
-  bottom: -7px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0; height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 7px solid var(--ink, #1f2430);
-}
-
-/* ---------- 舞台 ---------- */
-.lc-stage {
-  pointer-events: auto;
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #fef9f3 0%, #f4ecd8 100%);
-  border: 2px solid var(--line, #e5e7eb);
-  box-shadow: 0 10px 28px rgba(0,0,0,.12), inset 0 0 0 4px rgba(255,255,255,.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  cursor: pointer;
-  transition: box-shadow .3s ease, border-color .3s ease;
-  position: relative;
-}
-.lc-stage:hover {
-  box-shadow: 0 14px 32px rgba(0,0,0,.18), inset 0 0 0 4px rgba(255,255,255,.6);
-  border-color: var(--accent, #4b5563);
-}
-
-/* 地面阴影 */
-.lc-stage::after {
-  content: "";
-  position: absolute;
-  bottom: -16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 70px;
-  height: 8px;
-  background: radial-gradient(ellipse, rgba(0,0,0,.18) 0%, transparent 70%);
-  border-radius: 50%;
-}
-
-/* ---------- 身体（姿势容器）---------- */
-.cat-body {
-  width: 64px;
-  height: 64px;
-  position: relative;
-  transform-origin: center bottom;
-  transition: transform .5s cubic-bezier(.4,0,.2,1);
-}
-.cat-face {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-.cat-face svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-/* ---------- 八种姿势 ---------- */
-
-/* 睡觉：身体横向扁，慢慢起伏呼吸 */
-.pose-sleep {
-  transform: scaleY(0.7) scaleX(1.15);
-  animation: lc-breathe 3.6s ease-in-out infinite;
-}
-@keyframes lc-breathe {
-  0%, 100% { transform: scaleY(0.7) scaleX(1.15); }
-  50%      { transform: scaleY(0.74) scaleX(1.17); }
-}
-
-/* 巡视：身体微微左右挪动 */
-.pose-walk {
-  animation: lc-walk 2.4s ease-in-out infinite;
-}
-@keyframes lc-walk {
-  0%, 100% { transform: translateX(-3px) rotate(-1.5deg); }
-  50%      { transform: translateX(3px)  rotate(1.5deg); }
-}
-
-/* 理毛：身体前倾，头微低 */
-.pose-groom {
-  transform: translateY(2px) rotate(-4deg);
-  animation: lc-groom 1.6s ease-in-out infinite;
-}
-@keyframes lc-groom {
-  0%, 100% { transform: translateY(2px) rotate(-4deg); }
-  50%      { transform: translateY(0) rotate(-7deg); }
-}
-
-/* 玩耍：身体上下弹跳 */
-.pose-play {
-  animation: lc-bounce 0.7s cubic-bezier(.5,0,.5,1) infinite;
-}
-@keyframes lc-bounce {
-  0%, 100% { transform: translateY(0) scaleY(1); }
-  40%      { transform: translateY(-10px) scaleY(1.05); }
-  60%      { transform: translateY(-10px) scaleY(1.05); }
-}
-
-/* 凝视：身体不动，但头部微微追鼠标（用 transform）*/
-.pose-stare {
-  transform: scale(1.02);
-}
-
-/* 吃东西：身体低头前倾 */
-.pose-eat {
-  transform: translateY(3px) rotate(3deg);
-  animation: lc-chew 0.5s ease-in-out infinite;
-}
-@keyframes lc-chew {
-  0%, 100% { transform: translateY(3px) rotate(3deg); }
-  50%      { transform: translateY(5px) rotate(5deg); }
-}
-
-/* 钻纸箱：身体缩小成团 */
-.pose-box {
-  transform: scale(0.78) translateY(4px);
-  transition: transform .8s cubic-bezier(.4,0,.2,1);
-}
-.pose-box::before {
-  content: "";
-  position: absolute;
-  bottom: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56px;
-  height: 28px;
-  background: #c8a35e;
-  border-radius: 4px 4px 2px 2px;
-  z-index: -1;
-  opacity: 0.55;
-}
-
-/* 疯跑：身体快速左右抖动 */
-.pose-zoom {
-  animation: lc-zoom 0.25s ease-in-out infinite;
-}
-@keyframes lc-zoom {
-  0%   { transform: translateX(-8px) rotate(-3deg); }
-  25%  { transform: translateX(0)   rotate(0); }
-  50%  { transform: translateX(8px)  rotate(3deg); }
-  75%  { transform: translateX(0)   rotate(0); }
-  100% { transform: translateX(-8px) rotate(-3deg); }
-}
-
-/* 被摸：身体微微向上拱 */
-.pose-pet {
-  transform: translateY(-4px) scaleY(1.05);
-  transition: transform .25s ease;
-}
-
-/* 零食：身体前倾快速 */
-.pose-treat {
-  transform: translateY(2px) rotate(2deg);
+  transform: translate(-50%, -110%) scale(1);
 }
 
 /* ---------- 状态标签 ---------- */
-.lc-label {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
+.lc2-label {
+  position: fixed;
   font-size: 11px;
   color: var(--muted, #6b7280);
-  background: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.92);
   padding: 2px 8px;
   border-radius: 8px;
   pointer-events: none;
   white-space: nowrap;
   border: 1px solid var(--line, #e5e7eb);
   opacity: 0;
+  transform: translate(-50%, 0);
   transition: opacity .3s ease;
+  z-index: 3;
 }
-.livecat:hover .lc-label,
-.lc-label.lc-show { opacity: 1; }
+.lc2-wrap:hover .lc2-label { opacity: 1; }
 
 /* ---------- 控制按钮 ---------- */
-.lc-ctrls {
-  position: absolute;
-  top: -8px;
-  right: -8px;
+.lc2-ctrls {
+  position: fixed;
   display: flex;
   gap: 4px;
   pointer-events: auto;
   opacity: 0;
-  transform: scale(0.8);
-  transform-origin: top right;
+  transform: scale(0.85);
+  transform-origin: center;
   transition: opacity .2s ease, transform .2s cubic-bezier(.2,.9,.3,1.2);
+  z-index: 4;
 }
-.livecat:hover .lc-ctrls {
+.lc2-wrap:hover .lc2-ctrls {
   opacity: 1;
   transform: scale(1);
 }
-.lc-btn {
-  width: 26px;
-  height: 26px;
+.lc2-btn {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1px solid var(--line, #e5e7eb);
   background: #fff;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   transition: transform .15s ease, background .15s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,.08);
 }
-.lc-btn:hover {
-  transform: scale(1.15);
-  background: #f9fafb;
-}
-.lc-btn:active {
-  transform: scale(0.9);
-}
-
-/* ---------- 收起后的小启动器 ---------- */
-.lc-launcher {
-  position: fixed;
-  right: 26px;
-  bottom: 26px;
-  z-index: 9999;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 2px solid var(--line, #e5e7eb);
-  background: #fff;
-  cursor: pointer;
-  font-size: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  box-shadow: 0 8px 22px rgba(0,0,0,.12);
-  transition: transform .2s ease, box-shadow .2s ease;
-  pointer-events: auto;
-}
-.lc-launcher:hover {
-  transform: scale(1.08);
-  box-shadow: 0 10px 28px rgba(0,0,0,.16);
-}
-
-/* ---------- 隐藏整只猫 ---------- */
-.livecat.lc-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(20px);
-  transition: opacity .25s ease, transform .25s ease;
-}
+.lc2-btn:hover { transform: scale(1.15); background: #f9fafb; }
+.lc2-btn:active { transform: scale(0.9); }
 
 /* ---------- 移动端适配 ---------- */
 @media (max-width: 600px) {
-  .livecat { right: 12px; bottom: 12px; }
-  .lc-stage { width: 72px; height: 72px; }
-  .cat-body { width: 52px; height: 52px; }
-  .lc-bubble { font-size: 11.5px; max-width: 200px; }
-  .lc-ctrls { opacity: 1; transform: scale(1); }   /* 移动端没有 hover，按钮常驻 */
+  .lc2-cat { width: 80px; height: 56px; }
+  .lc2-bubble { font-size: 11.5px; max-width: 220px; }
+  .lc2-ctrls { opacity: 1; transform: scale(1); }
 }
 
-/* ---------- 尊重 prefers-reduced-motion ---------- */
+/* ---------- prefers-reduced-motion ---------- */
 @media (prefers-reduced-motion: reduce) {
-  .cat-body,
-  .pose-sleep, .pose-walk, .pose-groom, .pose-play,
-  .pose-eat, .pose-zoom, .pose-pet, .pose-treat {
+  .lc2-cat, .lc2-body, .lc2-tail, .lc2-leg, .lc2-mouth,
+  .state-sleep .lc2-body, .state-walk .lc2-front-leg,
+  .state-walk .lc2-front-leg2, .state-walk .lc2-back-leg,
+  .state-walk .lc2-back-leg2, .state-run .lc2-front-leg,
+  .state-run .lc2-front-leg2, .state-run .lc2-back-leg,
+  .state-run .lc2-back-leg2, .state-play .lc2-body,
+  .state-zoom .lc2-body, .state-eat .lc2-mouth {
     animation: none !important;
     transition: none !important;
   }
