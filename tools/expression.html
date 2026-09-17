@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>表情渲染器 — CAT API EXPR v1</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .xwrap { max-width: 1180px; margin: 0 auto; padding: 36px 28px 120px; }
+  .xhead { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 26px; }
+  .xhead h1 { font-size: 30px; }
+  .xhead p { color: var(--muted); font-size: 15px; max-width: 800px; }
+  .xhead .quote { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; margin: 18px 0 0;
+                  font-size: 15.5px; color: var(--ink); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .panel > h3 { margin: 0 0 14px; font-size: 13px; letter-spacing: .08em; color: var(--accent); text-transform: uppercase; }
+
+  .gal { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 14px; }
+  .gcard { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 12px 12px 13px;
+           cursor: pointer; transition: border-color .15s, transform .15s; }
+  .gcard:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .gcard.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .gcard .face { display: flex; justify-content: center; background: var(--code-bg); border-radius: 8px; padding: 8px; }
+  .gcard .face svg { display: block; width: 100%; max-width: 112px; height: auto; image-rendering: pixelated; }
+  .gcard .nm { font-size: 13.5px; font-weight: 600; margin: 9px 0 2px; line-height: 1.45; }
+  .gcard .id { font-family: "SF Mono", Menlo, monospace; font-size: 11px; color: var(--accent); letter-spacing: .04em; }
+  .gcard .cls { font-size: 11px; color: var(--faint); }
+  .gcard .hdrs { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag { font-size: 10.5px; padding: 2px 6px; border-radius: 4px; background: var(--code-bg); color: var(--code-ink);
+         font-family: "SF Mono", Menlo, monospace; white-space: nowrap; }
+  .tag.touch-yes { background: #dcfce7; color: #166534; }
+  .tag.touch-warn { background: #fffbeb; color: #92400e; }
+  .tag.touch-no  { background: #fee2e2; color: #991b1b; }
+  .tag.purr { background: #f3e8ff; color: #6b21a8; }
+
+  .cols { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+  @media (max-width: 1020px) { .cols { grid-template-columns: 1fr; } }
+
+  .stage { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 720px) { .stage { grid-template-columns: 1fr; } }
+  .bigface { background: var(--code-bg); border-radius: 12px; padding: 14px; display: flex; justify-content: center; }
+  .bigface svg { display: block; width: 100%; max-width: 232px; height: auto; image-rendering: pixelated; }
+  .meta dt { font-size: 11.5px; color: var(--faint); letter-spacing: .08em; text-transform: uppercase; margin-top: 11px; }
+  .meta dd { font-size: 14px; margin: 1px 0 0; }
+  .meta dd code { font-size: 12.5px; }
+  .note { font-size: 13.5px; color: var(--muted); line-height: 1.8; margin-top: 12px;
+          border-top: 1px dashed var(--line); padding-top: 11px; }
+
+  .sl { margin: 11px 0; }
+  .sl .row { display: flex; align-items: baseline; gap: 8px; }
+  .sl label { font-size: 12.5px; color: var(--muted); flex: 1; }
+  .sl .val { font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; font-variant-numeric: tabular-nums;
+             color: var(--accent); min-width: 46px; text-align: right; }
+  .sl .gr { font-size: 10px; color: var(--faint); font-family: "SF Mono", Menlo, monospace; }
+  .sl input[type=range] { width: 100%; accent-color: var(--accent); margin-top: 3px; }
+  .sl .dn { font-size: 11.5px; color: var(--faint); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab { font-size: 12.5px; padding: 5px 11px; border: 1px solid var(--line); background: var(--panel);
+         border-radius: 6px; cursor: pointer; font-family: inherit; color: var(--muted); }
+  .tab.on { border-color: var(--accent); color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+  .out { background: #1f2430; color: #d7dce5; border-radius: 10px; padding: 14px 16px; overflow: auto;
+         font-family: "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.7; white-space: pre;
+         max-height: 400px; margin: 0; }
+  .out.svg { white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+
+  table.t { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.t th { text-align: left; font-size: 11px; letter-spacing: .09em; text-transform: uppercase;
+               color: var(--faint); padding: 0 10px 7px 0; border-bottom: 1px solid var(--line); font-weight: 600; }
+  table.t td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.65; }
+  table.t td code { font-size: 12px; }
+  table.t .g { font-family: "SF Mono", Menlo, monospace; font-weight: 700; text-align: center; }
+  table.t .gA { color: #15803d; } table.t .gB { color: #b45309; } table.t .gC { color: #6b6b6b; }
+  table.t tr:last-child td { border-bottom: none; }
+
+  .ep { display: grid; grid-template-columns: 62px 1fr auto; gap: 12px; align-items: baseline;
+        padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .ep:last-child { border-bottom: none; }
+  .ep .m { font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; font-weight: 700;
+           padding: 1px 7px; border-radius: 4px; text-align: center; }
+  .ep .m.get { background: #dcfce7; color: #166534; }
+  .ep .m.post { background: #dbeafe; color: #1e40af; }
+  .ep .m.del { background: #fee2e2; color: #991b1b; }
+  .ep .p { font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  .ep .n { font-size: 12.5px; color: var(--muted); }
+
+  .mixrow { display: grid; grid-template-columns: 1fr 100px 44px 50px; gap: 8px; align-items: center;
+            font-size: 13px; margin: 7px 0; }
+  .mixrow input[type=range] { accent-color: var(--accent); }
+  .mixrow .w { font-family: "SF Mono", Menlo, monospace; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+  .mixrow .rm { font-size: 11.5px; color: var(--faint); cursor: pointer; border: 1px solid var(--line);
+                background: var(--panel); border-radius: 5px; padding: 2px 0; font-family: inherit; text-align:center; }
+
+  .hint { font-size: 12.5px; color: var(--faint); margin-top: 10px; line-height: 1.7; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
+  .btn.sm { font-size: 12.5px; padding: 5px 12px; }
+  #copymsg { font-size: 12.5px; color: var(--ok); }
+  .warnbox { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 10px;
+             padding: 13px 17px; font-size: 13.5px; line-height: 1.8; margin-top: 12px; }
+  .warnbox code { background: rgba(0,0,0,.07); padding: 1px 6px; border-radius: 4px; }
+  .okbox { background: #f0fdf4; border: 1px solid #86efac; color: #166534; border-radius: 10px;
+           padding: 13px 17px; font-size: 13.5px; line-height: 1.8; margin-top: 12px; }
+</style>
+</head>
+<body>
+<script src="../assets/js/expression.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html" class="on">表情渲染器</a>
+      <a href="../reference/opinions.html">生活意见</a>
+      <a href="../reference/errors.html">状态码</a>
+      <a href="https://nullurl.github.io/dog-api-spec/tools/expression.html" target="_blank">DOG 版 ↗</a>
+    </div>
+  </div>
+</div>
+
+<div class="xwrap">
+  <div class="xhead">
+    <h1>表情渲染器</h1>
+    <p>
+      这是 CAT API <strong>表情接口（EXPR v1）</strong>的<strong>渲染端</strong>——Staff 这一侧看到的东西。
+      §10 定义了 14 个可观测状态，由同一个 13 维参数向量驱动。
+    </p>
+    <div class="quote">
+      引擎里没有表情库。14 个状态是同一个 13 维参数向量上的 14 个点，
+      所有画面都是现算出来的——页面上每个像素都来自 <code>assets/js/expression.js</code>。
+    </div>
+  </div>
+
+  <div class="cols">
+    <div>
+      <div class="panel">
+        <h3>状态画廊 · 14</h3>
+        <div class="gal" id="gal"></div>
+        <div class="hint">点击任一表情把它载入下方的参数台。参数台是双向的：改数值会改变表情，选表情会覆盖数值。</div>
+      </div>
+
+      <div class="panel">
+        <h3>当前帧</h3>
+        <div class="stage">
+          <div class="bigface" id="bigface"></div>
+          <div>
+            <div style="font-size:19px;font-weight:600;" id="stname">—</div>
+            <div style="font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--accent);" id="stid">—</div>
+            <dl class="meta" id="stmeta"></dl>
+            <div class="note" id="stnote"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>输出</h3>
+        <div class="tabs" id="tabs">
+          <button class="tab on" data-t="svg">image/svg+xml</button>
+          <button class="tab" data-t="ascii">text/plain</button>
+          <button class="tab" data-t="json">application/json</button>
+          <button class="tab" data-t="uri">data URI</button>
+        </div>
+        <pre class="out" id="out"></pre>
+        <div class="btnrow">
+          <button class="btn sm" id="copy">复制输出</button>
+          <button class="btn ghost sm" id="download">下载 .svg</button>
+          <span id="copymsg"></span>
+        </div>
+        <div class="hint" id="outmeta"></div>
+      </div>
+
+      <div class="panel">
+        <h3>混合 · POST /api/v1/expression/compose</h3>
+        <p style="font-size:13.5px;color:var(--muted);margin-bottom:6px;">
+          混合是把两个参数向量做线性插值。主导状态权重 ≥ 0.60 才能保持，否则系统会回到主导态。
+        </p>
+        <div id="mix"></div>
+        <div class="btnrow">
+          <button class="btn sm" id="addmix">加一项</button>
+          <button class="btn ghost sm" id="resetmix">重置</button>
+          <span id="mixmsg" style="font-size:12.5px;"></span>
+        </div>
+        <div id="mixwarn"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h3>参数台 · 13 维</h3>
+        <div id="sliders"></div>
+        <div class="btnrow">
+          <button class="btn ghost sm" id="resetp">恢复该状态默认值</button>
+          <button class="btn ghost sm" id="zerop">归零</button>
+        </div>
+        <div class="hint">
+          参数在 <code>PARAM_DEFS</code> 中注册，含取值范围与来源等级。
+          等级 <span class="tag">A</span> 表示有同行评议出处，<span class="tag">C</span> 表示本项目定义。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>参数注册表 · 13 维</h3>
+    <table class="t" id="ptable"></table>
+  </div>
+
+  <div class="panel">
+    <h3>端点</h3>
+    <div id="eps"></div>
+    <div class="warnbox">
+      <strong>405 METHOD NOT ALLOWED</strong> ——
+      <code>POST /api/v1/expression/{state}</code> 是本节唯一一条真正的 MUST：<br>
+      <strong>表情是状态的上报，不是可调用的方法。</strong>
+      你可以改变状态（喂食、在场、不碰那个吸尘器），不能改变上报。任何试图直接设置表情的请求都会被拒绝。
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>状态码</h3>
+    <table class="t" id="ctable"></table>
+  </div>
+
+  <div class="panel">
+    <h3>关于这一章</h3>
+    <p style="font-size:14.5px;line-height:1.9;">
+      猫的 13 项表情参数里有 4 项是 A 级（瞳孔、尾巴、炸毛、呼噜），4 项 B 级，5 项 C 级。
+      比 DOG API 多了一项 A 级——因为猫的竖瞳和尾巴有更精确的量化研究。
+    </p>
+    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
+      注意 <code>PAIN</code> 状态：它的参数向量与基线<strong>几乎相同</strong>。
+      这不是渲染器的 bug——这正是 §10.3 描述的架构级缺陷：<strong>系统在隐藏疼痛</strong>。
+      它看起来和 RELAXED 一样，这才是问题。
+    </p>
+    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
+      正文见 <a href="../spec/cat.html#expr">CAT API §10</a>。
+      致敬 <a href="https://nullurl.github.io/dog-api-spec/tools/expression.html">DOG API 表情渲染器</a>。
+    </p>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var X = window.CatExpression;
+  var $ = function (id) { return document.getElementById(id); };
+
+  var current = "RELAXED";
+  var custom = null;
+  var tab = "svg";
+  var mixes = [{ state: "CURIOUS", weight: 60 }, { state: "PLAYFUL", weight: 40 }];
+
+  function params() { return custom || X.stateParams(current); }
+
+  /* ---------- 画廊 ---------- */
+  function renderGallery() {
+    $("gal").innerHTML = X.STATES.map(function (s) {
+      var touchCls = s.touch === "yes" ? " touch-yes" : s.touch === "warn" ? " touch-warn" : " touch-no";
+      return '<div class="gcard" data-id="' + s.id + '">' +
+        '<div class="face">' + X.toSVG(s.params, { scale: 4 }) + "</div>" +
+        '<div class="nm">' + s.title + "</div>" +
+        '<div class="id">' + s.id + ' <span class="cls">· ' + s.class + "</span></div>" +
+        '<div class="hdrs">' +
+          '<span class="tag' + touchCls + '">touch:' + s.touch + "</span>" +
+          '<span class="tag">tail:' + s.tail + "</span>" +
+          (s.vocal !== "silence" ? '<span class="tag purr">' + s.vocal + "</span>" : "") +
+        "</div></div>";
+    }).join("");
+    Array.prototype.forEach.call($("gal").querySelectorAll(".gcard"), function (el) {
+      el.addEventListener("click", function () {
+        current = el.getAttribute("data-id");
+        custom = null;
+        refresh(true);
+      });
+    });
+  }
+
+  /* ---------- 参数台 ---------- */
+  function renderSliders() {
+    var p = params();
+    $("sliders").innerHTML = X.PARAM_DEFS.map(function (d) {
+      var b = X.BOUNDS[d.key], min = b[0], max = b[1];
+      var step = (max - min) <= 2.5 ? 0.05 : 1;
+      return '<div class="sl"><div class="row"><label>' + d.label +
+        ' <span class="gr">[' + d.range + ']</span></label>' +
+        '<span class="val" id="v_' + d.key + '">' + fmt(p[d.key]) + "</span></div>" +
+        '<input type="range" id="p_' + d.key + '" min="' + min + '" max="' + max + '" step="' + step +
+        '" value="' + p[d.key] + '"></div>';
+    }).join("");
+    X.PARAM_DEFS.forEach(function (d) {
+      $("p_" + d.key).addEventListener("input", function () { setParam(d.key, parseFloat(this.value)); });
+    });
+  }
+
+  function fmt(v) { return typeof v === "number" ? (Math.round(v * 100) / 100).toString() : String(v); }
+
+  function setParam(k, v) {
+    custom = Object.assign({}, params());
+    custom[k] = v;
+    var el = $("v_" + k);
+    if (el) el.textContent = fmt(v);
+    draw();
+  }
+
+  function syncSliders() {
+    var p = params();
+    X.PARAM_DEFS.forEach(function (d) {
+      var i = $("p_" + d.key), v = $("v_" + d.key);
+      if (i) i.value = p[d.key];
+      if (v) v.textContent = fmt(p[d.key]);
+    });
+  }
+
+  /* ---------- 当前帧 ---------- */
+  function draw() {
+    var p = params();
+    var st = X.getState(current);
+    var label = custom ? st.title + "（已改参）" : st.title;
+    $("bigface").innerHTML = X.toSVG(p, { scale: 9, label: label });
+
+    $("stname").textContent = st.title;
+    $("stid").textContent = st.id + " · " + st.class + (custom ? " · 参数已修改" : "");
+    $("stmeta").innerHTML =
+      row("状态码", st.id === "PAIN" ? '<code>200 OK（但置信度 0.45）</code>' : "<code>200 OK</code>") +
+      row("X-Cat-Tail", "<code>" + st.tail + "</code>") +
+      row("X-Cat-Body", "<code>" + st.body + "</code>") +
+      row("X-Cat-Vocal", "<code>" + st.vocal + "</code>") +
+      row("X-Touch-Permission", "<code>" + st.touch + "</code>") +
+      row("X-Expression-Confidence", "<code>" + st.confidence.toFixed(2) + "</code>") +
+      row("参数向量", "<code>" + vec(p) + "</code>");
+    $("stnote").textContent = st.note;
+
+    Array.prototype.forEach.call($("gal").querySelectorAll(".gcard"), function (el) {
+      el.classList.toggle("on", el.getAttribute("data-id") === current);
+    });
+
+    output(p, st);
+  }
+
+  function row(k, v) { return "<dt>" + k + "</dt><dd>" + v + "</dd>"; }
+
+  function vec(p) {
+    var nonZero = X.PARAM_KEYS.filter(function (k) {
+      return Math.abs(p[k] - X.BASE[k]) > 0.01;
+    });
+    if (nonZero.length === 0) return "（纯基线）";
+    return nonZero.slice(0, 6).map(function (k) { return k + "=" + fmt(p[k]); }).join(" ") + (nonZero.length > 6 ? …" : "");
+  }
+
+  /* ---------- 输出 ---------- */
+  function output(p, st) {
+    var txt, meta;
+    if (tab === "svg") {
+      txt = X.toSVG(p, { scale: 12, label: st.title });
+      meta = "Accept: image/svg+xml · " + txt.length + " 字节";
+      $("out").className = "out svg";
+    } else if (tab === "ascii") {
+      txt = X.toASCII(p);
+      meta = "Accept: text/plain · 终端预览。猫的 ASCII 比狗难画——因为它有竖瞳和飞机耳。";
+      $("out").className = "out";
+    } else if (tab === "json") {
+      txt = JSON.stringify({
+        state: custom ? null : st.id,
+        composed: !!custom,
+        status: 200,
+        headers: {
+          "X-Cat-Tail": st.tail, "X-Cat-Body": st.body, "X-Cat-Vocal": st.vocal,
+          "X-Touch-Permission": st.touch,
+          "X-Expression-Confidence": st.confidence
+        },
+        params: p
+      }, null, 2);
+      meta = "Accept: application/json · 参数向量本身就是载荷。SVG 只是它的一个视图。";
+      $("out").className = "out";
+    } else {
+      txt = X.toDataURI(p, { scale: 8 });
+      meta = "可直接放进 <img src> 的形式。";
+      $("out").className = "out svg";
+    }
+    $("out").textContent = txt;
+    $("outmeta").textContent = meta;
+  }
+
+  /* ---------- 混合 ---------- */
+  function renderMix() {
+    $("mix").innerHTML = mixes.map(function (m, i) {
+      return '<div class="mixrow">' +
+        '<select data-i="' + i + '" class="msel" style="padding:4px 8px;border:1px solid var(--line);' +
+        'border-radius:6px;font-family:inherit;font-size:12.5px;background:#fff;color:var(--ink);">' +
+        X.STATES.map(function (s) {
+          return '<option value="' + s.id + '"' + (s.id === m.state ? " selected" : "") + ">" + s.id + "</option>";
+        }).join("") + "</select>" +
+        '<input type="range" data-i="' + i + '" class="mw" min="0" max="100" value="' + m.weight + '">' +
+        '<span class="w" data-i="' + i + '">' + m.weight + "%</span>" +
+        '<button class="rm" data-i="' + i + '">移除</button></div>';
+    }).join("") +
+    '<div class="btnrow"><button class="btn sm" id="applymix">渲染混合帧</button></div>';
+
+    Array.prototype.forEach.call($("mix").querySelectorAll(".msel"), function (el) {
+      el.addEventListener("change", function () {
+        mixes[+this.getAttribute("data-i")].state = this.value;
+        updateMixInfo();
+      });
+    });
+    Array.prototype.forEach.call($("mix").querySelectorAll(".mw"), function (el) {
+      el.addEventListener("input", function () {
+        var i = +this.getAttribute("data-i");
+        mixes[i].weight = +this.value;
+        var w = $("mix").querySelector('.w[data-i="' + i + '"]');
+        if (w) w.textContent = this.value + "%";
+        updateMixInfo();
+      });
+    });
+    Array.prototype.forEach.call($("mix").querySelectorAll(".rm"), function (el) {
+      el.addEventListener("click", function () {
+        if (mixes.length <= 1) return;
+        mixes.splice(+this.getAttribute("data-i"), 1); renderMix();
+      });
+    });
+    $("applymix").addEventListener("click", applyMix);
+    updateMixInfo();
+  }
+
+  function updateMixInfo() {
+    var r = X.blend(mixes);
+    if (!r.ok) {
+      $("mixmsg").textContent = "";
+      $("mixwarn").innerHTML = '<div class="warnbox"><strong>422 UNPROCESSABLE</strong> —— ' + r.reason +
+        "<br>参数向量不成立：没有权重为正的状态。</div>";
+      return;
+    }
+    $("mixmsg").textContent = "主导 " + r.dominant + " · 稳定度 " + r.stability.toFixed(2);
+    var c = X.compose(mixes, { persist: true });
+    $("mixwarn").innerHTML = c.ok
+      ? '<div class="okbox">最高权重 ≥ 0.60，该混合<strong>可以保持</strong>。这就是它此刻真正的状态。</div>'
+      : '<div class="warnbox"><strong>409 CONFLICT</strong> —— ' + c.reason +
+        "<br>混合表情无法保持。系统会回到权重最大的那个状态（" + c.dominant + "，" +
+        c.stability.toFixed(2) + "）。<br><strong>你没有得到一个新表情，你只是看到了过渡帧。</strong></div>";
+  }
+
+  function applyMix() {
+    var r = X.blend(mixes);
+    if (!r.ok) { $("mixmsg").textContent = "422 UNPROCESSABLE"; return; }
+    custom = r.params;
+    current = r.dominant;
+    syncSliders(); draw();
+  }
+
+  /* ---------- 表格 ---------- */
+  function renderTables() {
+    $("ptable").innerHTML =
+      "<tr><th>参数</th><th>范围</th><th>含义</th><th style='text-align:center'>等级</th></tr>" +
+      X.PARAM_DEFS.map(function (d) {
+        return "<tr><td><code>" + d.key + "</code><br>" + d.label + "</td>" +
+          "<td><code>" + d.range + "</code> <span style='color:var(--faint)'>" + d.unit + "</span></td>" +
+          "<td style='color:var(--muted)'>" + d.note + "</td>" +
+          '<td class="g g' + d.grade + '">' + d.grade + "</td></tr>";
+      }).join("");
+
+    $("eps").innerHTML = X.ENDPOINTS.map(function (e) {
+      var m = e.method.toLowerCase();
+      return '<div class="ep"><span class="m ' + (m === "delete" || m === "patch" ? "del" : m) + '">' + e.method + "</span>" +
+        '<span class="p">' + e.path + "</span>" +
+        "<span class='n'>" + e.note + "</span></div>";
+    }).join("");
+
+    $("ctable").innerHTML =
+      "<tr><th style='width:70px'>码</th><th style='width:190px'>名称</th><th>含义</th></tr>" +
+      X.STATUS_CODES.map(function (c) {
+        return "<tr><td><code>" + c.code + "</code></td><td><code>" + c.name + "</code></td>" +
+          "<td style='color:var(--muted)'>" + c.note + "</td></tr>";
+      }).join("");
+  }
+
+  /* ---------- 事件 ---------- */
+  Array.prototype.forEach.call($("tabs").querySelectorAll(".tab"), function (b) {
+    b.addEventListener("click", function () {
+      tab = this.getAttribute("data-t");
+      Array.prototype.forEach.call($("tabs").querySelectorAll(".tab"), function (o) {
+        o.classList.toggle("on", o === b);
+      });
+      draw();
+    });
+  });
+
+  $("resetp").addEventListener("click", function () { custom = null; syncSliders(); draw(); });
+  $("zerop").addEventListener("click", function () {
+    custom = Object.assign({}, X.BASE);
+    syncSliders(); draw();
+  });
+  $("addmix").addEventListener("click", function () {
+    if (mixes.length >= 4) return;
+    var used = mixes.map(function (m) { return m.state; });
+    var next = X.STATE_IDS.filter(function (id) { return used.indexOf(id) < 0; })[0] || "RELAXED";
+    mixes.push({ state: next, weight: 30 }); renderMix();
+  });
+  $("resetmix").addEventListener("click", function () {
+    mixes = [{ state: "CURIOUS", weight: 60 }, { state: "PLAYFUL", weight: 40 }]; renderMix();
+  });
+
+  $("copy").addEventListener("click", function () {
+    var txt = $("out").textContent;
+    var done = function () {
+      $("copymsg").textContent = "已复制";
+      setTimeout(function () { $("copymsg").textContent = ""; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done, function () { fb(txt, done); });
+    } else { fb(txt, done); }
+  });
+  function fb(txt, done) {
+    var ta = document.createElement("textarea");
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); }
+    catch (e) { $("copymsg").textContent = "复制失败，请手动选择"; }
+    document.body.removeChild(ta);
+  }
+
+  $("download").addEventListener("click", function () {
+    var svg = X.toSVG(params(), { scale: 12, label: X.getState(current).title });
+    var blob = new Blob([svg], { type: "image/svg+xml" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (custom ? "composed" : current.toLowerCase()) + ".svg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  /* ---------- 启动 ---------- */
+  renderGallery();
+  renderSliders();
+  renderMix();
+  renderTables();
+  draw();
+})();
+</script>
+</body>
+</html>
