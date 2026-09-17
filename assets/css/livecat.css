@@ -36,6 +36,17 @@
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18));
 }
 
+/* v4：变换锚点修正——以元素自身包围盒为参照，不再挂 viewBox 原点 */
+.lc2-eye-l, .lc2-eye-r, .lc2-mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.lc2-ear-l { transform-box: fill-box; transform-origin: bottom right; }
+.lc2-ear-r { transform-box: fill-box; transform-origin: bottom left; }
+.lc2-front-leg, .lc2-front-leg2, .lc2-back-leg, .lc2-back-leg2 {
+  transform-box: fill-box;
+}
+
 /* ---------- 状态对应身体姿势 ---------- */
 
 /* 走路：腿来回摆动 */

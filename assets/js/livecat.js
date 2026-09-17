@@ -418,84 +418,93 @@
     document.addEventListener("visibilitychange", onVisibility);
   }
 
-  /* ---------- SVG 猫身体 v3（AtomCode 打磨版）---------- */
-  // 贝塞尔曲线身体轮廓 + 圆角矩形腿 + 爪垫 + 虎斑纹 + 腹部渐变
-  // 头身比 1:1.5，6 根胡须，金色竖瞳，粉色鼻头
+  /* ---------- SVG 猫身体 v4（精修设计版）---------- */
+  // 暖炭灰三色调 + 金色放射渐变虹膜 + 双层眼高光 + 脸颊绒毛 + 弧形胡须 + 胸前毛领
+  // 头身比 1:1.5，贝塞尔有机轮廓，虎斑 clipPath，全部 class 与动画锚点保留
   function svgCat() {
     return '' +
     '<svg class="lc2-body" width="100" height="70" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
       '<defs>' +
         '<linearGradient id="lc2-belly-grad" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0" stop-color="#3a3a38"/>' +
-          '<stop offset="1" stop-color="#5a5a55"/>' +
+          '<stop offset="0" stop-color="#5E5956"/>' +
+          '<stop offset="1" stop-color="#7A736E"/>' +
         '</linearGradient>' +
+        '<radialGradient id="lc2-iris-grad" cx="0.35" cy="0.3" r="0.95">' +
+          '<stop offset="0" stop-color="#FFE9A8"/>' +
+          '<stop offset="0.45" stop-color="#FFC53D"/>' +
+          '<stop offset="1" stop-color="#D4880F"/>' +
+        '</radialGradient>' +
         '<clipPath id="lc2-body-clip">' +
           '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z"/>' +
         '</clipPath>' +
       '</defs>' +
-      // 呼噜波纹层（§4.1）
       '<g class="lc2-purr">' +
         '<circle class="lc2-purr-r1" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
         '<circle class="lc2-purr-r2" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
         '<circle class="lc2-purr-r3" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
       '</g>' +
-      // 尾巴：三次贝塞尔曲线
-      '<path class="lc2-tail" d="M72 46 C84 50 93 42 90 30 C88 22 80 22 81 30" fill="none" stroke="#2d2d2b" stroke-width="6" stroke-linecap="round"/>' +
-      // 后腿：圆角矩形
-      '<rect class="lc2-back-leg" x="61" y="50" width="8.5" height="16" rx="4.25" fill="#2d2d2b"/>' +
-      '<rect class="lc2-back-leg2" x="71.5" y="50" width="8.5" height="16" rx="4.25" fill="#2d2d2b"/>' +
-      // 身体：贝塞尔曲线轮廓
-      '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z" fill="#2d2d2b"/>' +
-      // 腹部渐变
-      '<path fill="url(#lc2-belly-grad)" clip-path="url(#lc2-body-clip)" d="M36 58 C40 50 64 50 68 56 C70 61 66 65 52 65 C40 65 34 62 36 58 Z"/>' +
-      // 虎斑条纹 ×3
-      '<g clip-path="url(#lc2-body-clip)" fill="none" stroke="#4d4d4d" stroke-width="4.5" stroke-linecap="round">' +
-        '<path d="M40 16 C34 26 33 44 37 61"/>' +
-        '<path d="M53 13 C55 26 52 44 52 63"/>' +
-        '<path d="M66 16 C72 26 73 44 69 61"/>' +
+      '<path class="lc2-tail" d="M72 46 C85 51 95 42 91.5 29 C89.5 20.5 80.5 20.5 81.5 29" fill="none" stroke="#3F3B38" stroke-width="7" stroke-linecap="round"/>' +
+      '<circle cx="81.5" cy="29" r="3.7" fill="#5E5956"/>' +
+      '<rect class="lc2-back-leg2" x="70" y="50" width="9" height="16" rx="4.5" fill="#3F3B38"/>' +
+      '<rect class="lc2-front-leg2" x="46" y="51" width="8" height="15" rx="4" fill="#3F3B38"/>' +
+      '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z" fill="#4A4543"/>' +
+      '<path d="M37 28 C45 21 61 21 69 28 C73.5 32 76 37 76.5 42.5 C65 36.5 45 36.5 33.5 43.5 C33 37 34 31.5 37 28 Z" fill="#3F3B38" opacity="0.6"/>' +
+      '<path fill="url(#lc2-belly-grad)" clip-path="url(#lc2-body-clip)" d="M36 58 C40 49 64 49 68 56 C70 61 66 65 52 65 C40 65 34 62 36 58 Z"/>' +
+      '<g clip-path="url(#lc2-body-clip)" fill="none" stroke="#332F2C" stroke-width="4" stroke-linecap="round" opacity="0.85">' +
+        '<path d="M41 17 C35 27 34 44 38 61"/>' +
+        '<path d="M53 14 C55 27 52 44 52 62"/>' +
+        '<path d="M65 17 C71 27 72 44 68 61"/>' +
       '</g>' +
-      // 前腿：圆角矩形
-      '<rect class="lc2-front-leg" x="36" y="52" width="7.5" height="14" rx="3.75" fill="#2d2d2b"/>' +
-      '<rect class="lc2-front-leg2" x="45.5" y="52" width="7.5" height="14" rx="3.75" fill="#2d2d2b"/>' +
-      // 爪垫
-      '<g fill="#f7a6b4">' +
-        '<circle cx="39.75" cy="64" r="1.9"/>' +
-        '<circle cx="49.25" cy="64" r="1.9"/>' +
-        '<circle cx="65.25" cy="64" r="1.9"/>' +
-        '<circle cx="75.75" cy="64" r="1.9"/>' +
+      '<rect class="lc2-back-leg" x="60" y="49" width="9" height="17" rx="4.5" fill="#4A4543"/>' +
+      '<rect class="lc2-front-leg" x="35" y="50" width="8" height="16" rx="4" fill="#4A4543"/>' +
+      '<ellipse cx="39" cy="65" rx="4.6" ry="2.7" fill="#5E5956"/>' +
+      '<ellipse cx="50" cy="65" rx="4.4" ry="2.6" fill="#5E5956"/>' +
+      '<ellipse cx="64.5" cy="65" rx="5" ry="2.9" fill="#5E5956"/>' +
+      '<ellipse cx="74.5" cy="65" rx="4.8" ry="2.8" fill="#5E5956"/>' +
+      '<g fill="#F293A0">' +
+        '<ellipse cx="39" cy="65.6" rx="1.6" ry="1.1"/>' +
+        '<circle cx="37.1" cy="63.9" r="0.75"/>' +
+        '<circle cx="40.9" cy="63.9" r="0.75"/>' +
+        '<ellipse cx="64.5" cy="65.6" rx="1.6" ry="1.1"/>' +
+        '<circle cx="62.6" cy="63.9" r="0.75"/>' +
+        '<circle cx="66.4" cy="63.9" r="0.75"/>' +
       '</g>' +
-      // 头部
+      '<path d="M 27.5 25 C 31.5 22.5 36 25 37.2 30 C 38.2 35 35 39.8 30.5 39.2 C 26.5 38.2 24.8 31.5 27.5 25 Z" fill="#6B6562"/>' +
       '<g class="lc2-head">' +
-        // 耳朵
-        '<path class="lc2-ear lc2-ear-l" d="M 6 12 L 11 0 L 17 10 Z" fill="#2d2d2b"/>' +
-        '<path class="lc2-ear lc2-ear-l-inner" d="M 8 10 L 11.5 3 L 15 10 Z" fill="#ffb3b3"/>' +
-        '<path class="lc2-ear lc2-ear-r" d="M 17 10 L 23 0 L 28 12 Z" fill="#2d2d2b"/>' +
-        '<path class="lc2-ear lc2-ear-r-inner" d="M 19 10 L 23 3 L 26 10 Z" fill="#ffb3b3"/>' +
-        // 头：贝塞尔曲线轮廓（微心形）
-        '<path d="M 3 19 C 3 8 10 4 17 4 C 24 4 31 8 31 19 C 31 27 26 34 17 34 C 7 34 3 27 3 19 Z" fill="#2d2d2b"/>' +
-        '<path d="M 5 18 C 5 10 11 6 17 6 C 23 6 29 10 29 18 C 29 25 25 31 17 31 C 9 31 5 25 5 18 Z" fill="#3a3a38"/>' +
-        // 眼睛：大椭圆金色
+        '<path class="lc2-ear lc2-ear-l" d="M 7 11 C 7.5 6 9.5 2 12 0.5 C 14.5 2.5 16 6 16.5 10 C 13 8.5 10 9 7 11 Z" fill="#3F3B38"/>' +
+        '<path class="lc2-ear lc2-ear-l-inner" d="M 9.6 8.6 C 10.1 5.6 11.5 3.6 12.4 3.1 C 13.5 4.6 14.4 6.6 14.9 9 C 13 8.1 11.1 8.1 9.6 8.6 Z" fill="#F2A7B8"/>' +
+        '<path class="lc2-ear lc2-ear-r" d="M 19.5 10 C 20 6 21.5 2.5 24 0.5 C 26.5 2 29 6 29 11 C 26 9 22.5 8.5 19.5 10 Z" fill="#3F3B38"/>' +
+        '<path class="lc2-ear lc2-ear-r-inner" d="M 21.6 9 C 22.1 6.6 23.1 4.6 24.1 3.6 C 25.4 4.6 26.4 6.4 26.9 8.6 C 25 8 23.1 8 21.6 9 Z" fill="#F2A7B8"/>' +
+        '<path d="M 4.5 19 C 3.5 9 9.5 3 18 3 C 26.5 3 32.5 9 31.5 19 C 32.8 21.5 33 24 32.3 26.5 L 34.8 28.2 L 31.5 30.2 C 28.6 35 23.5 37.8 18 37.8 C 12.5 37.8 7.4 35 4.5 30.2 L 1.2 28.2 L 3.7 26.5 C 3 24 3.2 21.5 4.5 19 Z" fill="#4A4543"/>' +
+        '<path d="M 7 19 C 6.4 11 11.6 6 18 6 C 24.4 6 29.6 11 29 19 C 29.9 22 29.9 25.6 28.5 28.8 C 26 33.4 22 35.4 18 35.4 C 14 35.4 10 33.4 7.5 28.8 C 6.1 25.6 6.1 22 7 19 Z" fill="#5E5956"/>' +
+        '<path d="M 13.5 8.5 L 15.7 12 L 18 9 L 20.3 12 L 22.5 8.5" stroke="#332F2C" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
         '<g class="lc2-eyes">' +
-          '<ellipse class="lc2-eye lc2-eye-l" cx="12" cy="17" rx="3.5" ry="4.5" fill="#ffd75e"/>' +
-          '<ellipse class="lc2-eye lc2-eye-r" cx="22" cy="17" rx="3.5" ry="4.5" fill="#ffd75e"/>' +
-          '<rect class="lc2-pupil lc2-pupil-l" x="11.2" y="13" width="1.6" height="8" fill="#0a0a08"/>' +
-          '<rect class="lc2-pupil lc2-pupil-r" x="21.2" y="13" width="1.6" height="8" fill="#0a0a08"/>' +
+          '<g class="lc2-eye lc2-eye-l">' +
+            '<ellipse cx="12.5" cy="18" rx="4.2" ry="5" fill="url(#lc2-iris-grad)"/>' +
+            '<rect class="lc2-pupil lc2-pupil-l" x="11.7" y="13" width="1.6" height="9" rx="0.8" fill="#17130F"/>' +
+            '<circle cx="14" cy="15.6" r="1.35" fill="#FFFFFF" opacity="0.95"/>' +
+            '<circle cx="11.4" cy="20.4" r="0.62" fill="#FFFFFF" opacity="0.55"/>' +
+          '</g>' +
+          '<g class="lc2-eye lc2-eye-r">' +
+            '<ellipse cx="23.5" cy="18" rx="4.2" ry="5" fill="url(#lc2-iris-grad)"/>' +
+            '<rect class="lc2-pupil lc2-pupil-r" x="22.7" y="13" width="1.6" height="9" rx="0.8" fill="#17130F"/>' +
+            '<circle cx="25" cy="15.6" r="1.35" fill="#FFFFFF" opacity="0.95"/>' +
+            '<circle cx="22.4" cy="20.4" r="0.62" fill="#FFFFFF" opacity="0.55"/>' +
+          '</g>' +
         '</g>' +
-        // 鼻头
-        '<path d="M 16 23 L 18 23 L 17 25 Z" fill="#ff8080"/>' +
-        // 嘴
-        '<path class="lc2-mouth" d="M 17 25 Q 14 27 12 26 M 17 25 Q 20 27 22 26" stroke="#1a1a18" stroke-width="1" fill="none" stroke-linecap="round"/>' +
-        // 胡须：6 根
-        '<g class="lc2-whiskers" stroke="#aaa" stroke-width="0.5" fill="none">' +
-          '<line x1="8" y1="21" x2="0" y2="18"/>' +
-          '<line x1="8" y1="23" x2="0" y2="23"/>' +
-          '<line x1="8" y1="25" x2="0" y2="28"/>' +
-          '<line x1="26" y1="21" x2="34" y2="18"/>' +
-          '<line x1="26" y1="23" x2="34" y2="23"/>' +
-          '<line x1="26" y1="25" x2="34" y2="28"/>' +
+        '<ellipse cx="7.6" cy="26.6" rx="2.3" ry="1.35" fill="#F5A9B8" opacity="0.5"/>' +
+        '<ellipse cx="28.4" cy="26.6" rx="2.3" ry="1.35" fill="#F5A9B8" opacity="0.5"/>' +
+        '<path d="M 16.4 25.4 Q 18 24.7 19.6 25.4 L 18 28.1 Z" fill="#F293A0"/>' +
+        '<path d="M 18 28.1 L 18 30" stroke="#2A2521" stroke-width="0.8" stroke-linecap="round"/>' +
+        '<path class="lc2-mouth" d="M 18 30 Q 15.6 32.2 13.6 31.2 M 18 30 Q 20.4 32.2 22.4 31.2" stroke="#2A2521" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+        '<g class="lc2-whiskers" stroke="#B8B2AC" stroke-width="0.55" fill="none" stroke-linecap="round">' +
+          '<path d="M 7.4 24.6 Q 3.8 22.6 0.6 20.8"/>' +
+          '<path d="M 7 26.8 Q 3.6 26.9 0.6 27.7"/>' +
+          '<path d="M 7.4 29.2 Q 4.2 31.2 1.2 33.6"/>' +
+          '<path d="M 28.6 24.6 Q 32.2 22.6 35.4 20.8"/>' +
+          '<path d="M 29 26.8 Q 32.4 26.9 35.4 27.7"/>' +
+          '<path d="M 28.6 29.2 Q 31.8 31.2 34.8 33.6"/>' +
         '</g>' +
-        // 虎斑 M 纹
-        '<path d="M 13 10 L 15 13 L 17 10 L 19 13 L 21 10" stroke="#1a1a18" stroke-width="1" fill="none"/>' +
       '</g>' +
     '</svg>';
   }
