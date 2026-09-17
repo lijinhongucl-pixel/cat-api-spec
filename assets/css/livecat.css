@@ -161,6 +161,41 @@
   transform: rotate(20deg);
 }
 
+/* §4.1 呼噜可视化（正向呼噜 25Hz → 节奏约 2.4 秒）
+   触发条件：.lc2-purring（由 tick 在 SLEEP / PETTED 时挂上）
+   三圈波纹错开 0.8 秒，从身体中心向外扩散并淡出。
+   transform-origin 等于身体中心 (50, 42) —— SVG 内坐标系。 */
+.lc2-purring .lc2-purr-r1,
+.lc2-purring .lc2-purr-r2,
+.lc2-purring .lc2-purr-r3 {
+  transform-origin: 50px 42px;
+  animation: lc2-purr-ring 2.4s ease-out infinite;
+}
+.lc2-purring .lc2-purr-r2 { animation-delay: 0.8s; }
+.lc2-purring .lc2-purr-r3 { animation-delay: 1.6s; }
+@keyframes lc2-purr-ring {
+  0%   { transform: scale(0.4); opacity: 0; }
+  20%  { opacity: 0.7; }
+  60%  { opacity: 0.25; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+/* 蹭人腿 HEADBUNT（§4.3）：身体侧倾贴过来 */
+.state-bunt .lc2-body {
+  transform: rotate(-8deg) translateY(2px);
+  transform-origin: 50% 70%;
+  animation: lc2-bunt-rub 1.4s ease-in-out infinite;
+}
+.state-bunt .lc2-tail {
+  transform-origin: 86px 38px;
+  transform: rotate(35deg);
+  animation: lc2-tail-swish 1.8s ease-in-out infinite;
+}
+@keyframes lc2-bunt-rub {
+  0%, 100% { transform: rotate(-8deg) translateY(2px); }
+  50%      { transform: rotate(-4deg) translateX(3px) translateY(0deg); }
+}
+
 /* 呕吐毛球：身体前倾、腹部剧烈收缩抖动 */
 .state-hack .lc2-body {
   animation: lc2-hack 0.45s ease-in-out infinite;
@@ -321,7 +356,10 @@
   .lc2-blinking .lc2-pupil-l, .lc2-blinking .lc2-pupil-r,
   .lc2-shake-once .lc2-body,
   .lc2-annoyed .lc2-ear-l, .lc2-annoyed .lc2-ear-r,
-  .lc2-annoyed .lc2-tail {
+  .lc2-annoyed .lc2-tail,
+  .lc2-purring .lc2-purr-r1, .lc2-purring .lc2-purr-r2,
+  .lc2-purring .lc2-purr-r3, .state-bunt .lc2-body,
+  .state-bunt .lc2-tail {
     animation: none !important;
     transition: none !important;
   }

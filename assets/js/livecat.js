@@ -95,6 +95,11 @@
       label: "凝视你", duration: 2500, pose: "sit", face: "ALERT",
       lines: ["…", "评估中。", "我也在看你。"],
       behavior: function () { faceMouse(); }
+    },
+    HEADBUNT: {
+      label: "蹭你", duration: 6500, pose: "bunt", face: "SLOW_BLINK",
+      lines: ["重新写入你的标签。", "化学接口已更新。", "你属于我了。", "HEADBUNT ok。"],
+      behavior: function () { pickBuntSpot(); }
     }
   };
 
@@ -300,6 +305,14 @@
   function svgCat() {
     return '' +
     '<svg class="lc2-body" width="100" height="70" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
+      // 呼噜波纹层（§4.1）：默认不可见，state-sleep / state-pet 时由
+      // .lc2-purring class 触发 CSS 动画——三个同心圆从身体中心扩散
+      // 放在身体下层，z 序最低
+      '<g class="lc2-purr">' +
+        '<circle class="lc2-purr-r1" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r2" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r3" cx="50" cy="42" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+      '</g>' +
       // 尾巴（独立分组，可单独动画）
       '<g class="lc2-tail">' +
         '<path d="M 86 38 Q 96 30 96 22 Q 96 14 90 12" stroke="#3a3a38" stroke-width="5" fill="none" stroke-linecap="round"/>' +
@@ -399,6 +412,32 @@
     targetY = 80 + Math.random() * (h - 200);
   }
 
+  function pickBuntSpot() {
+    // §4.3 HEADBUNT：走到屏幕底部中央偏鼠标位置附近
+    // 用户长时间不动 → 猫过来「重新写入你的标签」
+    var w = window.innerWidth, h = window.innerHeight;
+    var anchor = (mouseX > 0 && mouseY > 0) ? mouseX : w / 2;  // 用户鼠标位置（或屏幕中央）
+    targetX = Math.max(60, Math.min(w - 100, anchor - 50));
+    targetY = h - 110;  // 底部
+  }
+
+  // §4.3 HEADBUNT 触发条件：
+  // - 用户鼠标静止超 30 秒
+  // - 猫不在睡觉 / 钻纸箱 / 疯跑 / 追猎 / 已经在蹭
+  // - 触发概率 18%（每次 scheduleNext 时检查一次，平均每小时 2-3 次）
+  function maybeBunt() {
+    if (currentStateName === "HEADBUNT" || currentStateName === "BOXED" ||
+        currentStateName === "SLEEP" || currentStateName === "ZOOMIES" ||
+        currentStateName === "HUNT" || currentStateName === "清理缓存" ||
+        currentStateName === "PETTED") return false;
+    if (lastMouseTime === 0) return false;  // 还没有鼠标移动数据
+    var idle = Date.now() - lastMouseTime;
+    if (idle < 30000) return false;
+    if (Math.random() > 0.18) return false;
+    transitionTo("HEADBUNT");
+    return true;
+  }
+
   function zoomAround() {
     var w = window.innerWidth, h = window.innerHeight;
     targetX = Math.random() < 0.5 ? 40 : w - 100;
@@ -455,6 +494,18 @@
       cat.className = "lc2-cat state-" + current.pose;
       lastAppliedState = currentStateName;
       lastAppliedPose = current.pose;
+
+      // §4.1 呼噜可视化：SLEEP 和 PETTED 时身体周围环形波纹
+      // 正向呼噜 25Hz，节奏 ≈ 2.4 秒一圈。state-sleep / state-pet 触发。
+      var shouldPurr = (currentStateName === "SLEEP" ||
+                        currentStateName === "PETTED" ||
+                        current.pose === "sleep" ||
+                        current.pose === "pet");
+      if (shouldPurr) {
+        cat.classList.add("lc2-purring");
+      } else {
+        cat.classList.remove("lc2-purring");
+      }
     }
 
     // 同步气泡 / 标签 / 按钮组的位置跟着猫走（每帧，因为猫在动）
@@ -494,6 +545,9 @@
     stateTimer = setTimeout(function () {
       // 呕吐毛球检查（每天 1-2 次）
       if (maybeHairball()) return;
+
+      // §4.3 蹭人腿：用户长时间不动时触发
+      if (maybeBunt()) return;
 
       // 凌晨三点 / 凌晨四点前段：强制 ZOOMIES（行为准则 5 + crepuscular）
       var hour = new Date().getHours();
