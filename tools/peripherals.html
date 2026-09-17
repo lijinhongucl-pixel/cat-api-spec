@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>外设控制台 — CAT API Peripheral Bus v1</title>
-<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/spec.css"
+<link rel="stylesheet" href="../assets/css/livecat.css">>
 <style>
   .qwrap { max-width: 1240px; margin: 0 auto; padding: 36px 28px 120px; }
   .qhead { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 26px; }
@@ -145,28 +146,6 @@
         <label class="chk"><input id="f-indoor" type="checkbox" checked><span>纯室内</span></label>
         <div class="note" style="margin-top:8px;">地面材质只影响 G11 高处防跌：瓷砖上起跳落地的失败率高得多。</div>
       </div>
-
-      <div class="panel">
-        <h3>③ 今日基线 · Baseline</h3>
-        <div class="fld"><label>自发巡视（分钟）</label><input id="f-patrol" type="number" value="20" min="0"></div>
-        <div class="fld"><label>自发狩猎（分钟）</label><input id="f-selfhunt" type="number" value="5" min="0"></div>
-        <div class="fld"><label>自我梳理（分钟）</label><input id="f-groom" type="number" value="30" min="0"></div>
-        <div class="fld"><label>睡眠（小时）</label><input id="f-sleep" type="number" value="14" min="0" max="24"></div>
-        <div class="note" style="margin-top:8px;">没有外设时本来就有的部分。外设不能创造配额，只能转移负荷——叠加在基线之上。</div>
-      </div>
-
-      <div class="panel">
-        <h3>④ 分诊标记 · Triage</h3>
-        <div class="fld"><label>当前状态</label>
-          <select id="f-triage">
-            <option value="" selected>常规 · 引擎自判</option>
-            <option value="P2">P2 · 72 小时内</option>
-            <option value="P1">P1 · 当日</option>
-            <option value="P0">P0 · 立即</option>
-          </select>
-        </div>
-        <div class="note" style="margin-top:8px;">手动覆盖。P0 时页面进入硬停模式——任何外设建议都让位于「先解决 P0」。</div>
-      </div>
     </div>
 
     <!-- 右侧：结果 -->
@@ -200,26 +179,6 @@
       </div>
 
       <div class="panel">
-        <h3>今日活动预算 · DNS</h3>
-        <div id="baseline-out"></div>
-      </div>
-
-      <div class="panel">
-        <h3>弃用清单命中 · 出现即拉黑</h3>
-        <div id="retired-out"></div>
-      </div>
-
-      <div class="panel">
-        <h3>合规状态</h3>
-        <div id="compliance"></div>
-      </div>
-
-      <div class="panel">
-        <h3>来源与等级</h3>
-        <div id="sources-out"></div>
-      </div>
-
-      <div class="panel">
         <h3>环境丰富度建议</h3>
         <div id="enrich" class="note"></div>
       </div>
@@ -244,16 +203,6 @@
   <div class="section-title" style="padding:0;margin:34px 0 10px;">门槛注册表 · 13 道</div>
   <div class="panel">
     <div id="gatereg"></div>
-  </div>
-
-  <div class="section-title" style="padding:0;margin:34px 0 10px;">弃用清单 · 出现即拉黑</div>
-  <div class="panel">
-    <div id="retired-reg"></div>
-  </div>
-
-  <div class="section-title" style="padding:0;margin:34px 0 10px;">来源与等级</div>
-  <div class="panel">
-    <div id="sources-reg"></div>
   </div>
 
   <div class="section-title" style="padding:0;margin:34px 0 10px;">输出 JSON（对应 POST /api/v1/peripherals/enumerate）</div>
@@ -370,14 +319,7 @@
       nipReactive: $("f-nip").checked,
       area: parseFloat($("f-area").value) || 60,
       vertical: parseInt($("f-vertical").value) || 2,
-      indoor: $("f-indoor").checked,
-      baseline: {
-        patrol:   parseFloat($("f-patrol").value)   || 0,
-        selfHunt: parseFloat($("f-selfhunt").value) || 0,
-        groom:    parseFloat($("f-groom").value)    || 0,
-        sleep:    parseFloat($("f-sleep").value)    || 14
-      },
-      triage: $("f-triage").value
+      indoor: $("f-indoor").checked
     };
   }
 
@@ -491,54 +433,6 @@
     if (tips.length === 0) tips.push(" 当前外设配置良好。系统接受了你的部署方案。");
     $("enrich").innerHTML = tips.map(function (t, i) { return (i + 1) + "." + t; }).join("<br>");
 
-    // 今日活动预算（DNS）—— 把基线 + 外设贡献并列出来，
-    // 让「外设不能创造配额，只能转移负荷」这句话有具体数字支撑。
-    var b = r.baseline, ab = r.activityBudget;
-    var baselineRows = [
-      ['自发巡视',  b.patrol + ' min',   '没外设时本来就有的活动'],
-      ['自发狩猎',  b.selfHunt + ' min', '扑虫、影子、灰尘'],
-      ['自我梳理',  b.groom + ' min',    '短则 20 分钟，长可达 1-2 小时'],
-      ['睡眠',      b.sleep + ' h',      '猫默认 12-16 小时'],
-      ['外设贡献互动', ab.peripheralsContribute.value + ' min', '来自逗猫棒 + 激光笔'],
-      ['总互动覆盖',   ab.totalInteractive.value + ' min',     '基线 + 外设']
-    ];
-    $("baseline-out").innerHTML = '<table class="dev" style="font-size:12px;">' +
-      '<tr><th>项目</th><th>今日</th><th>说明</th></tr>' +
-      baselineRows.map(function (row) {
-        return '<tr><td>' + row[0] + '</td><td style="text-align:right;font-variant-numeric:tabular-nums;">' + row[1] + '</td><td style="color:var(--muted);">' + row[2] + '</td></tr>';
-      }).join('') + '</table>' +
-      '<div class="note" style="margin-top:10px;">每日互动需求 <strong>' + r.dailyPlayNeed + ' min</strong>（引擎按活动等级、年龄算出），当前总覆盖 ' + ab.totalInteractive.value + ' min。</div>';
-
-    // 弃用清单命中
-    if (r.retiredHits.length === 0) {
-      $("retired-out").innerHTML = '<div class="note" style="color:var(--ok);">清单里没有触发任何弃用项。</div>';
-    } else {
-      $("retired-out").innerHTML = r.retiredHits.map(function (h) {
-        var sc = h.severity === "P0" ? "fail" : h.severity === "P1" ? "warn" : "na";
-        return '<div class="gate-row"><span class="st ' + sc + '">' + h.severity + '</span>' +
-          '<span><strong>' + esc(h.name) + '</strong> · <code>' + esc(h.code) + '</code><br>' + esc(h.reason) + '</span>' +
-          '<span class="st ' + sc + '">' + h.severity + '</span></div>';
-      }).join("");
-    }
-
-    // 合规状态：把分诊、门槛矩阵、弃用三件事汇成一句话
-    var complianceItems = [];
-    complianceItems.push(r.triage === "OK" ? '<span class="st good">分诊通过</span>' : '<span class="st fail">分诊：' + r.triage + '</span>');
-    complianceItems.push(r.gateFailCount === 0 ? '<span class="st good">门槛全通过</span>' : '<span class="st fail">门槛挂 ' + r.gateFailCount + ' 道</span>');
-    complianceItems.push(r.retiredHits.length === 0 ? '<span class="st good">无弃用项</span>' : '<span class="st fail">命中弃用 ' + r.retiredHits.length + ' 项</span>');
-    complianceItems.push(r.hasBox ? '<span class="st good">纸箱 MUST 满足</span>' : '<span class="st warn">纸箱缺失</span>');
-    if (r.triageOverridden) complianceItems.push('<span class="st warn">分诊已被手动覆盖</span>');
-    $("compliance").innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;font-size:13.5px;">' + complianceItems.join("") + '</div>';
-
-    // 来源与等级
-    $("sources-out").innerHTML = '<table class="dev" style="font-size:12px;">' +
-      '<tr><th>等级</th><th>含义</th><th>覆盖门槛</th></tr>' +
-      P.SOURCES.map(function (s) {
-        return '<tr><td><span class="grade ' + s.code + '">' + s.code + '</span></td>' +
-          '<td>' + esc(s.desc) + '</td>' +
-          '<td><code>' + s.rules.join(', ') + '</code></td></tr>';
-      }).join('') + '</table>';
-
     // JSON 输出
     $("json").textContent = JSON.stringify({
       profile: profile,
@@ -547,17 +441,13 @@
       result: {
         healthScore: r.healthScore,
         triage: r.triage,
-        triageOverridden: r.triageOverridden,
         seqComplete: r.seqComplete,
         seqStuck: r.seqStuck,
         stages: r.stages,
-        baseline: r.baseline,
-        activityBudget: r.activityBudget,
         quota: r.quota,
         gates: r.gates,
         gateFailCount: r.gateFailCount,
         gateNaCount: r.gateNaCount,
-        retiredHits: r.retiredHits,
         failures: r.failures,
         hasBox: r.hasBox,
         laserMinutes: r.laserMinutes,
@@ -591,34 +481,11 @@
       }).join("") + "</table>";
   }
 
-  // 弃用清单注册表
-  function renderRetired() {
-    $("retired-reg").innerHTML = '<table class="dev" style="font-size:12px;">' +
-      "<tr><th>CODE</th><th>名称</th><th>严重度</th><th>原因</th></tr>" +
-      P.RETIRED.map(function (r) {
-        var sc = r.severity === "P0" ? "fail" : r.severity === "P1" ? "warn" : "na";
-        return "<tr><td><code>" + r.code + "</code></td><td>" + esc(r.name) + "</td>" +
-          '<td><span class="st ' + sc + '">' + r.severity + "</span></td>" +
-          '<td style="color:var(--muted);">' + esc(r.reason) + "</td></tr>";
-      }).join("") + "</table>";
-  }
-
-  // 来源与等级注册表
-  function renderSources() {
-    $("sources-reg").innerHTML = '<table class="dev" style="font-size:12px;">' +
-      "<tr><th>等级</th><th>含义</th><th>覆盖门槛</th></tr>" +
-      P.SOURCES.map(function (s) {
-        return "<tr><td><span class=\"grade " + s.code + "\">" + s.code + "</span></td>" +
-          "<td>" + esc(s.desc) + "</td>" +
-          "<td><code>" + s.rules.join(", ") + "</code></td></tr>";
-      }).join("") + "</table>";
-  }
-
   // 事件
-  ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical","f-patrol","f-selfhunt","f-groom","f-sleep"].forEach(function (id) {
+  ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical"].forEach(function (id) {
     $(id).addEventListener("input", recalc);
   });
-  ["f-nip","f-indoor","f-floor","f-triage"].forEach(function (id) {
+  ["f-nip","f-indoor","f-floor"].forEach(function (id) {
     $(id).addEventListener("change", recalc);
   });
 
@@ -645,10 +512,10 @@
   renderTable();
   renderRegistry();
   renderGates();
-  renderRetired();
-  renderSources();
   recalc();
 })();
 </script>
+<script src="../assets/js/expression.js"></script>
+<script src="../assets/js/livecat.js"></script>
 </body>
 </html>
