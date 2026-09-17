@@ -75,6 +75,13 @@
     var nipReactive = profile.nipReactive !== false; // ~60% 默认有反应
     var catCount = profile.catCount || 1;
 
+    // env 描述「房子本身」，与「外设」分开。
+    // 此前这个参数在函数体里一次都没被读过（页面也就顺手传了 {}），
+    // 于是门槛表里跟环境有关的规则永远不可能触发。G11 现在真的吃 env.floor。
+    env = env || {};
+    var envFloor = env.floor || "wood";                 // wood | tile | carpet
+    var envGrip = env.surface == null ? ({ wood: 6, tile: 3, carpet: 8 }[envFloor] || 6) : env.surface;
+
     // 计算每日狩猎序列闭合情况
     var stagesCovered = { STALK: 0, AMBUSH: 0, POUNCE: 0, KILL_BITE: 0, CONSUME: 0 };
     var totalHuntScore = 0;
@@ -84,8 +91,41 @@
     var hasBox = false;
     var hasScratch = false;
     var hasWater = false;
-    var gates = []; // 逐设备门槛判定
     var failures = [];
+    var gateStat = {}; // G01..G13 → { checked, failed, devices }
+
+    // 判一道门槛。ok=false 时自动登记一条失败记录。
+    //
+    // 所有 13 道门槛都走这一个出口，所以「门槛注册表」与「逐设备判定」
+    // 不可能出现一边有、一边没有的情况。之前 13 道门槛里有 5 道
+    // （G05 材料、G10 羽毛件、G11 防跌、G12 滤芯、G13 纸箱）
+    // 只在文档里存在，代码里没有任何一处会触发它们。
+    //
+    // severity === "HEURISTIC" 的门槛只进门槛矩阵，不进 failures：
+    // 它是「系统的优先队列被违反了」，不是健康问题，不该抬高分诊等级。
+    function judge(id, i, ok, mode, severity, msg) {
+      var s = gateStat[id] || (gateStat[id] = { checked: 0, failed: 0, devices: [] });
+      s.checked++;
+      if (s.devices.indexOf(i) < 0) s.devices.push(i);
+      if (!ok) {
+        s.failed++;
+        if (severity !== "HEURISTIC") {
+          failures.push({ device: i, gate: id, mode: mode, severity: severity, msg: msg });
+        }
+      }
+      return ok;
+    }
+
+    // 入参容错：允许直接传设备代码字符串，也允许传完整对象。
+    //
+    // 这里原本只吃对象，传字符串会走 `cls(undefined)` → null → 整条被静默跳过，
+    // 最终返回一份「什么都没买」的全零报告。调用方拿到的是合法 JSON、
+    // 没有任何报错，只会以为引擎算错了。全零结果是最难排查的一类失败，
+    // 所以在这里补一次归一化。
+    peripherals = (peripherals || []).map(function (d) {
+      if (typeof d === "string") return { cls: d, sessions: 1, minutes: 10 };
+      return d;
+    });
 
     peripherals.forEach(function (d, i) {
       var c = cls(d.cls);
@@ -100,8 +140,18 @@
       if (c.stage === "AMBUSH")   stagesCovered.AMBUSH += huntScore;
       if (c.stage === "POUNCE")   stagesCovered.POUNCE += huntScore;
 
-      // 特殊阶段标记
-      if (d.cls === "MOUSE" || d.cls === "BALL" || d.cls === "FEATHER") {
+      // 阶段覆盖：KILL_BITE / CONSUME 只认「有实物可捕获」的外设。
+      //
+      // 两个来源，取其一，不叠加：
+      //   1) 模拟猎物类（MOUSE / BALL / FEATHER）本身就有实体，天生可完成捕获
+      //   2) 任意类别上勾选了 killObject，表示该次互动以实物收尾
+      //
+      // 第 2 条是必须的：逗猫棒的正确用法本来就是最后让猫咬到玩具，
+      // 而激光笔只有配上实物收尾才算一次完整序列。此前 killObject 只在
+      // LASER 分支被读一次，且只用于「消掉 G07 告警」，从不给 KILL_BITE 记分——
+      // 于是勾了实物收尾的激光笔仍被判 seqStuck，报告自相矛盾。
+      var physicalCatch = d.cls === "MOUSE" || d.cls === "BALL" || d.cls === "FEATHER" || d.killObject === true;
+      if (physicalCatch) {
         stagesCovered.KILL_BITE += huntScore * 0.8;
         stagesCovered.CONSUME += huntScore * 0.3;
       }
@@ -118,58 +168,83 @@
       // 激光笔特殊处理
       if (d.cls === "LASER") {
         laserMinutes += d.minutes * d.sessions;
-        if (!d.killObject) {
-          failures.push({ device: i, gate: "G07", mode: "unclosed_hunt", severity: "P2",
-            msg: "激光笔使用未以实物 KILL BITE 收尾。狩猎序列永不闭合，长期使用导致焦虑和过度梳理。" });
-        }
+        judge("G07", i, !!d.killObject, "unclosed_hunt", "P2",
+          "激光笔使用未以实物 KILL BITE 收尾。狩猎序列永不闭合，长期使用导致焦虑和过度梳理。");
       }
 
       // 逗猫棒时长检查
       if (d.cls === "WAND") {
         wandMinutes += d.minutes * d.sessions;
-        if (d.minutes > 15) {
-          failures.push({ device: i, gate: "G09", mode: "overstimulation", severity: "P1",
-            msg: "单次逗猎 " + d.minutes + " 分钟超过 15 分钟上限。过度兴奋可能导致攻击行为转移。" });
-        }
+        judge("G09", i, !(d.minutes > 15), "overstimulation", "P1",
+          "单次逗猎 " + d.minutes + " 分钟超过 15 分钟上限。过度兴奋可能导致攻击行为转移。");
       }
 
       // 猫薄荷配额
       if (d.cls === "NIP" || d.cls === "VALERIAN") {
         nipMinutes += d.minutes * d.sessions;
-        if (nipReactive && d.minutes > 15) {
-          failures.push({ device: i, gate: "G08", mode: "nip_overdose", severity: "P2",
-            msg: "猫薄荷/缬草单次 " + d.minutes + " 分钟超过 15 分钟。虽无成瘾性，但可能导致短暂肠胃不适。" });
-        }
+        judge("G08", i, !(nipReactive && d.minutes > 15), "nip_overdose", "P2",
+          "猫薄荷/缬草单次 " + d.minutes + " 分钟超过 15 分钟。虽无成瘾性，但可能导致短暂肠胃不适。");
       }
 
-      // 小件检查
-      if (d.hasSmallParts) {
-        failures.push({ device: i, gate: "G02", mode: "small_parts", severity: "P0",
-          msg: (c.name || d.cls) + " 含有小件（眼睛/鼻子/铃铛）。咬掉吞入=气道阻塞=P0。" });
+      // G05 材料无毒。只有被明确标注为含毒材质才拦。
+      // 默认放行——引擎看不到实物，没有证据时不该替用户定罪。
+      if (d.toxicMaterial != null) {
+        judge("G05", i, d.toxicMaterial !== true, "toxic_material", "P0",
+          (c.name || d.cls) + " 含邻苯二甲酸酯 / BPA / 铅等增塑剂或重金属。舔舐即摄入。");
       }
 
-      // 尺寸检查
-      if (d.diameter && d.diameter < 30 && !d.isWallMounted) {
-        failures.push({ device: i, gate: "G01", mode: "choke_hazard", severity: "P0",
-          msg: (c.name || d.cls) + " 最小外径 " + d.diameter + "mm < 30mm。整体可被吞入。" });
+      // G02 小件
+      if (d.hasSmallParts != null) {
+        judge("G02", i, d.hasSmallParts !== true, "small_parts", "P0",
+          (c.name || d.cls) + " 含有小件（眼睛/鼻子/铃铛）。咬掉吞入=气道阻塞=P0。");
       }
 
-      // 绳索
-      if (d.hasString && d.stringLen > 15) {
-        failures.push({ device: i, gate: "G03", mode: "strangulation", severity: "P0",
-          msg: (c.name || d.cls) + " 含 " + d.stringLen + "cm 绳状结构。绕颈风险。" });
+      // G01 尺寸：只判"整体可被吞入"，壁挂件豁免
+      if (d.diameter != null && !d.isWallMounted) {
+        judge("G01", i, !(d.diameter < 30), "choke_hazard", "P0",
+          (c.name || d.cls) + " 最小外径 " + d.diameter + "mm < 30mm。整体可被吞入。");
       }
 
-      // 尖点
-      if (d.hasSharpEdge) {
-        failures.push({ device: i, gate: "G04", mode: "sharp_edge", severity: "P1",
-          msg: (c.name || d.cls) + " 已出现尖点。可能导致爪垫或面部割伤。" });
+      // G03 绳索
+      if (d.hasString != null) {
+        judge("G03", i, !(d.hasString === true && d.stringLen > 15), "strangulation", "P0",
+          (c.name || d.cls) + " 含 " + d.stringLen + "cm 绳状结构。绕颈风险。");
       }
 
-      // 电池
-      if (d.hasBattery && !d.batterySealed) {
-        failures.push({ device: i, gate: "G06", mode: "battery_exposed", severity: "P0",
-          msg: (c.name || d.cls) + " 电池仓未密封。猫爪可能打开电池仓，电池被吞入=重金属中毒。" });
+      // G04 尖点
+      if (d.hasSharpEdge != null) {
+        judge("G04", i, d.hasSharpEdge !== true, "sharp_edge", "P1",
+          (c.name || d.cls) + " 已出现尖点。可能导致爪垫或面部割伤。");
+      }
+
+      // G06 电池仓
+      if (d.hasBattery != null) {
+        judge("G06", i, !(d.hasBattery === true && d.batterySealed !== true), "battery_exposed", "P0",
+          (c.name || d.cls) + " 电池仓未密封。猫爪可能打开电池仓，电池被吞入=重金属中毒。");
+      }
+
+      // G10 羽毛件：羽毛玩具的硬质底座 / 金属丝是可吞入件。
+      // 只判羽毛类——其他玩具的硬质小件由 G01/G02 覆盖。
+      if (d.cls === "FEATHER") {
+        judge("G10", i, d.hasHardParts !== true, "feather_ingestion", "P0",
+          (c.name || d.cls) + " 含可吞入的硬质件（金属丝底座 / 塑料配重）。羽毛本身无害，底座不是。");
+      }
+
+      // G11 高处防跌：只判猫能上去的攀爬类（TREE / TUNNEL），
+      // 离地 ≥ 1m 时要求底座稳、且地面抓得住。
+      if (c.stage === "AMBUSH") {
+        var tall = (d.heightM || 0) >= 1;
+        var gripOk = d.stableBase === true && envGrip >= 4;
+        judge("G11", i, !tall || gripOk, "fall_risk", "P1",
+          (c.name || d.cls) + " 离地 " + (d.heightM || 0) + "m 但底座不稳或地面过滑（" +
+          envFloor + " / 抓地 " + envGrip + "/10）。起跳落地失败会导致骨折。");
+      }
+
+      // G12 饮水机清洁：滤芯周期是这类设备唯一的耗材型故障点。
+      if (d.cls === "WATER") {
+        var overdue = (d.filterDays || 0) > 28;
+        judge("G12", i, !overdue, "water_contamination", "P1",
+          (c.name || d.cls) + " 滤芯已用 " + (d.filterDays || 0) + " 天，超过 28 天上限。生物膜会反过来污染水源。");
       }
     });
 
@@ -183,6 +258,11 @@
     if (!hasBox) {
       boxWarning = "未部署纸箱。根据项目级 MUST，纸箱的优先级高于所有官方外设。建议立即部署一个。尺寸不重要。";
     }
+    // G13 是全局门槛（跟具体某件外设无关），所以 device = -1。
+    // 严重级 HEURISTIC：只进门槛矩阵，不抬高分诊等级 —— 纸箱缺失不会伤到猫，
+    // 违反的是系统的优先队列，不是健康指标。
+    judge("G13", -1, hasBox, "box_override", "HEURISTIC",
+      "未部署纸箱。纸箱 MUST 优先于所有官方外设，优先级高于预算本身。");
 
     // 每日互动需求
     var dailyPlayNeed = Math.max(20, 30 + (activityLevel - 3) * 10 + (isKitten ? 30 : 0) - (isSenior ? 10 : 0));
@@ -229,6 +309,33 @@
     var triage = hasP0 ? "P0" : failures.some(function(f) { return f.severity === "P1"; }) ? "P1" :
                  failures.length > 0 ? "P2" : "OK";
 
+    // 门槛矩阵：13 道门槛逐条给结论。
+    //
+    //   PASS —— 判过，全部通过
+    //   FAIL —— 判过，至少一件外设不通过
+    //   NA   —— 本清单里没有可判对象，例如没买羽毛玩具就谈不上 G10
+    //
+    // NA 必须和 PASS 分开。把「没检查」显示成「检查通过」是报告里
+    // 最容易被信任、也最容易骗人的一格。
+    var gates = GATES.map(function (g) {
+      var s = gateStat[g.id];
+      var status = !s || s.checked === 0 ? "NA" : (s.failed > 0 ? "FAIL" : "PASS");
+      return {
+        id: g.id,
+        name: g.name,
+        rule: g.rule,
+        grade: g.grade,
+        severity: g.severity,
+        fail: g.fail,
+        status: status,
+        checked: s ? s.checked : 0,
+        failed: s ? s.failed : 0,
+        devices: s ? s.devices : []
+      };
+    });
+    var gateFailCount = gates.filter(function (g) { return g.status === "FAIL"; }).length;
+    var gateNaCount = gates.filter(function (g) { return g.status === "NA"; }).length;
+
     return {
       profile: { weight: weight, ageMonths: ageMonths, isKitten: isKitten, isSenior: isSenior },
       stages: stagesCovered,
@@ -243,6 +350,10 @@
       hasScratch: hasScratch,
       hasWater: hasWater,
       failures: failures,
+      gates: gates,
+      gateFailCount: gateFailCount,
+      gateNaCount: gateNaCount,
+      env: { floor: envFloor, surface: envGrip },
       quota: quota,
       healthScore: healthScore,
       triage: triage,

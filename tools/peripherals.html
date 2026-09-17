@@ -69,7 +69,7 @@
   .gate-row { display: grid; grid-template-columns: 44px 1fr 50px; gap: 9px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; align-items: baseline; }
   .gate-row:last-child { border-bottom: none; }
   .gate-row .st { font-size: 11px; font-weight: 700; }
-  .st.pass { color: var(--ok); } .st.warn { color: var(--warn); } .st.fail { color: #b91c1c; } .st.na { color: var(--faint); }
+  .st.pass, .st.good { color: var(--ok); } .st.warn { color: var(--warn); } .st.fail { color: #b91c1c; } .st.na { color: var(--faint); }
 </style>
 </head>
 <body>
@@ -135,7 +135,15 @@
         <h3>② 环境速记 · Environment</h3>
         <div class="fld"><label>室内面积（㎡）</label><input id="f-area" type="number" value="60"></div>
         <div class="fld"><label>垂直空间层数</label><input id="f-vertical" type="number" value="2"></div>
+        <div class="fld"><label>地面材质</label>
+          <select id="f-floor">
+            <option value="tile">瓷砖 · 抓地 3/10</option>
+            <option value="wood" selected>木地板 · 抓地 6/10</option>
+            <option value="carpet">地毯 · 抓地 8/10</option>
+          </select>
+        </div>
         <label class="chk"><input id="f-indoor" type="checkbox" checked><span>纯室内</span></label>
+        <div class="note" style="margin-top:8px;">地面材质只影响 G11 高处防跌：瓷砖上起跳落地的失败率高得多。</div>
       </div>
     </div>
 
@@ -162,6 +170,11 @@
       <div class="panel">
         <h3>逐设备门槛判定</h3>
         <div id="gates"></div>
+      </div>
+
+      <div class="panel">
+        <h3>门槛矩阵 · 13 道逐条结论</h3>
+        <div id="gatematrix"></div>
       </div>
 
       <div class="panel">
@@ -211,13 +224,21 @@
   var esc = function (s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
 
   var DEFAULT = [
-    { cls: "WAND",    minutes: 10, sessions: 2, diameter: null, hasSmallParts: false, hasString: true, stringLen: 12, hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
-    { cls: "MOUSE",   minutes: 8,  sessions: 1, diameter: 45, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: true },
-    { cls: "BOX",     minutes: 120,sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
-    { cls: "SCRATCH", minutes: 0,  sessions: 3, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
-    { cls: "TREE",    minutes: 0,  sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false }
+    { cls: "WAND",    minutes: 10, sessions: 2, diameter: null, hasSmallParts: false, hasString: true, stringLen: 12, hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false, toxicMaterial: false },
+    { cls: "MOUSE",   minutes: 8,  sessions: 1, diameter: 45, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: true,  toxicMaterial: false },
+    { cls: "BOX",     minutes: 120,sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false, toxicMaterial: false },
+    { cls: "SCRATCH", minutes: 0,  sessions: 3, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false, toxicMaterial: false },
+    { cls: "TREE",    minutes: 0,  sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false, toxicMaterial: false, heightM: 1.2, stableBase: true }
   ];
   var state = JSON.parse(JSON.stringify(DEFAULT));
+
+  // 新增一行时的模板：只有这些字段会被门槛读，其余留空即为「未检查」。
+  var BLANK = {
+    cls: "BALL", minutes: 10, sessions: 1, diameter: null, hasSmallParts: false,
+    hasString: false, stringLen: 0, hasSharpEdge: false, hasBattery: false,
+    batterySealed: true, killObject: false, toxicMaterial: false,
+    heightM: null, stableBase: true, hasHardParts: false, filterDays: 0
+  };
 
   function opts(arr, cur) {
     return arr.map(function (o) {
@@ -227,21 +248,28 @@
 
   function renderTable() {
     var head = "<tr>" +
-      ["类别", "单次<br>min", "次/日", "最小<br>外径mm", "小件", "绳索<br>cm", "尖点", "电池<br>密封", "KILL<br>对象", ""]
+      ["类别", "单次<br>min", "次/日", "最小<br>外径mm", "小件", "绳索<br>cm", "尖点", "电池<br>密封", "KILL<br>对象", "含毒<br>材料", "硬质<br>件", "离地<br>m", "底座<br>稳", "滤芯<br>天", ""]
         .map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr>";
 
     var body = state.map(function (d, i) {
       var clsOpts = opts(P.CLASSES.map(function (x) { return { v: x.code, l: x.code + " · " + x.name }; }), d.cls);
+      var num = function (k, ph) { return '<input type="number" min="0" step="1" data-i="' + i + '" data-k="' + k + '" value="' + (d[k] == null ? "" : d[k]) + '" placeholder="' + ph + '">'; };
+      var box = function (k) { return '<input type="checkbox" data-i="' + i + '" data-k="' + k + '"' + (d[k] ? " checked" : "") + ">"; };
       return "<tr>" +
         '<td><select data-i="' + i + '" data-k="cls">' + clsOpts + "</select></td>" +
         '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="minutes" value="' + d.minutes + '"></td>' +
         '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="sessions" value="' + d.sessions + '"></td>' +
-        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="diameter" value="' + (d.diameter || "") + '" placeholder="—"></td>' +
-        '<td><input type="checkbox" data-i="' + i + '" data-k="hasSmallParts"' + (d.hasSmallParts ? " checked" : "") + "></td>" +
-        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="stringLen" value="' + (d.stringLen || 0) + '"></td>' +
-        '<td><input type="checkbox" data-i="' + i + '" data-k="hasSharpEdge"' + (d.hasSharpEdge ? " checked" : "") + "></td>" +
-        '<td><input type="checkbox" data-i="' + i + '" data-k="batterySealed"' + (d.batterySealed ? " checked" : "") + "></td>" +
-        '<td><input type="checkbox" data-i="' + i + '" data-k="killObject"' + (d.killObject ? " checked" : "") + "></td>" +
+        "<td>" + num("diameter", "—") + "</td>" +
+        "<td>" + box("hasSmallParts") + "</td>" +
+        "<td>" + num("stringLen", "0") + "</td>" +
+        "<td>" + box("hasSharpEdge") + "</td>" +
+        "<td>" + box("batterySealed") + "</td>" +
+        "<td>" + box("killObject") + "</td>" +
+        "<td>" + box("toxicMaterial") + "</td>" +
+        "<td>" + box("hasHardParts") + "</td>" +
+        "<td>" + num("heightM", "—") + "</td>" +
+        "<td>" + box("stableBase") + "</td>" +
+        "<td>" + num("filterDays", "0") + "</td>" +
         '<td><button class="rm" data-i="' + i + '">移除</button></td>' +
         "</tr>";
     }).join("");
@@ -281,9 +309,14 @@
     };
   }
 
+  function getEnv() {
+    return { floor: $("f-floor").value };
+  }
+
   function recalc() {
     var profile = getProfile();
-    var r = P.evaluate(profile, {}, state);
+    var env = getEnv();
+    var r = P.evaluate(profile, env, state);
 
     // Banner
     var banners = [];
@@ -342,19 +375,37 @@
     if (r.scratchGap > 0) qbars += '<div class="note">猫砂盆规则：抓板/猫柱数量应 ≥ ' + r.scratchNeed + '（实例数 + 1）。当前缺 ' + r.scratchGap + ' 个。</div>';
     $("quota-bars").innerHTML = qbars;
 
-    // 门槛判定
+    // 门槛判定 —— 逐设备失败明细
     if (r.failures.length === 0) {
       $("gates").innerHTML = '<div class="note" style="color:var(--ok);">所有外设通过全部门槛检查。</div>';
     } else {
       $("gates").innerHTML = r.failures.map(function (f) {
         var dev = state[f.device] ? P.cls(state[f.device].cls) : null;
-        var devName = dev ? dev.name : "?";
+        var devName = dev ? dev.name : (f.device < 0 ? "全局" : "?");
         var sc = f.severity === "P0" ? "fail" : f.severity === "P1" ? "warn" : "na";
         return '<div class="gate-row"><span class="st ' + sc + '">' + f.severity + '</span>' +
           '<span><strong>' + esc(devName) + '</strong> · ' + esc(f.gate) + ' ' + esc(f.mode) + '<br>' + esc(f.msg) + '</span>' +
           '<span class="st ' + sc + '">' + f.severity + '</span></div>';
       }).join("");
     }
+
+    // 门槛矩阵 —— 13 道逐条给结论。NA 单独标出来，
+    // 不把「本清单里没有可判对象」混进「已通过」。
+    $("gatematrix").innerHTML = '<table class="dev" style="font-size:12px;">' +
+      "<tr><th>ID</th><th>门槛</th><th>判定</th><th>判过</th><th>挂</th><th>规则</th></tr>" +
+      r.gates.map(function (g) {
+        var cls = g.status === "FAIL" ? "fail" : g.status === "PASS" ? "good" : "na";
+        return "<tr>" +
+          "<td><code>" + g.id + "</code></td>" +
+          "<td>" + esc(g.name) + "</td>" +
+          '<td><span class="st ' + cls + '">' + g.status + "</span></td>" +
+          '<td style="text-align:center;">' + g.checked + "</td>" +
+          '<td style="text-align:center;">' + g.failed + "</td>" +
+          '<td style="color:var(--muted);">' + esc(g.rule) + "</td></tr>";
+      }).join("") + "</table>" +
+      '<div class="note" style="margin-top:10px;">13 道门槛：<strong>' + (13 - r.gateNaCount) + " 道已判定</strong> · " +
+      r.gateNaCount + " 道因清单里没有可判对象而跳过 · 其中 " + r.gateFailCount + " 道不通过。" +
+      "环境：地面 " + esc(env.floor) + "（抓地 " + r.env.surface + "/10）。</div>";
 
     // 丰富度建议
     var tips = [];
@@ -371,6 +422,7 @@
     // JSON 输出
     $("json").textContent = JSON.stringify({
       profile: profile,
+      env: env,
       peripherals: state,
       result: {
         healthScore: r.healthScore,
@@ -379,6 +431,9 @@
         seqStuck: r.seqStuck,
         stages: r.stages,
         quota: r.quota,
+        gates: r.gates,
+        gateFailCount: r.gateFailCount,
+        gateNaCount: r.gateNaCount,
         failures: r.failures,
         hasBox: r.hasBox,
         laserMinutes: r.laserMinutes,
@@ -416,12 +471,12 @@
   ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical"].forEach(function (id) {
     $(id).addEventListener("input", recalc);
   });
-  ["f-nip","f-indoor"].forEach(function (id) {
+  ["f-nip","f-indoor","f-floor"].forEach(function (id) {
     $(id).addEventListener("change", recalc);
   });
 
   $("add").addEventListener("click", function () {
-    state.push({ cls: "BALL", minutes: 10, sessions: 1, diameter: 35, hasSmallParts: false, hasString: false, stringLen: 0, hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: true });
+    state.push(JSON.parse(JSON.stringify(BLANK)));
     renderTable(); recalc();
   });
   $("reset").addEventListener("click", function () {
