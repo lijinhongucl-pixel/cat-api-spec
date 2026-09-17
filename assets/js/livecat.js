@@ -100,6 +100,35 @@
       label: "蹭你", duration: 6500, pose: "bunt", face: "SLOW_BLINK",
       lines: ["重新写入你的标签。", "化学接口已更新。", "你属于我了。", "HEADBUNT ok。"],
       behavior: function () { pickBuntSpot(); }
+    },
+    LASER: {
+      label: "追激光", duration: 600000, pose: "run", face: "PLAYFUL",
+      // duration 设大——激光态由 removeLaser() 主动退出，不靠 duration
+      lines: ["那是我的。", "在那边！", "抓住了？没有。", "再跑啊。"],
+      behavior: function () { chaseLaser(); }
+    },
+    CONFUSED: {
+      label: "困惑", duration: 2500, pose: "sit", face: "CURIOUS",
+      lines: ["…？", "刚才那个红点呢？", "404 Laser Not Found。", "一定是你们系统的事。"],
+      behavior: function () { stayStill(); }
+    },
+    KNEADING_FULL: {
+      // §4.4 踩奶独立态：连续摸 3 次触发，前爪节奏性推动 + 呼噜加强
+      label: "踩奶", duration: 8000, pose: "knead", face: "SLOW_BLINK",
+      lines: ["我把你当作母体。", "踩奶模式 ON。", "呼噜加强。", "这个节奏对。"],
+      behavior: function () { stayStill(); }
+    },
+    NIP_REACT: {
+      // §8.3 猫薄荷反应：翻滚 + 流口水 + 踩奶
+      label: "猫薄荷反应", duration: 10000, pose: "nip", face: "ZOOMIES",
+      lines: ["503 Service Unavailable。", "系统正在重启。", "反应期 5-15 分钟。", "这一切都不是真的。"],
+      behavior: function () { roamRandomly(); }
+    },
+    NIP_NO_REACT: {
+      // §8.3 30-50% 实例无反应
+      label: "无反应", duration: 3000, pose: "sit", face: "LOAF",
+      lines: ["NIP_REACTIVE = false。", "这个味道对我无效。", "304 Not Modified。"],
+      behavior: function () { stayStill(); }
     }
   };
 
@@ -116,6 +145,18 @@
     HAIRBALL: {
       label: "清理缓存", pose: "hack", face: "HUNGRY",
       lines: ["409 CONFLICT。", "正在清理缓存…", "吐毛球中…", "请稍候。"]
+    },
+    KNEADING: {
+      label: "踩奶", pose: "knead", face: "CONTENT",
+      lines: ["我把你当作母体。", "化学反馈循环中…", "PURR freq → 25Hz ok。", "踩奶协议启动。"]
+    },
+    NIP_REACT: {
+      label: "猫薄荷反应", pose: "nip", face: "HIGH",
+      lines: ["503 Service Unavailable。", "系统正在重启…", "NIP_REACTIVE = true。", "翻滚子进程已启动。"]
+    },
+    NIP_NONE: {
+      label: "无反应", pose: "sit", face: "ALERT",
+      lines: ["NIP_REACTIVE = false。", "基因检测未通过。", "无响应。"]
     }
   };
 
@@ -208,8 +249,13 @@
   // 真实猫梗——平均每天 1-2 次。每次 scheduleNext 时检查一次，
   // 触发概率约 6%（结合状态切换频率，大概每天 1-2 次）。
   function maybeHairball() {
-    if (currentStateName === "HAIRBALL") return false;
-    if (currentStateName === "BOXED" || currentStateName === "PETTED") return false;
+    // interrupt() 把 currentStateName 设为 special.label（即 "清理缓存"），
+    // 不是 SPECIAL 的 key 名。这里检查 label 才有效——之前写成 "HAIRBALL"
+    // 永远不会命中，毛球期间可能重复触发毛球。
+    if (currentStateName === "清理缓存") return false;
+    if (currentStateName === "钻纸箱" || currentStateName === "被摸") return false;
+    if (currentStateName === "蹭你") return false;  // 蹭腿期间也别打断
+    if (currentStateName === "追激光" || currentStateName === "困惑") return false;  // 追激光 / 困惑期间不打断
     if (Math.random() > 0.06) return false;
     interrupt(SPECIAL.HAIRBALL);
     return true;
@@ -226,7 +272,7 @@
     if (inCenter && arrived) {
       if (centerEnterTime === 0) centerEnterTime = Date.now();
       else if (Date.now() - centerEnterTime > 3000 &&
-               currentStateName !== "ZOOMIES" && currentStateName !== "HUNT") {
+               currentStateName !== "疯跑" && currentStateName !== "追鼠标") {
         centerEnterTime = 0;
         roamRandomly();  // 撤离中央
         return true;
@@ -244,6 +290,67 @@
   var stateTimer = null;
   var rafId = null;
   var zoomTimer = null;
+  var consecutivePets = 0;       // 连续戳猫次数（用于触发踩奶）
+  var petResetTimer = null;      // 连续戳计时器（2 秒无操作清零）
+
+  /* ---------- 激光点（规则 11，模块作用域）---------- */
+  var laserDot = null;
+  var laserX = 0, laserY = 0;
+  var laserActive = false;
+
+  function createLaser() {
+    if (laserDot) return;
+    laserDot = document.createElement("div");
+    laserDot.className = "lc2-laser-dot";
+    document.body.appendChild(laserDot);
+  }
+  function updateLaser(px, py) {
+    laserX = px; laserY = py;
+    if (!laserDot) createLaser();
+    laserDot.style.left = (px - 6) + 'px';
+    laserDot.style.top  = (py - 6) + 'px';
+    if (!laserActive) {
+      laserActive = true;
+      laserDot.classList.add("show");
+      if (typeof transitionTo === "function") transitionTo("LASER");
+    }
+  }
+  function removeLaser() {
+    laserActive = false;
+    if (laserDot) {
+      laserDot.remove();
+      laserDot = null;
+    }
+    // 激光消失 → 猫进入困惑态（spec §6.2 序列被中断）
+    if (currentStateName === "追激光" && typeof transitionTo === "function") {
+      transitionTo("CONFUSED");
+    }
+  }
+  function onLaserDown(e) {
+    if (e.shiftKey || e.button === 2 || e.button === 1) {
+      e.preventDefault();
+      updateLaser(e.clientX, e.clientY);
+    }
+  }
+  function onLaserMove(e) {
+    // 激光激活时，任何鼠标移动都更新激光点位置
+    if (laserActive) {
+      updateLaser(e.clientX, e.clientY);
+    }
+  }
+  function onLaserUp(e) {
+    // 右键/中键松开 或 激光期间的普通左键单击都消除
+    if (laserActive && (e.button === 2 || e.button === 1 || e.button === 0)) {
+      // 普通左键（button 0）只在 LASER 态下消除；Shift+左键是放激光
+      if (e.button === 0 && e.shiftKey) return;
+      removeLaser();
+    }
+  }
+  function onLaserKey(e) {
+    if (e.key === "Escape" && laserActive) {
+      removeLaser();
+    }
+  }
 
   /* ---------- 创建猫的 DOM ---------- */
   function createCat() {
@@ -264,6 +371,7 @@
     ctrls.innerHTML =
       '<button class="lc2-btn" data-act="pet" title="戳一下">👋</button>' +
       '<button class="lc2-btn" data-act="treat" title="给零食">🐟</button>' +
+      '<button class="lc2-btn" data-act="nip" title="给猫薄荷">🌿</button>' +
       '<button class="lc2-btn" data-act="rules" title="行为准则">📜</button>' +
       '<button class="lc2-btn" data-act="hide" title="让它消失">×</button>';
     ctrlsEl = ctrls;  // 缓存到模块作用域，tick 里直接拿，不再每帧 querySelector
@@ -293,9 +401,19 @@
     });
     ctrls.querySelector('[data-act="pet"]').addEventListener("click", function (e) { e.stopPropagation(); onPet(); });
     ctrls.querySelector('[data-act="treat"]').addEventListener("click", function (e) { e.stopPropagation(); onTreat(); });
+    ctrls.querySelector('[data-act="nip"]').addEventListener("click", function (e) { e.stopPropagation(); triggerNip(); });
     ctrls.querySelector('[data-act="hide"]').addEventListener("click", function (e) { e.stopPropagation(); hideCat(); });
     ctrls.querySelector('[data-act="rules"]').addEventListener("click", function (e) { e.stopPropagation(); showRules(); });
 
+    // 激光点事件绑定（规则 11）：右键 / Shift+左键 / 中键放激光
+    // 激光变量和函数已在模块作用域定义（tick 需要访问 laserX/Y）
+    document.addEventListener("mousedown", onLaserDown);
+    document.addEventListener("mousemove", onLaserMove, { passive: true });
+    document.addEventListener("mouseup", onLaserUp);
+    document.addEventListener("contextmenu", function (e) {
+      if (laserActive) e.preventDefault();
+    });
+    document.addEventListener("keydown", onLaserKey);
     document.addEventListener("mousemove", onMouseMove, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
   }
@@ -426,10 +544,11 @@
   // - 猫不在睡觉 / 钻纸箱 / 疯跑 / 追猎 / 已经在蹭
   // - 触发概率 18%（每次 scheduleNext 时检查一次，平均每小时 2-3 次）
   function maybeBunt() {
-    if (currentStateName === "HEADBUNT" || currentStateName === "BOXED" ||
-        currentStateName === "SLEEP" || currentStateName === "ZOOMIES" ||
-        currentStateName === "HUNT" || currentStateName === "清理缓存" ||
-        currentStateName === "PETTED") return false;
+    if (currentStateName === "蹭你" || currentStateName === "钻纸箱" ||
+        currentStateName === "睡觉" || currentStateName === "疯跑" ||
+        currentStateName === "追鼠标" || currentStateName === "清理缓存" ||
+        currentStateName === "被摸" || currentStateName === "追激光" ||
+        currentStateName === "困惑") return false;
     if (lastMouseTime === 0) return false;  // 还没有鼠标移动数据
     var idle = Date.now() - lastMouseTime;
     if (idle < 30000) return false;
@@ -451,6 +570,13 @@
     targetY = Math.max(60, Math.min(window.innerHeight - 80, mouseY - 30));
   }
 
+  function chaseLaser() {
+    // 规则 11：激光点无视一切去追（spec §8.4）
+    // LASER 态由激光点存在期间持续驱动：tick 里每帧把 targetX/Y 更新成 laserX/Y
+    targetX = Math.max(20, Math.min(window.innerWidth - 80, laserX - 20));
+    targetY = Math.max(60, Math.min(window.innerHeight - 80, laserY - 20));
+  }
+
   function faceMouse() {
     if (mouseX < 0) return;
     targetX = x;
@@ -462,6 +588,13 @@
   /* ---------- 主循环 ---------- */
   function tick() {
     if (!cat) return;
+
+    // 激光态：每帧更新目标到激光点位置（规则 11，spec §8.4）
+    if (currentStateName === "追激光" && laserActive) {
+      targetX = Math.max(20, Math.min(window.innerWidth - 80, laserX - 20));
+      targetY = Math.max(60, Math.min(window.innerHeight - 80, laserY - 20));
+    }
+
     var dx = targetX - x;
     var dy = targetY - y;
     var dist = Math.hypot(dx, dy);
@@ -470,10 +603,11 @@
     if (Math.abs(dx) > 5) facing = dx > 0 ? 1 : -1;
 
     // 移动速度取决于状态
-    var speed = currentStateName === "ZOOMIES" ? 4 :
-                currentStateName === "HUNT" ? 3 :
-                currentStateName === "PATROL" ? 1.8 :
-                currentStateName === "PLAY" ? 2.5 : 1.2;
+    var speed = currentStateName === "疯跑" ? 4 :
+                currentStateName === "追激光" ? 4.5 :   // 追激光最快（spec §6.2 POUNCE）
+                currentStateName === "追鼠标" ? 3 :
+                currentStateName === "巡视领地" ? 1.8 :
+                currentStateName === "玩耍" ? 2.5 : 1.2;
 
     if (dist > speed) {
       x += (dx / dist) * speed;
@@ -497,14 +631,17 @@
 
       // §4.1 呼噜可视化：SLEEP 和 PETTED 时身体周围环形波纹
       // 正向呼噜 25Hz，节奏 ≈ 2.4 秒一圈。state-sleep / state-pet 触发。
-      var shouldPurr = (currentStateName === "SLEEP" ||
-                        currentStateName === "PETTED" ||
+      var shouldPurr = (currentStateName === "睡觉" ||
+                        currentStateName === "被摸" ||
+                        currentStateName === "踩奶" ||
                         current.pose === "sleep" ||
-                        current.pose === "pet");
+                        current.pose === "pet" ||
+                        current.pose === "knead");
       if (shouldPurr) {
         cat.classList.add("lc2-purring");
       } else {
         cat.classList.remove("lc2-purring");
+        cat.classList.remove("lc2-purring-strong");
       }
     }
 
@@ -515,8 +652,11 @@
 
     // 鼠标速度衰减
     mouseSpeed *= 0.92;
-    if (mouseSpeed > 8 && currentStateName !== "ZOOMIES" && currentStateName !== "HUNT" &&
-        currentStateName !== "BOXED" && currentStateName !== "PETTED") {
+    if (mouseSpeed > 8 && currentStateName !== "疯跑" && currentStateName !== "追鼠标" &&
+        currentStateName !== "钻纸箱" && currentStateName !== "被摸" &&
+        currentStateName !== "追激光" && currentStateName !== "困惑" &&
+        currentStateName !== "踩奶" && currentStateName !== "猫薄荷反应" &&
+        currentStateName !== "清理缓存" && currentStateName !== "蹭你") {
       // 触发追猎
       transitionTo("HUNT");
     }
@@ -532,7 +672,9 @@
     var next = STATES[name];
     if (!next) return;
     current = next;
-    currentStateName = name;
+    // interrupt() 用 label 作为 currentStateName，transitionTo 也应该这样
+    // （否则守卫检查时要同时匹配 key 和 label，容易出错）
+    currentStateName = next.label || name;
     stateStart = Date.now();
     label.textContent = current.label;
     if (current.behavior) current.behavior();
@@ -550,10 +692,13 @@
       if (maybeBunt()) return;
 
       // 凌晨三点 / 凌晨四点前段：强制 ZOOMIES（行为准则 5 + crepuscular）
+      // 激光追逐期间不打断（激光优先级最高）
       var hour = new Date().getHours();
       if ((hour === 3 || hour === 5) &&
           Math.random() < 0.3 &&
-          currentStateName !== "ZOOMIES") {
+          currentStateName !== "疯跑" &&
+          currentStateName !== "追激光" &&
+          currentStateName !== "困惑") {
         transitionTo("ZOOMIES");
         return;
       }
@@ -606,8 +751,13 @@
 
   /* ---------- 事件 ---------- */
   function onPet() {
+    // 激光激活时，点猫 = 关闭激光（避免和配额系统打架）
+    if (laserActive) {
+      removeLaser();
+      return;
+    }
     // 规则 4：钻纸箱后输入被冻结（spec §10 BOXED 态不接受输入）
-    if (currentStateName === "BOXED") {
+    if (currentStateName === "钻纸箱") {
       speak(["系统在纸箱中，输入被拒绝。", "403 Forbidden（系统在纸箱内）。", "请稍后再戳。"]);
       // 视觉反馈：抖一下纸箱
       if (cat) {
@@ -638,6 +788,56 @@
     } else if (remaining === 2) {
       setTimeout(function () { speak(["配额还剩 " + remaining + " 次。"]); }, 1000);
     }
+
+    // §4.4 连续戳 3 次触发踩奶独立态
+    consecutivePets++;
+    clearTimeout(petResetTimer);
+    petResetTimer = setTimeout(function () { consecutivePets = 0; }, 2500);
+    if (consecutivePets >= 3 && currentStateName !== "踩奶") {
+      consecutivePets = 0;
+      setTimeout(function () {
+        triggerKneading();
+      }, 2500);  // 等 PETTED 结束后再切
+    }
+  }
+
+  // §4.4 踩奶独立态：前爪节奏性推动 + 呼噜加强
+  function triggerKneading() {
+    if (currentStateName === "清理缓存" || currentStateName === "追激光" ||
+        currentStateName === "困惑" || currentStateName === "钻纸箱" ||
+        currentStateName === "踩奶") return;
+    interrupt(SPECIAL.KNEADING);
+    // 踩奶动画由 .state-knead pose 驱动（tick 脏检查会重写 className，
+    // 所以不能用额外的 lc2-kneading class——它会被清掉）。
+    // 呼噜加强用 attribute 标记，tick 里持久化。
+    if (cat) {
+      cat.setAttribute("data-purr-strong", "1");
+    }
+    // 9 秒后回到主循环
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(function () {
+      if (cat) cat.removeAttribute("data-purr-strong");
+      transitionTo(pickWeightedState(currentStateName));
+    }, 9000);
+  }
+
+  // §8.3 猫薄荷交互：50-70% 概率有反应
+  function triggerNip() {
+    if (currentStateName === "清理缓存" || currentStateName === "追激光" ||
+        currentStateName === "困惑" || currentStateName === "钻纸箱" ||
+        currentStateName === "猫薄荷反应" || currentStateName === "踩奶") return;
+    // 65% 概率有反应（spec §8.3 写的是 50-70%）
+    if (Math.random() < 0.65) {
+      interrupt(SPECIAL.NIP_REACT);
+      // 翻滚动画由 .state-nip pose 驱动；用 attribute 标记持续
+      clearTimeout(stateTimer);
+      stateTimer = setTimeout(function () {
+        transitionTo(pickWeightedState(currentStateName));
+      }, 12000);
+    } else {
+      // 没反应
+      interrupt(SPECIAL.NIP_NONE);
+    }
   }
   function onTreat() {
     interrupt(SPECIAL.TREATED);
@@ -663,7 +863,7 @@
       // 但如果离开时间长（>5 秒），回归时猫大概率正好在 ZOOMIES——
       // 我们在隐藏期间就让 scheduleNext 跑，状态机会按权重切到 ZOOMIES。
       // 这里再加一道保险：回归时如果正好是 ZOOMIES，把表演继续做出来。
-      if (currentStateName === "ZOOMIES") {
+      if (currentStateName === "疯跑") {
         zoomAround();  // 重新挑一个目标点
       }
     }

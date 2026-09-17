@@ -212,6 +212,82 @@
   60%      { transform: translateY(-2px) scaleY(1.06); }  /* 抬头 */
 }
 
+/* §4.4 踩奶：前爪节奏性推动，身体轻微起伏（由 state-knead pose 驱动）*/
+.state-knead .lc2-body {
+  transform-origin: 50% 80%;
+  animation: lc2-knead-rub 0.85s ease-in-out infinite;
+}
+@keyframes lc2-knead-rub {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50%      { transform: translateY(-3px) scaleY(0.97); }  /* 前爪推动节奏 */
+}
+
+/* 踩奶时呼噜加强：周期从 2.4s 缩到 1.2s（用 attribute 而非 class，
+   因为 tick 脏检查会重写 className，但 attribute 不会被清掉）*/
+.lc2-cat[data-purr-strong] .lc2-purr-ring {
+  animation-duration: 1.2s !important;
+}
+
+/* §8.3 猫薄荷反应：身体翻滚 + 抖动（由 state-nip pose 驱动）*/
+.state-nip .lc2-body {
+  transform-origin: 50% 70%;
+  animation: lc2-nip-roll 1.8s ease-in-out infinite;
+}
+.state-nip .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 0.4s ease-in-out infinite;
+}
+@keyframes lc2-nip-roll {
+  0%   { transform: rotate(0deg) translateY(0); }
+  25%  { transform: rotate(180deg) translateY(-4px); }
+  50%  { transform: rotate(360deg) translateY(0); }
+  75%  { transform: rotate(540deg) translateY(-4px); }
+  100% { transform: rotate(720deg) translateY(0); }
+}
+
+/* §8.4 激光追逐：全力冲刺，身体压低 */
+.state-laser .lc2-body {
+  transform: translateY(2px) scaleY(0.96);
+  animation: lc2-laser-dash 0.3s ease-in-out infinite;
+}
+.state-laser .lc2-tail {
+  transform-origin: 86px 38px;
+  animation: lc2-tail-swish 0.25s ease-in-out infinite;
+}
+@keyframes lc2-laser-dash {
+  0%, 100% { transform: translateY(2px) scaleY(0.96); }
+  50%      { transform: translateY(0) scaleY(1.02); }
+}
+
+/* 困惑态：身体左右摇晃 */
+.state-confused .lc2-body {
+  transform-origin: 50% 80%;
+  animation: lc2-confused 1.5s ease-in-out infinite;
+}
+@keyframes lc2-confused {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-6deg); }
+  75%      { transform: rotate(6deg); }
+}
+
+/* 激光点 DOM */
+.lc2-laser-dot {
+  position: fixed;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff2020 0%, #cc0000 60%, rgba(204,0,0,0.3) 100%);
+  box-shadow: 0 0 12px #ff3030, 0 0 24px #ff0000;
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate(-50%, -50%);
+  animation: lc2-laser-pulse 0.6s ease-in-out infinite;
+}
+@keyframes lc2-laser-pulse {
+  0%, 100% { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.15); }
+}
+
 /* §4.2 缓慢眨眼彩蛋：眼睛压成线再回正 */
 .lc2-blinking .lc2-eye-l,
 .lc2-blinking .lc2-eye-r {
@@ -359,7 +435,13 @@
   .lc2-annoyed .lc2-tail,
   .lc2-purring .lc2-purr-r1, .lc2-purring .lc2-purr-r2,
   .lc2-purring .lc2-purr-r3, .state-bunt .lc2-body,
-  .state-bunt .lc2-tail {
+  .state-bunt .lc2-tail,
+  .state-knead .lc2-body,
+  .lc2-cat[data-purr-strong] .lc2-purr-ring,
+  .state-nip .lc2-body, .state-nip .lc2-tail,
+  .state-laser .lc2-body, .state-laser .lc2-tail,
+  .state-confused .lc2-body,
+  .lc2-laser-dot {
     animation: none !important;
     transition: none !important;
   }
