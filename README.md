@@ -8,6 +8,19 @@
 
 ---
 
+## 截图
+
+| | |
+|---|---|
+| ![首页](assets/img/screenshots/home.png) | ![正文·权限模型](assets/img/screenshots/spec-permissions.png) |
+| **首页** —— 项目门面与统计数字 | **正文 §2 权限模型** —— 否认 `Owner` 角色的存在 |
+| ![表情渲染器](assets/img/screenshots/expression.png) | ![外设控制台](assets/img/screenshots/peripherals.png) |
+| **表情渲染器** —— 选状态实时出猫脸 SVG | **外设控制台** —— 14 类外设 / 13 道门槛 / 接合评分 |
+| ![一只猫的生活意见](assets/img/screenshots/opinions.png) | ![活猫](assets/img/screenshots/livecat.png) |
+| **一只猫的生活意见** —— 31 条当事猫官方立场 | **活猫 LIVECAT v2** —— 会在你屏幕上走来走去 |
+
+---
+
 ## 这是什么
 
 把一只猫当成一个接口规范来写。16 章正文、31 条「当事猫意见」、13 个状态码、14 种表情、一份从 §2 开始就反向定义的权限模型，外加一只会自己在你屏幕上走来走去的活猫。

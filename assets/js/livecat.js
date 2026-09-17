@@ -34,12 +34,18 @@
   var cat = null;       // 猫节点
   var bubble = null;    // 对白气泡
   var label = null;     // 状态标签
+  var ctrlsEl = null;   // 控制按钮组（缓存引用，避免 tick 里每帧 querySelector）
   var x = 0, y = 0;     // 当前位置（页面坐标系）
   var targetX = 0, targetY = 0;  // 目标位置
   var facing = 1;       // 朝向：1 右 / -1 左
   var mouseX = -1, mouseY = -1;
   var lastMouseTime = 0;
   var mouseSpeed = 0;
+
+  // 脏检查：只有真正切换了状态，才需要重写 className / data-state。
+  // 否则 tick 每帧都会重写一遍样式字符串，哪怕猫根本没换姿势。
+  var lastAppliedState = null;
+  var lastAppliedPose = null;
 
   /* ---------- 状态机 ---------- */
   // 每个状态有：名字 / 持续时长 / 身体姿势 class / 表情 / 进入时调用的行为函数
@@ -135,6 +141,7 @@
       '<button class="lc2-btn" data-act="treat" title="给零食">🐟</button>' +
       '<button class="lc2-btn" data-act="rules" title="行为准则">📜</button>' +
       '<button class="lc2-btn" data-act="hide" title="让它消失">×</button>';
+    ctrlsEl = ctrls;  // 缓存到模块作用域，tick 里直接拿，不再每帧 querySelector
 
     var wrap = document.createElement("div");
     wrap.className = "lc2-wrap";
@@ -304,17 +311,23 @@
       y = targetY;
     }
 
-    // 应用变换
+    // 应用变换。物理位置每帧都要写（猫在移动）。
     cat.style.transform = 'translate(' + x + 'px,' + y + 'px) scaleX(' + facing + ')';
-    cat.setAttribute("data-state", currentStateName);
-    cat.className = "lc2-cat state-" + current.pose;
 
-    // 同步气泡 / 标签 / 按钮组的位置跟着猫走
-    var bw = 200, bh = 50;
+    // 状态相关样式只在切换时才需要写一次：
+    // 此前 tick 每帧都重写 className / data-state，空转也在烧 CPU。
+    // 现在用 lastApplied 两个标志位做脏检查，状态没变就跳过。
+    if (currentStateName !== lastAppliedState || current.pose !== lastAppliedPose) {
+      cat.setAttribute("data-state", currentStateName);
+      cat.className = "lc2-cat state-" + current.pose;
+      lastAppliedState = currentStateName;
+      lastAppliedPose = current.pose;
+    }
+
+    // 同步气泡 / 标签 / 按钮组的位置跟着猫走（每帧，因为猫在动）
     if (bubble) bubble.style.left = (x + 50) + 'px', bubble.style.top = (y - 12) + 'px';
     if (label)  label.style.left  = (x + 50) + 'px', label.style.top  = (y + 72) + 'px';
-    var ctrls = cat.parentNode.querySelector('.lc2-ctrls');
-    if (ctrls) ctrls.style.left = (x + 70) + 'px', ctrls.style.top = (y - 12) + 'px';
+    if (ctrlsEl) ctrlsEl.style.left = (x + 70) + 'px', ctrlsEl.style.top = (y - 12) + 'px';
 
     // 鼠标速度衰减
     mouseSpeed *= 0.92;
