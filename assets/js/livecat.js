@@ -107,12 +107,132 @@
     TREATED: {
       label: "收到零食", pose: "eat", face: "HUNGRY",
       lines: ["200 OK。", "通讯正常。", "再来一个。"]
+    },
+    HAIRBALL: {
+      label: "清理缓存", pose: "hack", face: "HUNGRY",
+      lines: ["409 CONFLICT。", "正在清理缓存…", "吐毛球中…", "请稍候。"]
     }
   };
 
-  // 状态循环顺序（不完全是顺序，会按行为准则随机跳）
-  var CYCLE = ["PATROL", "GROOM", "PLAY", "STARE", "EAT", "BOXED", "SLEEP"];
-  var cycleIdx = 0;
+  /* ---------- 状态权重（真实猫作息分布）---------- */
+  // 此前 CYCLE 等概率轮转 7 个状态，SLEEP 只占 1/7 ≈ 14%——但真实猫一天睡
+  // 13-16 小时（54-67%）。spec §5 里自己写的「日均睡眠 13-16 小时」。
+  // GROOM 也只占 14%，但真实是醒着时间的 30%（spec §4.1）。
+  //
+  // 现在按真实猫作息给权重：
+  //   SLEEP 50% · GROOM 20% · PATROL 10% · PLAY 8% ·
+  //   EAT 5% · STARE 4% · BOXED 3%
+  // crepuscular（晨昏活跃）会让 SLEEP 权重在 5-7 点和 17-19 点降到 25%，
+  // 其他状态权重同步上调（spec §6.2 真实猫是晨昏动物）。
+  var WEIGHTS = {
+    SLEEP:  50,
+    GROOM:  20,
+    PATROL: 10,
+    PLAY:    8,
+    EAT:     5,
+    STARE:   4,
+    BOXED:   3
+  };
+
+  // crepuscular：晨昏时段（5-7 点 / 17-19 点）SLEEP 降到 25，
+  // 其他状态按原比例放大。spec §6.2。
+  function currentWeights() {
+    var h = new Date().getHours();
+    var dawn = (h >= 5 && h <= 7);
+    var dusk = (h >= 17 && h <= 19);
+    if (!dawn && !dusk) return WEIGHTS;
+    var w = {};
+    var sleepW = 25;
+    var scale = (100 - sleepW) / (100 - WEIGHTS.SLEEP);
+    for (var k in WEIGHTS) {
+      if (k === "SLEEP") w[k] = sleepW;
+      else w[k] = WEIGHTS[k] * scale;
+    }
+    return w;
+  }
+
+  // 按权重随机选一个状态（不一定是当前状态）
+  function pickWeightedState(exclude) {
+    var w = currentWeights();
+    var total = 0;
+    var keys = [];
+    for (var k in w) {
+      if (k === exclude) continue;
+      total += w[k];
+      keys.push({ k: k, cum: total });
+    }
+    var r = Math.random() * total;
+    for (var i = 0; i < keys.length; i++) {
+      if (r < keys[i].cum) return keys[i].k;
+    }
+    return keys[keys.length - 1].k;
+  }
+
+  /* ---------- 抚摸配额（行为准则 6+7）---------- */
+  // 每日配额 5 次。戳一次扣一次。配额耗尽返回 429。
+  // 用 localStorage 按日持久化——关页面再打开，配额不重置。
+  var PET_QUOTA_DEFAULT = 5;
+  function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate();
+  }
+  function getQuota() {
+    try {
+      var raw = localStorage.getItem('catapi_pet_quota');
+      if (!raw) return PET_QUOTA_DEFAULT;
+      var data = JSON.parse(raw);
+      if (data.day !== todayKey()) return PET_QUOTA_DEFAULT;  // 跨日重置
+      return data.remaining;
+    } catch (e) { return PET_QUOTA_DEFAULT; }
+  }
+  function setQuota(n) {
+    try {
+      localStorage.setItem('catapi_pet_quota', JSON.stringify({
+        day: todayKey(), remaining: n
+      }));
+    } catch (e) { /* 无痕模式禁用了 localStorage，静默降级 */ }
+  }
+  function consumeQuota() {
+    var q = getQuota();
+    if (q <= 0) return 0;
+    setQuota(q - 1);
+    return q - 1;  // 扣完后的剩余次数
+  }
+
+  /* ---------- 呕吐毛球随机事件 ---------- */
+  // 真实猫梗——平均每天 1-2 次。每次 scheduleNext 时检查一次，
+  // 触发概率约 6%（结合状态切换频率，大概每天 1-2 次）。
+  function maybeHairball() {
+    if (currentStateName === "HAIRBALL") return false;
+    if (currentStateName === "BOXED" || currentStateName === "PETTED") return false;
+    if (Math.random() > 0.06) return false;
+    interrupt(SPECIAL.HAIRBALL);
+    return true;
+  }
+
+  // 中央区域停留检测（行为准则 12）
+  // 猫如果走到屏幕中央 30%×30% 区域内且静止超过 3 秒，自动撤离。
+  var centerEnterTime = 0;
+  function maybeFleeCenter() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var cx = w / 2, cy = h / 2;
+    var inCenter = Math.abs(x - cx) < w * 0.15 && Math.abs(y - cy) < h * 0.15;
+    var arrived = Math.abs(targetX - x) < 5 && Math.abs(targetY - y) < 5;
+    if (inCenter && arrived) {
+      if (centerEnterTime === 0) centerEnterTime = Date.now();
+      else if (Date.now() - centerEnterTime > 3000 &&
+               currentStateName !== "ZOOMIES" && currentStateName !== "HUNT") {
+        centerEnterTime = 0;
+        roamRandomly();  // 撤离中央
+        return true;
+      }
+    } else {
+      centerEnterTime = 0;
+    }
+    return false;
+  }
+
+  var cycleIdx = -1;
   var current = STATES.SLEEP;
   var currentStateName = "SLEEP";
   var stateStart = 0;
@@ -153,6 +273,19 @@
 
     // 事件
     cat.addEventListener("click", onPet);
+    // §4.2 SLOW_BLINK 缓慢眨眼彩蛋：双击猫触发协议握手
+    // spec 里写的「最高级别正面信号」。用户双击 = 我也想跟你握手。
+    cat.addEventListener("dblclick", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerSlowBlink(true);
+    });
+    // 鼠标悬停在 STARE 态时也有概率自动眨眼回应
+    cat.addEventListener("mouseenter", function () {
+      if (currentStateName === "STARE" && Math.random() < 0.3) {
+        triggerSlowBlink(false);
+      }
+    });
     ctrls.querySelector('[data-act="pet"]').addEventListener("click", function (e) { e.stopPropagation(); onPet(); });
     ctrls.querySelector('[data-act="treat"]').addEventListener("click", function (e) { e.stopPropagation(); onTreat(); });
     ctrls.querySelector('[data-act="hide"]').addEventListener("click", function (e) { e.stopPropagation(); hideCat(); });
@@ -337,6 +470,9 @@
       transitionTo("HUNT");
     }
 
+    // 行为准则 12：中央区域停留超 3 秒自动撤离
+    maybeFleeCenter();
+
     rafId = requestAnimationFrame(tick);
   }
 
@@ -356,14 +492,21 @@
     clearTimeout(stateTimer);
     var jitter = 0.7 + Math.random() * 0.6;
     stateTimer = setTimeout(function () {
-      // 凌晨三点强制 ZOOMIES（行为准则 5）
+      // 呕吐毛球检查（每天 1-2 次）
+      if (maybeHairball()) return;
+
+      // 凌晨三点 / 凌晨四点前段：强制 ZOOMIES（行为准则 5 + crepuscular）
       var hour = new Date().getHours();
-      if (hour === 3 && Math.random() < 0.3 && currentStateName !== "ZOOMIES") {
+      if ((hour === 3 || hour === 5) &&
+          Math.random() < 0.3 &&
+          currentStateName !== "ZOOMIES") {
         transitionTo("ZOOMIES");
         return;
       }
-      cycleIdx = (cycleIdx + 1) % CYCLE.length;
-      transitionTo(CYCLE[cycleIdx]);
+
+      // 加权随机选下一个状态（真实猫作息分布 + crepuscular）
+      var next = pickWeightedState(currentStateName);
+      transitionTo(next);
     }, current.duration * jitter);
   }
 
@@ -371,12 +514,17 @@
     clearTimeout(stateTimer);
     current = Object.assign({}, special);
     currentStateName = special.label;
+    // 直接清掉脏检查标志位，下一帧会强制重写样式
+    lastAppliedState = null;
+    lastAppliedPose = null;
     label.textContent = special.label;
-    cat.className = "lc2-cat state-" + current.pose;
     speak(current.lines);
+    // 特殊态持续 2.4 秒（HAIRBALL 加倍，让它有完整表演时长）
+    var dwell = special === SPECIAL.HAIRBALL ? 3500 : 2400;
     stateTimer = setTimeout(function () {
-      transitionTo(cycleIdx >= 0 ? CYCLE[cycleIdx] : "SLEEP");
-    }, 2400);
+      // 回到主循环：按权重选下一个，避免每次都回到同一个状态
+      transitionTo(pickWeightedState(special.label));
+    }, dwell);
   }
 
   function speak(lines) {
@@ -386,9 +534,56 @@
     setTimeout(function () { bubble.classList.remove("show"); }, 2800);
   }
 
+  /* ---------- §4.2 缓慢眨眼（协议握手彩蛋）---------- */
+  // spec §4.2 写的「最高级别正面信号」。用户主动眨眼 → 猫回应 → 协议握手成功。
+  // 被动触发（hover on STARE）也走同一条路。
+  function triggerSlowBlink(userInitiated) {
+    if (!cat) return;
+    if (cat.classList.contains("lc2-blinking")) return;  // 已经在眨了
+    cat.classList.add("lc2-blinking");
+    setTimeout(function () { cat.classList.remove("lc2-blinking"); }, 1500);
+    // 回应台词
+    if (userInitiated) {
+      speak(["😊 协议握手成功。", "眨眼已收到。", "我也信任你。", "SLOW_BLINK → ACK。"]);
+    } else {
+      speak(["…😊", "我也眨了。"]);
+    }
+  }
+
   /* ---------- 事件 ---------- */
   function onPet() {
+    // 规则 4：钻纸箱后输入被冻结（spec §10 BOXED 态不接受输入）
+    if (currentStateName === "BOXED") {
+      speak(["系统在纸箱中，输入被拒绝。", "403 Forbidden（系统在纸箱内）。", "请稍后再戳。"]);
+      // 视觉反馈：抖一下纸箱
+      if (cat) {
+        cat.classList.add("lc2-shake-once");
+        setTimeout(function () { cat.classList.remove("lc2-shake-once"); }, 400);
+      }
+      return;
+    }
+    // 呕吐毛球期间戳会被打断
+    if (currentStateName === "清理缓存") return;
+
+    // 行为准则 6+7：每日抚摸配额，戳一次扣一次，配额耗尽返回 429
+    var remaining = consumeQuota();
+    if (remaining <= 0) {
+      speak(["429 Too Many Requests。今日配额已用完。", "配额超限。明日 0:00 重置。", "403 抚摸限流。"]);
+      // 视觉反馈：猫明显不悦
+      if (cat) {
+        cat.classList.add("lc2-annoyed");
+        setTimeout(function () { cat.classList.remove("lc2-annoyed"); }, 1200);
+      }
+      return;
+    }
+
     interrupt(SPECIAL.PETTED);
+    // 根据剩余配额显示不同台词
+    if (remaining === 1) {
+      setTimeout(function () { speak(["今天配额剩 1 次。再摸就 429。"]); }, 1000);
+    } else if (remaining === 2) {
+      setTimeout(function () { speak(["配额还剩 " + remaining + " 次。"]); }, 1000);
+    }
   }
   function onTreat() {
     interrupt(SPECIAL.TREATED);
@@ -410,6 +605,13 @@
       cancelAnimationFrame(rafId);
     } else {
       rafId = requestAnimationFrame(tick);
+      // 行为准则 3：没人看时才疯跑。用户切回这个 tab = 「有人看了」，
+      // 但如果离开时间长（>5 秒），回归时猫大概率正好在 ZOOMIES——
+      // 我们在隐藏期间就让 scheduleNext 跑，状态机会按权重切到 ZOOMIES。
+      // 这里再加一道保险：回归时如果正好是 ZOOMIES，把表演继续做出来。
+      if (currentStateName === "ZOOMIES") {
+        zoomAround();  // 重新挑一个目标点
+      }
     }
   }
   function hideCat() {
@@ -457,7 +659,11 @@
     STATES: STATES,
     BEHAVIOR_RULES: BEHAVIOR_RULES,
     getState: function () { return currentStateName; },
-    getRules: function () { return BEHAVIOR_RULES; }
+    getRules: function () { return BEHAVIOR_RULES; },
+    transitionTo: transitionTo,        // 暴露给外部触发状态（测试 / 彩蛋）
+    triggerBlink: function () { triggerSlowBlink(true); },
+    getQuota: getQuota,
+    setQuota: setQuota
   };
 
   start();
