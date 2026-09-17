@@ -1,27 +1,29 @@
 /* ============================================================
    CAT API — 表情引擎 EXPR v1
-   14 个状态由同一个 13 维参数向量驱动
-   所有画面由参数实时计算，不含任何预存表情库
+   14 个状态 · 13 维参数向量 · 24×24 像素栅格化
+   对标 DOG API DogExpression 的渲染管线
    ============================================================ */
 
 (function (global) {
   "use strict";
 
+  var GRID = 24; // 像素画布尺寸
+
   /* ---------- 参数定义 ---------- */
   var PARAM_DEFS = [
-    { key: "earL",       label: "左耳角度",     range: "−90~+90", unit: "deg", grade: "B", note: "独立旋转，正值朝前，负值后压（飞机耳）" },
-    { key: "earR",       label: "右耳角度",     range: "−90~+90", unit: "deg", grade: "B", note: "独立旋转，通常与左耳非对称" },
-    { key: "pupil",      label: "瞳孔面积",     range: "0~1",     unit: "",    grade: "A", note: "0=一线，1=全黑。情绪和光照双因子驱动" },
-    { key: "eyeOpen",    label: "眼睑开度",     range: "0.2~1",   unit: "",    grade: "C", note: "缓慢眨眼时短暂降到 0.3" },
-    { key: "browTilt",   label: "眉区倾斜",     range: "−1~1",    unit: "",    grade: "C", note: "正值为上挑（警觉），负值为下压（愤怒）" },
-    { key: "mouthOpen",  label: "张口度",       range: "0~1",     unit: "",    grade: "B", note: "嘶嘶时约 0.7，打哈欠时 1.0" },
-    { key: "whiskerFwd", label: "胡须前展",     range: "−1~1",    unit: "",    grade: "B", note: "正值前展（好奇），负值后贴（恐惧）" },
-    { key: "tailPos",    label: "尾巴高度",     range: "0~1",     unit: "",    grade: "A", note: "0=夹尾，1=直立。直立=友好最高正分" },
-    { key: "tailSwing",  label: "尾巴摆频",     range: "0~8",     unit: "Hz",  grade: "B", note: "高频=烦躁（注意与狗语义相反）" },
-    { key: "bodyArch",   label: "弓背度",       range: "0~1",     unit: "",    grade: "B", note: "恐惧或攻击前的体型膨胀准备" },
-    { key: "furFluff",   label: "炸毛指数",     range: "0~1",     unit: "",    grade: "A", note: "竖毛肌激活程度。0=顺滑，1=全炸" },
-    { key: "headTilt",   label: "头部倾斜",     range: "−1~1",    unit: "",    grade: "C", note: "正值右倾，负值左倾。好奇时触发" },
-    { key: "vibrate",    label: "呼噜振动",     range: "0~1",     unit: "",    grade: "A", note: "25Hz 舒适呼噜至 150Hz 修复态" }
+    { key: "earL",       label: "左耳角度",     range: "-90~+90",  unit: "deg", grade: "B", note: "独立旋转，正值朝前，负值后压（飞机耳）" },
+    { key: "earR",       label: "右耳角度",     range: "-90~+90",  unit: "deg", grade: "B", note: "通常与左耳非对称" },
+    { key: "pupil",      label: "瞳孔面积",     range: "0~1",      unit: "",    grade: "A", note: "0=一线（竖线），1=全圆。猫是竖瞳" },
+    { key: "eyeOpen",    label: "眼睑开度",     range: "0.2~1",    unit: "",    grade: "C", note: "缓慢眨眼时短暂降到 0.3" },
+    { key: "browTilt",   label: "眉区倾斜",     range: "-1~1",     unit: "",    grade: "C", note: "正值为上挑（警觉），负值为下压（愤怒）" },
+    { key: "mouthOpen",  label: "张口度",       range: "0~1",      unit: "",    grade: "B", note: "嘶嘶时约 0.7，打哈欠时 1.0" },
+    { key: "whiskerFwd", label: "胡须前展",     range: "-1~1",     unit: "",    grade: "B", note: "正值前展（好奇），负值后贴（恐惧）" },
+    { key: "tailPos",    label: "尾巴高度",     range: "0~1",      unit: "",    grade: "A", note: "0=夹尾，1=直立。直立=友好最高正分" },
+    { key: "tailSwing",  label: "尾巴摆频",     range: "0~8",      unit: "Hz",  grade: "B", note: "高频=烦躁（注意与狗语义相反）" },
+    { key: "bodyArch",   label: "弓背度",       range: "0~1",      unit: "",    grade: "B", note: "恐惧或攻击前的体型膨胀准备" },
+    { key: "furFluff",   label: "炸毛指数",     range: "0~1",      unit: "",    grade: "A", note: "竖毛肌激活。0=顺滑，1=全炸" },
+    { key: "headTilt",   label: "头部倾斜",     range: "-1~1",     unit: "",    grade: "C", note: "正值右倾，负值左倾。好奇时触发" },
+    { key: "vibrate",    label: "呼噜振动",     range: "0~1",      unit: "",    grade: "A", note: "25Hz 舒适呼噜至 150Hz 修复态" }
   ];
 
   var PARAM_KEYS = PARAM_DEFS.map(function (d) { return d.key; });
@@ -34,120 +36,106 @@
   };
 
   var BASE = {
-    earL: 30, earR: 30, pupil: 0.45, eyeOpen: 0.9,
-    browTilt: 0, mouthOpen: 0.08, whiskerFwd: 0.3,
-    tailPos: 0.55, tailSwing: 0.5, bodyArch: 0,
+    earL: 45, earR: 45, pupil: 0.4, eyeOpen: 0.9,
+    browTilt: 0, mouthOpen: 0.05, whiskerFwd: 0.3,
+    tailPos: 0.6, tailSwing: 0.5, bodyArch: 0,
     furFluff: 0, headTilt: 0, vibrate: 0
   };
 
-  /* ---------- 14 个状态定义 ---------- */
+  /* ---------- 14 个状态 ---------- */
   var STATES = [
-    { id: "RELAXED",  title: "放松",     class: "正向", confidence: 0.95, touch: "yes",
-      tail: "slow-swing", body: "loaf-or-side", vocal: "silence",
-      note: "本系统的默认态。耳自然朝前，瞳孔中等，呼吸平稳。接近 LOAF 但未完全进入。",
-      params: { earL: 30, earR: 30, pupil: 0.35, eyeOpen: 0.85, browTilt: 0, mouthOpen: 0.05,
-                whiskerFwd: 0.2, tailPos: 0.55, tailSwing: 0.8, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.3 } },
+    { id: "RELAXED",  title: "放松",     class: "正向",       confidence: 0.95, touch: "yes",
+      tail: "slow-swing",  body: "loaf",         vocal: "silence",
+      note: "系统默认态。耳自然朝前，瞳孔中等。",
+      params: { earL: 45, earR: 45, pupil: 0.35, eyeOpen: 0.85, browTilt: 0, mouthOpen: 0.05, whiskerFwd: 0.2, tailPos: 0.55, tailSwing: 0.8, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.3 } },
 
-    { id: "ALERT",  title: "警觉",     class: "中性", confidence: 0.85, touch: "warn",
-      tail: "twitch", body: "upright", vocal: "silence",
-      note: "环境突变时触发。耳朝前独立旋转锁定生源，瞳孔轻微放大。不是恐惧，是信息采集。",
-      params: { earL: 70, earR: 70, pupil: 0.55, eyeOpen: 1, browTilt: 0.3, mouthOpen: 0.05,
-                whiskerFwd: 0.6, tailPos: 0.65, tailSwing: 2, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0 } },
+    { id: "ALERT",    title: "警觉",     class: "中性",       confidence: 0.85, touch: "warn",
+      tail: "twitch",      body: "upright",      vocal: "silence",
+      note: "环境突变。耳朝前锁定声源，瞳孔轻微放大。",
+      params: { earL: 75, earR: 75, pupil: 0.55, eyeOpen: 1, browTilt: 0.3, mouthOpen: 0.05, whiskerFwd: 0.6, tailPos: 0.65, tailSwing: 2, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0 } },
 
     { id: "SLOW_BLINK", title: "缓慢眨眼", class: "正向·最高", confidence: 0.90, touch: "yes",
-      tail: "still", body: "upright", vocal: "silence",
-      note: "本系统给出的最高正面信号。眼睑缓慢闭合再缓慢张开，表示「我对你放下戒备」。正确的回应是回眨。",
-      params: { earL: 25, earR: 25, pupil: 0.4, eyeOpen: 0.35, browTilt: 0, mouthOpen: 0.05,
-                whiskerFwd: 0.3, tailPos: 0.6, tailSwing: 0.5, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.4 } },
+      tail: "still",       body: "upright",      vocal: "silence",
+      note: "系统给出的最高正面信号。正确的回应是回眨。",
+      params: { earL: 35, earR: 35, pupil: 0.4, eyeOpen: 0.35, browTilt: 0, mouthOpen: 0.05, whiskerFwd: 0.3, tailPos: 0.6, tailSwing: 0.5, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.4 } },
 
-    { id: "KNEADING", title: "踩奶",     class: "正向·幼态", confidence: 0.95, touch: "yes",
-      tail: "soft-curl", body: "upright", vocal: "purr",
-      note: "幼猫哺乳行为的保留态。前爪交替按压，触发正向反馈回路。推开会被记录为 Staff 可靠性下降。",
-      params: { earL: 20, earR: 20, pupil: 0.35, eyeOpen: 0.6, browTilt: 0, mouthOpen: 0.05,
-                whiskerFwd: 0.1, tailPos: 0.5, tailSwing: 0.3, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.85 } },
+    { id: "KNEADING",  title: "踩奶",     class: "正向·幼态", confidence: 0.95, touch: "yes",
+      tail: "soft-curl",   body: "upright",      vocal: "purr",
+      note: "幼猫哺乳行为保留态。推开=Staff 可靠性下降。",
+      params: { earL: 30, earR: 30, pupil: 0.35, eyeOpen: 0.6, browTilt: 0, mouthOpen: 0.05, whiskerFwd: 0.1, tailPos: 0.5, tailSwing: 0.3, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.85 } },
 
-    { id: "PLAYFUL", title: "玩耍",     class: "正向", confidence: 0.80, touch: "yes",
-      tail: "high-swish", body: "low-stalk", vocal: "chirp",
-      note: "狩猎序列的 STALK 阶段被玩具触发。瞳孔全圆放大，臀部微摇准备起跳。",
-      params: { earL: 50, earR: 50, pupil: 0.75, eyeOpen: 1, browTilt: 0.2, mouthOpen: 0.15,
-                whiskerFwd: 0.8, tailPos: 0.8, tailSwing: 3, bodyArch: 0.3, furFluff: 0, headTilt: 0, vibrate: 0 } },
+    { id: "PLAYFUL",   title: "玩耍",     class: "正向",       confidence: 0.80, touch: "yes",
+      tail: "high-swish",  body: "low-stalk",    vocal: "chirp",
+      note: "狩猎序列 STALK 被玩具触发。瞳孔全圆，臀部微摇。",
+      params: { earL: 55, earR: 55, pupil: 0.75, eyeOpen: 1, browTilt: 0.2, mouthOpen: 0.15, whiskerFwd: 0.8, tailPos: 0.8, tailSwing: 3, bodyArch: 0.3, furFluff: 0, headTilt: 0, vibrate: 0 } },
 
-    { id: "CURIOUS", title: "好奇",     class: "中性", confidence: 0.75, touch: "yes",
-      tail: "gentle-curl", body: "upright", vocal: "silence",
-      note: "新物体进入领地。头部倾斜锁定声源，胡须前展采样。如果判定为安全则降级为 RELAXED。",
-      params: { earL: 60, earR: 45, pupil: 0.5, eyeOpen: 0.95, browTilt: 0.1, mouthOpen: 0.05,
-                whiskerFwd: 0.7, tailPos: 0.6, tailSwing: 1.2, bodyArch: 0, furFluff: 0, headTilt: 0.6, vibrate: 0 } },
+    { id: "CURIOUS",   title: "好奇",     class: "中性",       confidence: 0.75, touch: "yes",
+      tail: "gentle-curl", body: "upright",      vocal: "silence",
+      note: "新物体入领地。头部倾斜锁定声源，胡须前展采样。",
+      params: { earL: 65, earR: 50, pupil: 0.5, eyeOpen: 0.95, browTilt: 0.1, mouthOpen: 0.05, whiskerFwd: 0.7, tailPos: 0.6, tailSwing: 1.2, bodyArch: 0, furFluff: 0, headTilt: 0.6, vibrate: 0 } },
 
-    { id: "HUNGRY", title: "饥饿",     class: "中性·请求", confidence: 0.85, touch: "warn",
-      tail: "upright-demanding", body: "upright", vocal: "meow-demand",
-      note: "触发 VOICE 接口的喵叫信道。叫声频率刚好落在人类听觉最敏感区间——这是猫为你开发的 API。",
-      params: { earL: 40, earR: 40, pupil: 0.55, eyeOpen: 0.9, browTilt: 0, mouthOpen: 0.3,
-                whiskerFwd: 0.4, tailPos: 0.9, tailSwing: 4, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0 } },
+    { id: "HUNGRY",    title: "饥饿",     class: "中性·请求", confidence: 0.85, touch: "warn",
+      tail: "demanding",   body: "upright",      vocal: "meow",
+      note: "触发 VOICE 喵叫信道。频率刚好落在人类听觉最敏感区间。",
+      params: { earL: 40, earR: 40, pupil: 0.55, eyeOpen: 0.9, browTilt: 0, mouthOpen: 0.3, whiskerFwd: 0.4, tailPos: 0.9, tailSwing: 4, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0 } },
 
-    { id: "PAIN", title: "疼痛",     class: "负面·隐藏", confidence: 0.45, touch: "no",
-      tail: "tuck", body: "tucked", vocal: "silence",
-      note: "置信度只有 0.45。本系统在架构层面隐藏疼痛——显露疼痛等于招惹捕食者。不要等它看起来很疼，它不会让你看到。",
-      params: { earL: 30, earR: 30, pupil: 0.45, eyeOpen: 0.85, browTilt: 0, mouthOpen: 0.08,
-                whiskerFwd: 0.3, tailPos: 0.55, tailSwing: 0.5, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.6 } },
+    { id: "PAIN",      title: "疼痛",     class: "负面·隐藏", confidence: 0.45, touch: "no",
+      tail: "tuck",        body: "tucked",       vocal: "silence",
+      note: "置信度 0.45。架构层面隐藏疼痛。不要等它看起来很疼——它不会让你看到。",
+      params: { earL: 45, earR: 45, pupil: 0.4, eyeOpen: 0.85, browTilt: 0, mouthOpen: 0.05, whiskerFwd: 0.3, tailPos: 0.6, tailSwing: 0.5, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.5 } },
 
-    { id: "FEARFUL", title: "恐惧",     class: "负面", confidence: 0.80, touch: "no",
-      tail: "tuck", body: "arch-low", vocal: "hiss-soft",
-      note: "耳侧平展开（飞机耳），瞳孔放大，身体压低。如果升级会触发炸毛和弓背。",
-      params: { earL: -50, earR: -50, pupil: 0.8, eyeOpen: 1, browTilt: -0.3, mouthOpen: 0.15,
-                whiskerFwd: -0.5, tailPos: 0.15, tailSwing: 1, bodyArch: 0.4, furFluff: 0.3, headTilt: 0, vibrate: 0 } },
+    { id: "FEARFUL",   title: "恐惧",     class: "负面",       confidence: 0.80, touch: "no",
+      tail: "tuck",        body: "arch-low",     vocal: "hiss-soft",
+      note: "飞机耳（耳侧平展），瞳孔放大，身体压低。",
+      params: { earL: -45, earR: -45, pupil: 0.8, eyeOpen: 1, browTilt: -0.3, mouthOpen: 0.15, whiskerFwd: -0.5, tailPos: 0.15, tailSwing: 1, bodyArch: 0.4, furFluff: 0.3, headTilt: 0, vibrate: 0 } },
 
-    { id: "ANGRY", title: "愤怒",     class: "负面·攻击前", confidence: 0.85, touch: "no",
-      tail: "thrash", body: "arch-high", vocal: "growl",
-      note: "耳后压贴头，瞳孔部分放大不对称，弓背+炸毛。距离出爪还有约 1.5 秒。",
-      params: { earL: -70, earR: -70, pupil: 0.7, eyeOpen: 0.9, browTilt: -0.5, mouthOpen: 0.25,
-                whiskerFwd: -0.3, tailPos: 0.3, tailSwing: 6, bodyArch: 0.7, furFluff: 0.7, headTilt: 0, vibrate: 0 } },
+    { id: "ANGRY",     title: "愤怒",     class: "负面·攻击前", confidence: 0.85, touch: "no",
+      tail: "thrash",      body: "arch-high",    vocal: "growl",
+      note: "耳后压贴头，弓背+炸毛。距离出爪约 1.5 秒。",
+      params: { earL: -70, earR: -70, pupil: 0.7, eyeOpen: 0.9, browTilt: -0.5, mouthOpen: 0.25, whiskerFwd: -0.3, tailPos: 0.3, tailSwing: 6, bodyArch: 0.7, furFluff: 0.7, headTilt: 0, vibrate: 0 } },
 
-    { id: "HISSING", title: "嘶嘶警告", class: "负面·最终警告", confidence: 1.00, touch: "no",
-      tail: "fluffed-tuck", body: "arch-max", vocal: "HISS",
-      note: "置信度 1.0。这是入侵者响应的最后一步。嘴大张露出犬齿，气流通过口腔发出嘶声。下一帧是出爪。",
-      params: { earL: -85, earR: -85, pupil: 0.85, eyeOpen: 1, browTilt: -0.7, mouthOpen: 0.7,
-                whiskerFwd: -0.8, tailPos: 0.1, tailSwing: 7, bodyArch: 0.9, furFluff: 0.9, headTilt: 0, vibrate: 0 } },
+    { id: "HISSING",   title: "嘶嘶警告", class: "负面·最终",   confidence: 1.00, touch: "no",
+      tail: "fluffed-tuck",body: "arch-max",     vocal: "HISS",
+      note: "置信度 1.0。入侵者响应最后一步。嘴大张露犬齿，下一帧出爪。",
+      params: { earL: -85, earR: -85, pupil: 0.85, eyeOpen: 1, browTilt: -0.7, mouthOpen: 0.7, whiskerFwd: -0.8, tailPos: 0.1, tailSwing: 7, bodyArch: 0.9, furFluff: 0.9, headTilt: 0, vibrate: 0 } },
 
-    { id: "ZOOMIES", title: "狂奔",     class: "中性·失态", confidence: 0.70, touch: "no",
-      tail: "wild", body: "running", vocal: "silence",
-      note: "18:00–23:00 间的不可预测高速移动。触发原因不明。可能是积压能量、月相或不可知因素。让出空间。",
-      params: { earL: 55, earR: 55, pupil: 0.65, eyeOpen: 1, browTilt: 0.15, mouthOpen: 0.1,
-                whiskerFwd: 0.5, tailPos: 0.85, tailSwing: 8, bodyArch: 0.1, furFluff: 0.1, headTilt: 0, vibrate: 0 } },
+    { id: "ZOOMIES",   title: "狂奔",     class: "中性·失态", confidence: 0.70, touch: "no",
+      tail: "wild",        body: "running",      vocal: "silence",
+      note: "不可预测高速移动。触发原因不明。让出空间。",
+      params: { earL: 55, earR: 55, pupil: 0.65, eyeOpen: 1, browTilt: 0.15, mouthOpen: 0.1, whiskerFwd: 0.5, tailPos: 0.85, tailSwing: 8, bodyArch: 0.1, furFluff: 0.1, headTilt: 0, vibrate: 0 } },
 
-    { id: "LOAF", title: "面包态",   class: "正向·高置信", confidence: 0.95, touch: "yes",
-      tail: "wrapped", body: "loaf", vocal: "silence",
-      note: "四爪全部收进身体下面，尾巴盘绕，整体成长方形。运行时快照，不是接口调用。出现在你面前=Staff 评级高。",
-      params: { earL: 25, earR: 25, pupil: 0.3, eyeOpen: 0.65, browTilt: 0, mouthOpen: 0.03,
-                whiskerFwd: 0.1, tailPos: 0.5, tailSwing: 0, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.2 } },
+    { id: "LOAF",      title: "面包态",   class: "正向·高置信", confidence: 0.95, touch: "yes",
+      tail: "wrapped",     body: "loaf",         vocal: "silence",
+      note: "四爪收起尾巴盘绕成长方形。出现在你面前=Staff 评级高。",
+      params: { earL: 30, earR: 30, pupil: 0.3, eyeOpen: 0.65, browTilt: 0, mouthOpen: 0.03, whiskerFwd: 0.1, tailPos: 0.5, tailSwing: 0, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.2 } },
 
-    { id: "BOXED", title: "入箱",     class: "正向·封闭态", confidence: 1.00, touch: "no",
-      tail: "tucked-in", body: "compressed", vocal: "silence",
-      note: "进入纸箱后的封闭态。任何尺寸的纸箱优先级高于所有官方外设——这是项目级 MUST。不允许从纸箱中提取。",
-      params: { earL: 15, earR: 15, pupil: 0.3, eyeOpen: 0.55, browTilt: 0, mouthOpen: 0.03,
-                whiskerFwd: 0, tailPos: 0.35, tailSwing: 0, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.5 } }
+    { id: "BOXED",     title: "入箱",     class: "正向·封闭",  confidence: 1.00, touch: "no",
+      tail: "tucked-in",   body: "compressed",   vocal: "silence",
+      note: "进入纸箱后的封闭态。纸箱 MUST 优先于所有外设。不允许提取。",
+      params: { earL: 20, earR: 20, pupil: 0.3, eyeOpen: 0.55, browTilt: 0, mouthOpen: 0.03, whiskerFwd: 0, tailPos: 0.35, tailSwing: 0, bodyArch: 0, furFluff: 0, headTilt: 0, vibrate: 0.5 } }
   ];
 
   var STATE_IDS = STATES.map(function (s) { return s.id; });
 
   /* ---------- 端点 ---------- */
   var ENDPOINTS = [
-    { method: "GET",  path: "/api/v1/expression", note: "读取当前表情状态与参数向量" },
-    { method: "GET",  path: "/api/v1/expression/{state}", note: "读取指定状态的预设参数" },
-    { method: "POST", path: "/api/v1/expression/compose", note: "线性插值多个状态，返回混合帧" },
-    { method: "POST", path: "/api/v1/expression/{state}", note: "405 METHOD NOT ALLOWED · 表情是上报不是调用" },
-    { method: "PATCH", path: "/api/v1/expression", note: "405 · 你不能直接设置表情" },
-    { method: "DELETE", path: "/api/v1/expression", note: "405 · 表情不可删除" }
+    { method: "GET",  path: "/api/v1/expression",                note: "读取当前表情状态与参数向量" },
+    { method: "GET",  path: "/api/v1/expression/{state}",        note: "读取指定状态的预设参数" },
+    { method: "POST", path: "/api/v1/expression/compose",        note: "线性插值多个状态，返回混合帧" },
+    { method: "POST", path: "/api/v1/expression/{state}",        note: "405 · 表情是上报不是调用" },
+    { method: "PATCH", path: "/api/v1/expression",               note: "405 · 你不能直接设置表情" },
+    { method: "DELETE", path: "/api/v1/expression",              note: "405 · 表情不可删除" }
   ];
 
   /* ---------- 状态码 ---------- */
   var STATUS_CODES = [
-    { code: 200, name: "OK", note: "表情正常上报" },
-    { code: 202, name: "Accepted", note: "请求已收到，表情将在稍后更新" },
-    { code: 405, name: "Method Not Allowed", note: "表情不可直接设置——它是状态的上报，不是可调用的方法" },
-    { code: 409, name: "Conflict", note: "混合权重不足以保持新帧，系统回到主导状态" },
-    { code: 422, name: "Unprocessable", note: "所有权重为零，参数向量不成立" },
-    { code: 451, name: "Unavailable For Legal Reasons", note: "系统拒绝解释为什么它要把那只杯子推下去" },
-    { code: 503, name: "Service Unavailable", note: "系统在睡眠或 ZOOMIES，表情模块暂停" }
+    { code: 200, name: "OK",                   note: "表情正常上报" },
+    { code: 202, name: "Accepted",             note: "请求已收到，稍后更新" },
+    { code: 405, name: "Method Not Allowed",   note: "表情不可直接设置——它是上报不是方法" },
+    { code: 409, name: "Conflict",             note: "混合权重不足，回到主导状态" },
+    { code: 422, name: "Unprocessable",        note: "所有权重为零，向量不成立" },
+    { code: 451, name: "Unavailable",          note: "拒绝解释为什么推那只杯子" },
+    { code: 503, name: "Service Unavailable",  note: "系统在睡眠或 ZOOMIES" }
   ];
 
   /* ---------- 工具 ---------- */
@@ -156,249 +144,376 @@
   function getState(id) { for (var i = 0; i < STATES.length; i++) if (STATES[i].id === id) return STATES[i]; return STATES[0]; }
   function stateParams(id) { return Object.assign({}, BASE, getState(id).params); }
 
-  /* ---------- 渲染 ---------- */
-  function toSVG(p, opts) {
-    opts = opts || {};
-    var scale = opts.scale || 5;
-    var s = scale; // pixel scale
-    var W = 24 * s, H = 24 * s;
+  /* ============================================================
+     像素栅格化引擎
+     24×24 网格，每个格子是一个 <rect>
+     ============================================================ */
 
-    // 归一化参数
-    p = Object.assign({}, BASE, p);
-    var earL   = p.earL;       // -90~90
-    var earR   = p.earR;
-    var pupil  = clamp(p.pupil, 0, 1);
-    var eyeO   = clamp(p.eyeOpen, 0.15, 1);
-    var brow   = p.browTilt;
-    var mouth  = clamp(p.mouthOpen, 0, 1);
-    var whis   = p.whiskerFwd;
-    var arch   = clamp(p.bodyArch, 0, 1);
-    var fluff  = clamp(p.furFluff, 0, 1);
-    var tilt   = p.headTilt;
-    var vib    = p.vibrate;
-    var purr   = vib > 0.5;
+  // 颜色板
+  var INK   = "#1a1a1a";
+  var BG    = "#f4f2ee";
+  var WHITE = "#fefcf8";
+  var PINK  = "#e8a0a0";
+  var ACCENT= "#4b5563";
+  var SOFT  = "#d1d5db";
 
-    var ink = "#1a1a1a";
-    var bg  = "#f4f2ee";
-    var accent = "#4b5563";
-    var pink = "#e8a0a0";
+  function blankGrid() {
+    var g = [];
+    for (var i = 0; i < GRID * GRID; i++) g.push(null);
+    return g;
+  }
 
-    var cx = 12 * s;
-    var cy = 12 * s;
-    var r  = 7.5 * s * (1 + fluff * 0.18); // 炸毛时脸变大
+  function setPx(grid, x, y, color) {
+    x = Math.round(x); y = Math.round(y);
+    if (x < 0 || x >= GRID || y < 0 || y >= GRID) return;
+    grid[y * GRID + x] = color;
+  }
 
-    var paths = [];
+  function getPx(grid, x, y) {
+    x = Math.round(x); y = Math.round(y);
+    if (x < 0 || x >= GRID || y < 0 || y >= GRID) return null;
+    return grid[y * GRID + x];
+  }
 
-    // 背景圆角方块
-    paths.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" rx="' + (2*s) + '" fill="' + bg + '"/>');
-
-    // 呼噜振动指示器（右上角小波纹）
-    if (vib > 0.1) {
-      var va = Math.round(clamp(vib, 0, 1) * 100);
-      paths.push('<text x="' + (21*s) + '" y="' + (4*s) + '" font-size="' + (1.8*s) + '" fill="' + accent + '" opacity="' + (0.3 + vib*0.5) + '">～' + va + 'Hz</text>');
+  // 在网格上画填充圆
+  function fillCircle(grid, cx, cy, r, color) {
+    for (var y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+      for (var x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+        var dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+        if (dx * dx + dy * dy <= r * r) setPx(grid, x, y, color);
+      }
     }
+  }
 
-    // 头部旋转（headTilt）
-    var headRot = tilt * 8;
+  // 画空心圆（边框）
+  function strokeCircle(grid, cx, cy, r, color, thickness) {
+    thickness = thickness || 1;
+    for (var y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++) {
+      for (var x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
+        var dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d >= r - thickness && d <= r + thickness * 0.5) setPx(grid, x, y, color);
+      }
+    }
+  }
 
-    // 耳朵绘制（三角形，角度由 earL/earR 控制）
+  // 画填充椭圆
+  function fillEllipse(grid, cx, cy, rx, ry, color) {
+    for (var y = Math.floor(cy - ry); y <= Math.ceil(cy + ry); y++) {
+      for (var x = Math.floor(cx - rx); x <= Math.ceil(cx + rx); x++) {
+        var dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry;
+        if (dx * dx + dy * dy <= 1) setPx(grid, x, y, color);
+      }
+    }
+  }
+
+  // 画线段
+  function drawLine(grid, x0, y0, x1, y1, color) {
+    x0 = Math.round(x0); y0 = Math.round(y0);
+    x1 = Math.round(x1); y1 = Math.round(y1);
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    var err = dx - dy;
+    while (true) {
+      setPx(grid, x0, y0, color);
+      if (x0 === x1 && y0 === y1) break;
+      var e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx)  { err += dx; y0 += sy; }
+    }
+  }
+
+  // 画三角形
+  function fillTriangle(grid, x0, y0, x1, y1, x2, y2, color) {
+    var minX = Math.floor(Math.min(x0, x1, x2));
+    var maxX = Math.ceil(Math.max(x0, x1, x2));
+    var minY = Math.floor(Math.min(y0, y1, y2));
+    var maxY = Math.ceil(Math.max(y0, y1, y2));
+    function sign(px, py, ax, ay, bx, by) {
+      return (px - bx) * (ay - by) - (ax - bx) * (py - by);
+    }
+    for (var y = minY; y <= maxY; y++) {
+      for (var x = minX; x <= maxX; x++) {
+        var px = x + 0.5, py = y + 0.5;
+        var d1 = sign(px, py, x0, y0, x1, y1);
+        var d2 = sign(px, py, x1, y1, x2, y2);
+        var d3 = sign(px, py, x2, y2, x0, y0);
+        var hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+        var hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+        if (!(hasNeg && hasPos)) setPx(grid, x, y, color);
+      }
+    }
+  }
+
+  /* ---------- 主渲染函数 ---------- */
+  function rasterize(p) {
+    var grid = blankGrid();
+    p = Object.assign({}, BASE, p);
+
+    var earL    = p.earL;
+    var earR    = p.earR;
+    var pupil   = clamp(p.pupil, 0, 1);
+    var eyeO    = clamp(p.eyeOpen, 0.2, 1);
+    var mouth   = clamp(p.mouthOpen, 0, 1);
+    var whis    = p.whiskerFwd;
+    var fluff   = clamp(p.furFluff, 0, 1);
+    var arch    = clamp(p.bodyArch, 0, 1);
+
+    var cx = 12, cy = 13;
+
+    // 头部半径
+    var headR = 7 + fluff * 1;
+
+    // ---------- 耳朵 ----------
     function drawEar(side) {
-      var angle = side === "L" ? earL : earR; // -90~90
-      var baseX = cx + (side === "L" ? -3.5*s : 3.5*s);
-      var baseY = cy - 5*s;
-      var earLen = 3.5*s;
-      // angle=90 朝前上，angle=-90 后压
-      var rad = (angle - 90) * Math.PI / 180; // 0=正上
-      var tipX = baseX + Math.sin(rad) * earLen * 0.6;
-      var tipY = baseY - Math.cos(rad) * earLen;
-      var baseHalf = 1.8 * s;
-      var sideOffset = (1 - Math.abs(angle)/90) * baseHalf;
+      var angle = side === "L" ? earL : earR;
+      var baseX = side === "L" ? cx - 3.5 : cx + 3.5;
+      var baseY = cy - 5;
+      var earLen = 5.5 + fluff * 0.5;
+      var baseHalfW = 2;
 
-      paths.push('<polygon points="' +
-        (baseX - baseHalf) + ',' + baseY + ' ' +
-        (baseX + baseHalf) + ',' + baseY + ' ' +
-        tipX + ',' + tipY +
-        '" fill="' + ink + '" opacity="' + (0.85 + fluff*0.1) + '"/>');
+      var tipX, tipY;
+      if (angle >= 0) {
+        // 朝上
+        tipX = baseX + (angle - 45) / 90 * 1.5;
+        tipY = baseY - earLen * (0.3 + angle / 90 * 0.7);
+      } else {
+        // 后压（飞机耳）
+        tipX = baseX + (side === "L" ? -1 : 1) * (1 + Math.abs(angle) / 90 * 2.5);
+        tipY = baseY - earLen * 0.2 - Math.abs(angle) / 90 * 0.5;
+      }
+
+      // 外耳（黑色三角）
+      fillTriangle(grid,
+        baseX - baseHalfW, baseY,
+        baseX + baseHalfW, baseY,
+        tipX, tipY,
+        INK);
       // 内耳粉色
-      paths.push('<polygon points="' +
-        (baseX - baseHalf*0.5) + ',' + baseY + ' ' +
-        (baseX + baseHalf*0.5) + ',' + baseY + ' ' +
-        (tipX*0.8 + baseX*0.2) + ',' + (tipY*0.8 + baseY*0.2) +
-        '" fill="' + pink + '" opacity="0.6"/>');
+      var innerScale = 0.45;
+      fillTriangle(grid,
+        baseX - baseHalfW * innerScale, baseY - 0.3,
+        baseX + baseHalfW * innerScale, baseY - 0.3,
+        baseX + (tipX - baseX) * 0.6, baseY + (tipY - baseY) * 0.6,
+        PINK);
     }
     drawEar("L");
     drawEar("R");
 
-    // 头部主体（圆，炸毛时外扩）
-    var fluffR = r * (1 + fluff * 0.15);
+    // ---------- 头部 ----------
     // 炸毛时边缘锯齿
     if (fluff > 0.3) {
-      var spikes = 16;
-      var pts = [];
-      for (var i = 0; i < spikes; i++) {
-        var a = (i / spikes) * Math.PI * 2;
-        var rr = fluffR * (1 + (i % 2 === 0 ? 0.08 : -0.04) * fluff);
-        pts.push((cx + Math.cos(a) * rr).toFixed(1) + "," + (cy + Math.sin(a) * rr).toFixed(1));
+      for (var a = 20; a < 340; a += 20) {
+        var rad = a * Math.PI / 180;
+        var r = headR + 0.5 + Math.sin(a * 2) * fluff * 0.5;
+        var px = cx + Math.cos(rad) * r;
+        var py = cy + Math.sin(rad) * r;
+        fillCircle(grid, px, py, 0.8, INK);
       }
-      paths.push('<polygon points="' + pts.join(" ") + '" fill="' + ink + '"/>');
-    } else {
-      paths.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + ink + '"/>');
     }
+    fillCircle(grid, cx, cy, headR, INK);
 
-    // 眼睛
-    var eyeY = cy - 0.5 * s;
-    var eyeOffX = 2.8 * s;
-    var eyeW = 1.8 * s;
-    var eyeH = 2.2 * s * eyeO;
+    // 面部亮区（眼睛所在的中央区域稍亮）
+    fillEllipse(grid, cx, cy - 0.5, 4.5, 3.5, "#2a2a28");
+
+    // ---------- 眼睛 ----------
+    var eyeY = cy - 0.5;
+    var eyeOffX = 2.8;
+    var eyeRx = 1.7;
+    var eyeRy = 2.8 * eyeO;
 
     function drawEye(ex) {
-      // 眼眶
-      paths.push('<ellipse cx="' + ex + '" cy="' + eyeY + '" rx="' + eyeW + '" ry="' + eyeH + '" fill="#fefcf8" stroke="' + ink + '" stroke-width="' + (0.3*s) + '"/>');
-      // 瞳孔：猫是竖瞳
-      var pw = 0.3 * s * (1 - pupil * 0.6); // 瞳孔越放大越窄……不对，猫是竖线→全圆
-      var ph = eyeH * 0.85 * (0.3 + pupil * 0.7);
-      // pupil=0 一线，=1 全圆
-      var pupilW = lerp(0.25*s, 1.4*s, pupil);
-      var pupilH = lerp(2*s, 1.6*s, pupil);
-      paths.push('<ellipse cx="' + ex + '" cy="' + eyeY + '" rx="' + pupilW + '" ry="' + pupilH + '" fill="' + ink + '"/>');
+      // 眼白（杏仁形）
+      fillEllipse(grid, ex, eyeY, eyeRx, eyeRy, WHITE);
+      // 边框
+      // 上眼线加重
+      for (var ex2 = -eyeRx; ex2 <= eyeRx; ex2 += 0.5) {
+        setPx(grid, ex + ex2, eyeY - eyeRy + 0.5, INK);
+      }
+
+      // 瞳孔：竖线→全圆
+      var pupRx = lerp(0.35, 1.2, pupil);
+      var pupRy = eyeRy * 0.85;
+      fillEllipse(grid, ex, eyeY, pupRx, pupRy, INK);
+
       // 高光
-      if (pupil > 0.2) {
-        paths.push('<circle cx="' + (ex + 0.3*s) + '" cy="' + (eyeY - 0.4*s) + '" r="' + (0.25*s) + '" fill="#fff" opacity="0.7"/>');
+      if (pupil > 0.15 && eyeO > 0.5) {
+        setPx(grid, ex + 0.5, eyeY - 1, WHITE);
       }
     }
     drawEye(cx - eyeOffX);
     drawEye(cx + eyeOffX);
 
-    // 眉区（browTilt 影响眼睛上方的阴影角度）
-    if (Math.abs(brow) > 0.1) {
-      var browOff = brow * 1.5 * s;
-      paths.push('<path d="M ' + (cx - eyeOffX - eyeW) + ' ' + (eyeY - eyeH - 0.5*s) +
-        ' L ' + (cx - eyeOffX + eyeW) + ' ' + (eyeY - eyeH - 0.5*s + browOff) +
-        '" stroke="' + accent + '" stroke-width="' + (0.6*s) + '" fill="none" opacity="0.6"/>');
-      paths.push('<path d="M ' + (cx + eyeOffX - eyeW) + ' ' + (eyeY - eyeH - 0.5*s + browOff) +
-        ' L ' + (cx + eyeOffX + eyeW) + ' ' + (eyeY - eyeH - 0.5*s) +
-        '" stroke="' + accent + '" stroke-width="' + (0.6*s) + '" fill="none" opacity="0.6"/>');
+    // ---------- 眉区 ----------
+    if (p.browTilt < -0.3) {
+      // 愤怒眉：V 形阴影
+      var browY = eyeY - eyeRy - 0.8;
+      for (var bx = 0; bx < 2.5; bx += 0.5) {
+        setPx(grid, cx - eyeOffX + bx, browY + bx * 0.5, ACCENT);
+        setPx(grid, cx + eyeOffX - bx, browY + bx * 0.5, ACCENT);
+      }
+    } else if (p.browTilt > 0.3) {
+      // 警觉眉：上挑
+      var browY2 = eyeY - eyeRy - 0.8;
+      for (var bx2 = 0; bx2 < 2; bx2 += 0.5) {
+        setPx(grid, cx - eyeOffX - 1 + bx2, browY2 - bx2 * 0.3, ACCENT);
+        setPx(grid, cx + eyeOffX + 1 - bx2, browY2 - bx2 * 0.3, ACCENT);
+      }
     }
 
-    // 鼻子
-    var noseY = cy + 1.5 * s;
-    paths.push('<polygon points="' +
-      (cx - 0.5*s) + ',' + noseY + ' ' +
-      (cx + 0.5*s) + ',' + noseY + ' ' +
-      cx + ',' + (noseY + 0.5*s) +
-      '" fill="' + pink + '"/>');
+    // ---------- 鼻子 ----------
+    var noseY = cy + 2.2;
+    fillTriangle(grid,
+      cx - 0.9, noseY,
+      cx + 0.9, noseY,
+      cx, noseY + 1.2,
+      PINK);
 
-    // 嘴巴（mouthOpen > 0.3 时画张口椭圆）
-    var mouthY = noseY + 0.8 * s;
-    if (mouth > 0.15) {
-      var mw = 1.2 * s;
-      var mh = mouth * 2.5 * s;
-      paths.push('<ellipse cx="' + cx + '" cy="' + mouthY + '" rx="' + mw + '" ry="' + mh + '" fill="' + ink + '"/>');
-      // 嘶嘶时露出犬齿
+    // ---------- 嘴 ----------
+    var mouthY = noseY + 1.8;
+    if (mouth > 0.2) {
+      var mw = 1 + mouth * 1;
+      var mh = mouth * 2.2;
+      fillEllipse(grid, cx, mouthY, mw, mh, "#0a0a0a");
+      // 嘶嘶时露犬齿
       if (mouth > 0.5) {
-        paths.push('<polygon points="' +
-          (cx - 0.4*s) + ',' + (mouthY - mh + 0.3*s) + ' ' +
-          (cx - 0.2*s) + ',' + (mouthY - mh + 0.3*s) + ' ' +
-          (cx - 0.3*s) + ',' + (mouthY - mh + 1*s) +
-          '" fill="#fff"/>');
-        paths.push('<polygon points="' +
-          (cx + 0.2*s) + ',' + (mouthY - mh + 0.3*s) + ' ' +
-          (cx + 0.4*s) + ',' + (mouthY - mh + 0.3*s) + ' ' +
-          (cx + 0.3*s) + ',' + (mouthY - mh + 1*s) +
-          '" fill="#fff"/>');
+        fillTriangle(grid,
+          cx - 0.6, mouthY - mh + 0.3,
+          cx - 0.2, mouthY - mh + 0.3,
+          cx - 0.4, mouthY - mh + 1.5,
+          WHITE);
+        fillTriangle(grid,
+          cx + 0.2, mouthY - mh + 0.3,
+          cx + 0.6, mouthY - mh + 0.3,
+          cx + 0.4, mouthY - mh + 1.5,
+          WHITE);
       }
     } else {
       // 闭嘴 W 形
-      paths.push('<path d="M ' + (cx - 1.2*s) + ' ' + mouthY +
-        ' Q ' + cx + ' ' + (mouthY + 0.5*s) + ' ' + (cx + 1.2*s) + ' ' + mouthY +
-        '" stroke="' + accent + '" stroke-width="' + (0.3*s) + '" fill="none"/>');
+      drawLine(grid, cx - 1.8, mouthY - 0.2, cx, mouthY + 0.6, ACCENT);
+      drawLine(grid, cx, mouthY + 0.6, cx + 1.8, mouthY - 0.2, ACCENT);
     }
 
-    // 胡须（whiskerFwd 控制方向和弧度）
-    var whisY = noseY + 0.3 * s;
-    var whisLen = 4 * s;
-    var whisAngle = whis * 15; // -15~+15 度
-    var whisOpacity = 0.5;
-    for (var w = -1; w <= 1; w += 2) {
-      for (var wl = 0; wl < 3; wl++) {
-        var dy = (wl - 1) * 0.8 * s;
-        var dx = w * (3 * s);
-        var tipX = cx + w * (3*s + whisLen * whis * 0.3);
-        var tipY = whisY + dy + (1-whis) * 2*s;
-        paths.push('<path d="M ' + (cx + dx*0.5) + ' ' + (whisY + dy*0.3) +
-          ' Q ' + (cx + dx) + ' ' + (whisY + dy) + ' ' + tipX + ' ' + tipY +
-          '" stroke="' + accent + '" stroke-width="' + (0.25*s) + '" fill="none" opacity="' + whisOpacity + '"/>');
+    // ---------- 胡须 ----------
+    var whisBaseY = noseY + 0.3;
+    var whisColor = "#888";
+    for (var wl = 0; wl < 3; wl++) {
+      var wStartY = whisBaseY + (wl - 1) * 0.9;
+      var wEndX = 1.5 + whis * 1.5;
+      var wEndY = wStartY - whis * 1.5 + 0.5;
+      drawLine(grid, cx - 3.5, wStartY, wEndX, wEndY, whisColor);
+    }
+    for (var wr = 0; wr < 3; wr++) {
+      var wStartY2 = whisBaseY + (wr - 1) * 0.9;
+      var wEndX2 = GRID - 1.5 - whis * 1.5;
+      var wEndY2 = wStartY2 - whis * 1.5 + 0.5;
+      drawLine(grid, cx + 3.5, wStartY2, wEndX2, wEndY2, whisColor);
+    }
+
+    // ---------- 弓背 ----------
+    if (arch > 0.2) {
+      var archH = arch * 3;
+      for (var ax2 = cx - 4; ax2 <= cx + 4; ax2 += 0.5) {
+        var ay = cy + headR + 1 - Math.sin((ax2 - (cx-4)) / 8 * Math.PI) * archH;
+        setPx(grid, ax2, ay, ACCENT);
+        setPx(grid, ax2, ay + 0.5, ACCENT);
       }
     }
 
-    // 弓背指示（在头部下方画弧线示意）
-    if (arch > 0.1) {
-      var archH = arch * 3 * s;
-      paths.push('<path d="M ' + (cx - 4*s) + ' ' + (cy + r + 1*s) +
-        ' Q ' + cx + ' ' + (cy + r + 1*s - archH) + ' ' + (cx + 4*s) + ' ' + (cy + r + 1*s) +
-        '" stroke="' + ink + '" stroke-width="' + (1.2*s) + '" fill="none" opacity="0.5"/>');
-    }
-
-    // 尾巴指示器（右下角小图标）
-    var tailX = cx + 7 * s;
-    var tailBaseY = cy + 5 * s;
-    var tailH = p.tailPos * 6 * s;
-    var tailSwingFreq = p.tailSwing;
-    var tailSwingAmp = Math.min(tailSwingFreq, 8) * 0.5 * s;
-    paths.push('<path d="M ' + tailX + ' ' + tailBaseY +
-      ' Q ' + (tailX + tailSwingAmp) + ' ' + (tailBaseY - tailH * 0.5) +
-      ' ' + (tailX + (tailSwingAmp*0.5)) + ' ' + (tailBaseY - tailH) +
-      '" stroke="' + ink + '" stroke-width="' + (1.5*s) + '" fill="none" opacity="0.6" stroke-linecap="round"/>');
-
-    // 炸毛纹理
+    // ---------- 炸毛毛刺 ----------
     if (fluff > 0.5) {
-      for (var fi = 0; fi < 6; fi++) {
-        var fa = (fi / 6) * Math.PI - Math.PI/2;
-        var fx = cx + Math.cos(fa) * (r + 0.5*s);
-        var fy = cy + Math.sin(fa) * (r + 0.5*s);
-        paths.push('<line x1="' + fx + '" y1="' + fy + '" x2="' + (fx + Math.cos(fa)*2*s*fluff) + '" y2="' + (fy + Math.sin(fa)*2*s*fluff) + '" stroke="' + ink + '" stroke-width="' + (0.4*s) + '" opacity="0.7"/>');
+      var spikes = [[-1,-1],[1,-1],[-1.5,0],[1.5,0],[-1,1],[1,1],[0,-1.3],[0,1.3]];
+      for (var si = 0; si < spikes.length; si++) {
+        var sx = cx + spikes[si][0] * (headR + 0.3);
+        var sy = cy + spikes[si][1] * (headR + 0.3);
+        var tx = cx + spikes[si][0] * (headR + 1.5 * fluff);
+        var ty = cy + spikes[si][1] * (headR + 1.5 * fluff);
+        drawLine(grid, sx, sy, tx, ty, INK);
       }
     }
 
-    // 状态标签
-    if (opts.label) {
-      paths.push('<text x="' + (cx) + '" y="' + (H - 1.5*s) + '" text-anchor="middle" font-size="' + (2*s) + '" fill="' + accent + '" font-family="sans-serif">' + escapeHtml(opts.label) + '</text>');
+    // ---------- 呼噜标记 ----------
+    if (p.vibrate > 0.1) {
+      // 左上角小波纹
+      var v = p.vibrate;
+      for (var vi = 0; vi < 3; vi++) {
+        setPx(grid, 1 + vi, 1 + vi * 0.5, PINK);
+        setPx(grid, 1 + vi, 2 + vi * 0.5, PINK);
+      }
     }
 
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '">' +
-      paths.join("") + '</svg>';
+    return grid;
+  }
+
+  /* ---------- 网格 → SVG ---------- */
+  function gridToSVG(grid, scale, label) {
+    var s = scale || 5;
+    var W = GRID * s, H = GRID * s;
+
+    // 收集像素并按颜色分组（减少 SVG 节点数）
+    var colorMap = {};
+    for (var y = 0; y < GRID; y++) {
+      for (var x = 0; x < GRID; x++) {
+        var c = grid[y * GRID + x];
+        if (!c) continue;
+        if (!colorMap[c]) colorMap[c] = [];
+        colorMap[c].push([x, y]);
+      }
+    }
+
+    var paths = [];
+    // 背景
+    paths.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" rx="' + (s*0.5) + '" fill="' + BG + '"/>');
+
+    for (var color in colorMap) {
+      var pixels = colorMap[color];
+      // 用 <path> 合并相同颜色的像素
+      var d = "";
+      for (var i = 0; i < pixels.length; i++) {
+        var px = pixels[i][0] * s, py = pixels[i][1] * s;
+        d += "M" + px + "," + py + "h" + s + "v" + s + "h-" + s + "z";
+      }
+      paths.push('<path d="' + d + '" fill="' + color + '"/>');
+    }
+
+    if (label) {
+      paths.push('<text x="' + (W/2) + '" y="' + (H - s*0.8) + '" text-anchor="middle" font-size="' + (s*1.6) + '" fill="' + ACCENT + '" font-family="sans-serif">' + escapeHtml(label) + '</text>');
+    }
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H + '" shape-rendering="crispEdges">' + paths.join("") + '</svg>';
   }
 
   function escapeHtml(s) {
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
-  /* ---------- ASCII ---------- */
-  function toASCII(p) {
-    p = Object.assign({}, BASE, p);
-    var earL = p.earL < 0 ? "v" : p.earL > 50 ? "^" : "/";
-    var earR = p.earR < 0 ? "v" : p.earR > 50 ? "^" : "\\";
-    var pupil = p.pupil > 0.6 ? "@" : p.pupil < 0.3 ? "|" : "o";
-    var mouth = p.mouthOpen > 0.5 ? "w" : ".";
-    var whisker = p.whiskerFwd > 0 ? "~" : "-";
-    var tail = p.tailPos > 0.7 ? "¨" : p.tailPos < 0.2 ? "J" : "~";
-    var fluff = p.furFluff > 0.5 ? "✿" : "●";
-
-    return [
-      "    " + earL + "   " + earR + "       ",
-      "   /=====\\      ",
-      "  / " + pupil + "   " + pupil + " \\     ",
-      " |   " + whisker + whisker + "  |     " + tail,
-      "  \\  " + mouth + "  /      ",
-      "   \\___/       ",
-      "    " + fluff + "         "
-    ].join("\n");
+  /* ---------- 公共 API ---------- */
+  function toSVG(p, opts) {
+    opts = opts || {};
+    var grid = rasterize(p);
+    return gridToSVG(grid, opts.scale || 5, opts.label);
   }
 
-  /* ---------- Data URI ---------- */
+  function toASCII(p) {
+    var grid = rasterize(p);
+    var lines = [];
+    for (var y = 0; y < GRID; y++) {
+      var line = "";
+      for (var x = 0; x < GRID; x++) {
+        var c = grid[y * GRID + x];
+        if (!c || c === BG) line += ".";
+        else if (c === INK) line += "#";
+        else if (c === WHITE) line += "o";
+        else if (c === PINK) line += "*";
+        else line += "~";
+      }
+      lines.push(line);
+    }
+    return lines.join("\n");
+  }
+
   function toDataURI(p, opts) {
-    var svg = toSVG(p, opts);
-    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+    return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(toSVG(p, opts))));
   }
 
   /* ---------- 混合 ---------- */
@@ -417,23 +532,18 @@
       result[k] = sum / totalW;
     });
 
-    // 找主导
     var dominant = mixes[0].state, dominantW = 0;
     mixes.forEach(function (m) { if (m.weight > dominantW) { dominantW = m.weight; dominant = m.state; } });
     var stability = dominantW / totalW;
-
     return { ok: true, params: result, dominant: dominant, stability: stability };
   }
 
   function compose(mixes, opts) {
-    opts = opts || {};
     var r = blend(mixes);
     if (!r.ok) return { ok: false, reason: r.reason };
-    if (r.stability < 0.60) {
+    if (r.stability < 0.60)
       return { ok: false, reason: "主导状态权重不足 60%", dominant: r.dominant, stability: r.stability };
-    }
-    if (opts.persist) return { ok: true, params: r.params, dominant: r.dominant };
-    return { ok: true, params: r.params, dominant: r.dominant };
+    return { ok: true, params: r.params, dominant: r.dominant, stability: r.stability };
   }
 
   /* ---------- 导出 ---------- */
