@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>速查卡 · CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="voice.html">口吻</a>
+      <a href="opinions.html">生活意见</a>
+      <a href="cheatsheet.html" class="on">速查卡</a>
+      <a href="errors.html">状态码</a>
+      <a href="glossary.html">术语表</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<aside>
+  <div class="doc-name">速查卡</div>
+  <div class="doc-sub">一页看完</div>
+  <nav>
+    <div class="nav-label">区块</div>
+    <a href="#interfaces">接口清单</a>
+    <a href="#energy">能量公式</a>
+    <a href="#territory">领地分层</a>
+    <a href="#must">三条 MUST</a>
+    <a href="#vet">必须就医</a>
+  </nav>
+</aside>
+
+<main>
+<span class="doc-tag">REFERENCE / CHEATSHEET</span>
+<h1>速查卡</h1>
+<p class="subtitle">一页看完 · 可打印</p>
+
+<h2 id="interfaces"><span class="sec-no">§1</span>接口清单</h2>
+<table>
+  <tr><th>接口</th><th>版本</th><th>用途</th></tr>
+  <tr><td>VOICE</td><td>v1</td><td>声学（喵叫、呼噜、嘶嘶）</td></tr>
+  <tr><td>GAZE</td><td>v1</td><td>视觉（瞳孔、眨眼、耳廓、尾巴）</td></tr>
+  <tr><td>SCENT</td><td>v1</td><td>化学（颞腺、口周、爪间、肛腺）</td></tr>
+  <tr><td>TOUCH</td><td>v1</td><td>触觉（踩奶、抚触配额）</td></tr>
+  <tr><td>EXPR</td><td>v1</td><td>表情（14 状态）</td></tr>
+  <tr><td>PERIPHERAL</td><td>BUS</td><td>外设（4 类、纸箱 MUST）</td></tr>
+</table>
+
+<h2 id="energy"><span class="sec-no">§2</span>能量公式</h2>
+<pre>RER (kcal) = 70 × 体重(kg)^0.67
+
+DER 系数：
+  绝育成年    ×1.2
+  未绝育成年  ×1.4
+  减肥期      ×0.8
+  哺乳期      ×2.0–3.0
+  老年 >10岁  ×0.9–1.1</pre>
+
+<h2 id="territory"><span class="sec-no">§3</span>领地分层</h2>
+<table>
+  <tr><th>层级</th><th>范围</th><th>防御</th></tr>
+  <tr><td>核心区</td><td>睡/吃/排泄点</td><td>高</td></tr>
+  <tr><td>家区</td><td>住所内部</td><td>中</td></tr>
+  <tr><td>巡猎区</td><td>外围 30–100m</td><td>低</td></tr>
+</table>
+<p><strong>猫砂盆数量 = 实例数 + 1</strong></p>
+
+<h2 id="must"><span class="sec-no">§4</span>三条最常被忽略的 MUST</h2>
+<ol>
+  <li><strong>MUST</strong>：纸箱的优先级高于所有官方授权外设。</li>
+  <li><strong>MUST</strong>：猫砂盆数量 = 实例数 + 1。</li>
+  <li><strong>MUST</strong>：本系统不能部署为素食——会导致死亡。</li>
+</ol>
+
+<h2 id="vet"><span class="sec-no">§5</span>必须就医</h2>
+<pre>┌──────────────────────────────────────────┐
+│ 出现任一即就医                            │
+├──────────────────────────────────────────┤
+│ 连续 24h 拒食                             │
+│ 连续 24h 不饮水                           │
+│ 反复进出猫砂盆但无排泄                     │
+│ 后腿拖地行走                               │
+│ 牙龈发白或发紫                             │
+│ 呼吸时张嘴                                 │
+│ 第三眼睑长时间不退                         │
+└──────────────────────────────────────────┘</pre>
+<p><strong>不要等「它看起来很疼」——它不会让你看到。</strong></p>
+
+<div class="end-note">
+  速查卡 · 打印友好 · CAT API v0.4.2
+</div>
+
+</main>
+</div>
+
+</body>
+</html>

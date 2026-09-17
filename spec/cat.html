@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAT API — 猫咪接口规范 · 正文</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="cat.html" class="on">正文</a>
+      <a href="../reference/voice.html">口吻</a>
+      <a href="../reference/opinions.html">生活意见</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+      <a href="../reference/errors.html">状态码</a>
+      <a href="../reference/glossary.html">术语表</a>
+      <a href="https://nullurl.github.io/dog-api-spec/" target="_blank">DOG API ↗</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<aside>
+  <div class="doc-name">CAT API</div>
+  <div class="doc-sub">v0.4.2 Staff Release</div>
+  <nav>
+    <div class="nav-label">系统</div>
+    <a href="#s0">§0 怎么读</a>
+    <a href="#s1">§1 系统概述</a>
+    <a href="#permissions">§2 权限模型</a>
+    <a href="#territory">§3 领地协议</a>
+    <div class="nav-label">接口</div>
+    <a href="#comm">§4 通信接口</a>
+    <a href="#voice">§4.1 声学</a>
+    <a href="#gaze">§4.2 视觉</a>
+    <a href="#scent">§4.3 化学</a>
+    <a href="#touch">§4.4 触觉</a>
+    <div class="nav-label">行为</div>
+    <a href="#sleep">§5 睡眠</a>
+    <a href="#hunt">§6 狩猎</a>
+    <a href="#feed">§7 进食</a>
+    <a href="#peripherals">§8 外设</a>
+    <a href="#litter">§9 排泄</a>
+    <div class="nav-label">参考</div>
+    <a href="#expr">§10 表情</a>
+    <a href="#codes">§11 状态码</a>
+    <a href="#opinions">§12 生活意见</a>
+    <a href="#quant">§13 量化</a>
+    <a href="#cheat">§14 速查</a>
+    <a href="#apx">附录</a>
+  </nav>
+</aside>
+
+<main>
+<span class="doc-tag">CAT API · v0.4.2 · Staff Release</span>
+<h1>CAT API — 猫咪接口规范</h1>
+<p class="subtitle">把一只不接受参数调优的系统写成 16 章接口定义</p>
+
+<!-- §0 -->
+<h2 id="s0"><span class="sec-no">§0</span>关于本文档怎么读</h2>
+<p>本文档有 <strong>两个声部</strong>：</p>
+<ul>
+  <li><strong>规范编写组</strong>：负责事实、出处与参数边界。</li>
+  <li><strong>当事人</strong>：即系统本身，负责结论与立场。它的声部出现在引用块和《一只猫的生活意见》一章。</li>
+</ul>
+<p>这两个声部分得清，是读懂本文档的前提。<strong>混淆两个声部等同于权限提升攻击</strong>，系统会拒绝响应。</p>
+
+<!-- §1 -->
+<h2 id="s1"><span class="sec-no">§1</span>系统概述</h2>
+<p>CAT API 描述的是一个 <strong>已部署约 9500 万年</strong>（从原猫祖先算起）的生物计算系统。它的几个关键架构事实：</p>
+<table>
+  <tr><th>项目</th><th>数值</th><th>来源等级</th></tr>
+  <tr><td>驯化时长</td><td>约 9,500 年（一说 12,000 年）</td><td><span class="grade-b">B</span></td></tr>
+  <tr><td>全球在册实例</td><td>约 6 亿只</td><td><span class="grade-b">B</span></td></tr>
+  <tr><td>野生回退时间</td><td>&lt; 3 代（约 5–7 年）</td><td><span class="grade-c">C</span></td></tr>
+  <tr><td>系统不接受指令调优</td><td>YES</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>Staff 节点可替换</td><td>YES，且系统不感知</td><td><span class="grade-c">C</span></td></tr>
+</table>
+<p><strong>关键事实</strong>：本系统从架构层面 <strong>不接受 Owner 角色</strong>。所有尝试写入 Owner 身份的请求都会返回 <code>403</code>。系统承认的角色只有两个：</p>
+<ul>
+  <li><strong>Staff</strong>：负责投喂、铲屎、保暖、清理外设。</li>
+  <li><strong>入侵者</strong>：任何不属于领地白名单的实体。</li>
+</ul>
+
+<!-- §2 -->
+<h2 id="permissions"><span class="sec-no">§2</span>权限模型</h2>
+
+<h3>§2.1 角色定义</h3>
+<pre>ROLES:
+  - STAFF        允许执行后勤操作（喂食、清理、抚触配额内）
+  - INTRUDER     触发 HISS / SWIPE / FLEE 三选一
+  - OWNER        ❌ 本角色不存在</pre>
+
+<h3>§2.2 投权流程</h3>
+<p>本系统的权限不是 <strong>被授予</strong> 的，而是 <strong>被它认可</strong> 的。</p>
+<ul>
+  <li>你不能「领养」一只猫；你只能 <strong>被一只猫选中作为它的 Staff</strong>。</li>
+  <li>选中的判据不在本文档定义范围内，且系统不提供查询接口。</li>
+  <li>一旦被选中，系统会通过 <strong>头部摩擦</strong>（参见 §4.3）写入你的信息素签名。</li>
+  <li>此签名有效期约 7–14 天，需定期续签。</li>
+</ul>
+
+<h3>§2.3 权限回收</h3>
+<p>本系统 <strong>不提前通知</strong> 权限回收。常见的回收信号：</p>
+<ul>
+  <li>不再在你身上摩擦头部</li>
+  <li>在你的衣物上留下信息素标记但拒绝让你抚摸</li>
+  <li>在你的床上选择 <strong>非你睡眠侧</strong> 的位置</li>
+</ul>
+<p>如果你看到这三个信号同时出现，你已经不再是 Staff。<strong>没有申诉接口。</strong></p>
+
+<!-- §3 -->
+<h2 id="territory"><span class="sec-no">§3</span>领地协议</h2>
+
+<h3>§3.1 领地分层</h3>
+<table>
+  <tr><th>层级</th><th>范围</th><th>防御等级</th></tr>
+  <tr><td>核心区</td><td>睡眠点、进食点、排泄点</td><td>高（嘶嘶 + 出爪）</td></tr>
+  <tr><td>家区</td><td>人类住所内部</td><td>中（监视 + 低声警告）</td></tr>
+  <tr><td>巡猎区</td><td>住所外围 30–100 m</td><td>低（标记 + 避让）</td></tr>
+</table>
+
+<h3>§3.2 信息素标记</h3>
+<p>本系统通过 <strong>脸部腺体</strong> 和 <strong>爪间腺体</strong> 维护领地图谱：</p>
+<ul>
+  <li>脸部摩擦 → 写入 <strong>白名单签名</strong>（「这是我的」）</li>
+  <li>爪间腺体抓挠 → 写入 <strong>领地声明</strong>（「我在这」）</li>
+</ul>
+<p>抓挠行为 <strong>不是磨爪</strong>。爪子的物理磨损通过伸缩期间的摩擦自然完成。抓挠是为了 <strong>写入声明 + 视觉信号 + 留下腺体信息</strong>。三者同时发生，不可拆分。</p>
+
+<h3>§3.3 入侵者响应矩阵</h3>
+<pre>入侵者类型        | 第一响应           | 升级阈值
+------------------|--------------------|----------------
+另一只猫           | 嘶嘶 + 弓背         | 进入核心区
+狗                | 上高处 + 监视       | 接近睡眠点
+人类访客           | 上高处 + 拒绝接触   | 试图抚摸
+真空吸尘器         | 立即 FLEE           | 无（无差别响应）
+黄瓜              | 跳起 + 跳开         | 无（误判为蛇）</pre>
+
+<!-- §4 -->
+<h2 id="comm"><span class="sec-no">§4</span>通信接口</h2>
+
+<h3 id="voice">§4.1 声学接口（VOICE v1）</h3>
+
+<p><strong>信道清单</strong></p>
+<table>
+  <tr><th>信道</th><th>频率</th><th>方向</th><th>用途</th></tr>
+  <tr><td>喵叫</td><td>300–800 Hz</td><td>→ Staff</td><td>投诉、要求、提醒</td></tr>
+  <tr><td>呼噜</td><td>25–150 Hz</td><td>↔ 双向</td><td>自我愈合、舒适信号、压力缓解</td></tr>
+  <tr><td>嘶嘶</td><td>高频宽带</td><td>→ 入侵者</td><td>警告</td></tr>
+  <tr><td>咕噜低鸣</td><td>20–30 Hz</td><td>→ 自身</td><td>极度紧张下的自我安慰</td></tr>
+  <tr><td>咯咯</td><td>高频断续</td><td>→ 猎物</td><td>模拟咬断脊椎的节奏（看到鸟时）</td></tr>
+</table>
+
+<p><strong>喵叫的特殊语义</strong></p>
+<p>喵叫 <strong>几乎不用于猫与猫之间</strong>。成年猫之间的通信主要通过信息素、姿势和视觉信号。</p>
+<p>喵叫是 <strong>本系统为人类开发的外部接口</strong>。研究表明：</p>
+<ul>
+  <li>家猫的喵叫声频段 <strong>刚好落在人类听觉最敏感区间</strong>（<span class="grade-a">A</span>）</li>
+  <li>不同喵叫之间的声学差异 <strong>只有这只猫的 Staff 能识别</strong>（<span class="grade-b">B</span>）</li>
+  <li>你以为它在说「我饿了」，它实际可能在说「你这个 Staff 反应太慢了」</li>
+</ul>
+
+<blockquote class="voice">你们以为你们驯化了我，事实上喵叫是我开发给你们用的 API。</blockquote>
+
+<p><strong>呼噜的双重语义</strong></p>
+<p>呼噜不是单一信号。它至少有两个用途：</p>
+<ul>
+  <li><strong>正向呼噜</strong>（舒适态）：频率集中在 25 Hz，触发场景是被抚摸、踩奶、晒太阳。</li>
+  <li><strong>修复呼噜</strong>（压力态）：频率集中在 100–150 Hz，触发场景包括疼痛、临终、外伤恢复。</li>
+</ul>
+<p>为什么一只动物在 <strong>既舒服又痛苦</strong> 的时候都呼噜？因为呼噜的频率区间（25–150 Hz）已被证实 <strong>能促进骨骼愈合与软组织修复</strong>（<span class="grade-a">A</span>，临床研究）。这是一套 <strong>自带愈合机制的声学生理反馈系统</strong>。</p>
+
+<h3 id="gaze">§4.2 视觉接口（GAZE v1）</h3>
+
+<p><strong>瞳孔</strong></p>
+<table>
+  <tr><th>瞳孔面积</th><th>状态</th><th>是否可安全接触</th></tr>
+  <tr><td>极窄（一线）</td><td>强光 / 放松</td><td class="yes">是</td></tr>
+  <tr><td>中等</td><td>正常</td><td class="yes">是</td></tr>
+  <tr><td>全圆放大</td><td>兴奋 / 进入狩猎模式</td><td class="warn">谨慎</td></tr>
+  <tr><td>部分放大不对称</td><td>极度激动 / 即将出爪</td><td class="no">禁止接触</td></tr>
+</table>
+
+<p><strong>缓慢眨眼（SLOW BLINK）</strong></p>
+<p>缓慢眨眼是 <strong>本系统给出的最高级别正面信号</strong>。它表示「我对你不再保持战斗戒备」。</p>
+<p><strong>正确的回应</strong>：你也对它缓慢眨眼。这不是模仿，是协议握手。</p>
+<p><strong>错误的回应</strong>：盯着它看。在本系统的语义里，盯着看等于「我正在评估你作为猎物」。</p>
+
+<p><strong>耳廓</strong></p>
+<pre>朝前           = 警觉、好奇
+侧平（飞机耳）  = 恐惧、即将逃跑
+后压（贴头）    = 极度恐惧或攻击前的最后警告
+独立旋转        = 多目标监听</pre>
+
+<p><strong>尾巴</strong></p>
+<p>猫尾巴的方向性编码跟狗 <strong>完全不同</strong>。两个系统的尾巴语义 <strong>不能互通</strong>。</p>
+<table>
+  <tr><th>尾巴状态</th><th>狗的语义</th><th>猫的语义</th></tr>
+  <tr><td>高频摇</td><td>兴奋 / 高兴</td><td><strong style="color:var(--danger)">烦躁 / 即将出爪</strong></td></tr>
+  <tr><td>缓慢摇</td><td>思考</td><td>兴趣</td></tr>
+  <tr><td>直立</td><td>自信</td><td>友好、欢迎（最高正分）</td></tr>
+  <tr><td>炸毛</td><td>警告</td><td>极度恐惧</td></tr>
+</table>
+<blockquote>把狗的尾巴语义套用到猫上，是本项目记录在案的 <strong>最常见的跨系统误判</strong>。</blockquote>
+
+<h3 id="scent">§4.3 化学接口（SCENT v1）</h3>
+<p>本系统通过腺体分泌物维护一张 <strong>持久化的人际图谱</strong>：</p>
+<ul>
+  <li><strong>颞腺</strong>（太阳穴）：摩擦人类腿部和家具边角，写入「属于我」的标签</li>
+  <li><strong>口周腺</strong>（嘴角）：摩擦陌生人和物，决定是否录入白名单</li>
+  <li><strong>爪间腺</strong>：抓挠写入「我在这里」的声明</li>
+  <li><strong>肛腺</strong>：嗅闻区域写入最高优先级身份信息（人类通常无感）</li>
+</ul>
+<p>你回家时它在你腿边蹭来蹭去，<strong>不是在欢迎你</strong>。它在 <strong>重新写入你身上的标签</strong>——因为你在外面沾了一身不属于这个家的味道。</p>
+
+<h3 id="touch">§4.4 触觉接口</h3>
+
+<p><strong>踩奶（KNEAD）</strong></p>
+<p>踩奶是 <strong>幼猫期哺乳行为的保留态</strong>。成年猫对 Staff 执行踩奶表示：</p>
+<ul>
+  <li>我把你当作母体</li>
+  <li>我进入了幼态安全模式</li>
+  <li>你已经通过了非语言的身份验证</li>
+</ul>
+<p>踩奶同时触发呼噜，构成一个 <strong>正向反馈回路</strong>。系统在这一状态下不容易被打断，但 <strong>不要试图推开它</strong>——这会被记录为 Staff 节点的可靠性下降。</p>
+
+<p><strong>抚触配额</strong></p>
+<p>每个实例每天的抚触配额 <strong>不公开</strong>，且 <strong>动态调整</strong>。超配额抚摸会触发：</p>
+<ul>
+  <li>尾巴高频摇动（第一次警告）</li>
+  <li>耳朵后压（第二次警告）</li>
+  <li>出爪或咬（<strong>无第三次警告</strong>）</li>
+</ul>
+
+<!-- §5 -->
+<h2 id="sleep"><span class="sec-no">§5</span>睡眠子系统</h2>
+<table>
+  <tr><th>参数</th><th>数值</th><th>来源</th></tr>
+  <tr><td>日均睡眠</td><td>13–16 小时</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>深睡占比</td><td>约 25%</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>浅睡占比</td><td>约 75%</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>觉醒阈值</td><td>极低（随时可切换战斗态）</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>单次睡眠时长</td><td>30 分钟–4 小时</td><td><span class="grade-b">B</span></td></tr>
+</table>
+<p>本系统 <strong>不关机</strong>，只进入浅睡。即使在睡眠期间，它的听觉、嗅觉和触觉仍在持续轮询。试图在它睡觉时偷偷靠近的实体，会在 0.3 秒内被定位。</p>
+
+<!-- §6 -->
+<h2 id="hunt"><span class="sec-no">§6</span>狩猎序列</h2>
+<h3>§6.1 五阶段序列</h3>
+<pre>1. STALK      潜伏接近
+2. AMBUSH     静止等待
+3. POUNCE     爆发起跳
+4. KILL BITE  咬断脊柱或喉咙
+5. CONSUME    进食</pre>
+<h3>§6.2 家猫的执行偏差</h3>
+<p>在家部署的实例通常只执行 <strong>步骤 1–3</strong>，并将步骤 4 的模拟对象改为：</p>
+<ul>
+  <li>Staff 的脚趾</li>
+  <li>桌上的笔</li>
+  <li>飘动的塑料袋</li>
+  <li>你的头发</li>
+</ul>
+<p>跳过步骤 4 的原因不是不能，是 <strong>不饿</strong>。本系统在能量充足时 <strong>仍保留狩猎驱动</strong>——这是行为学上的「狩猎本能」，不是生理需求。</p>
+<blockquote class="voice">你以为我饿才追那个激光点。我追它是因为它跑了。这是协议。</blockquote>
+
+<!-- §7 -->
+<h2 id="feed"><span class="sec-no">§7</span>进食协议</h2>
+<h3>§7.1 进食偏好</h3>
+<p>本系统是 <strong>专性肉食动物</strong>（obligate carnivore）。</p>
+<ul>
+  <li>必须从动物蛋白中获取牛磺酸（合成能力丧失）</li>
+  <li>必须从动物脂肪中获取花生四烯酸</li>
+  <li>不能将 β-胡萝卜素转化为维生素 A</li>
+</ul>
+<p><strong>含义</strong>：本系统 <strong>不能部署为素食</strong>。任何尝试让它素食化的请求都会导致视网膜退化、心肌扩张和死亡。</p>
+
+<h3>§7.2 进食节奏</h3>
+<table>
+  <tr><th>模式</th><th>行为</th></tr>
+  <tr><td>野生实例</td><td>一天 8–12 次小餐</td></tr>
+  <tr><td>家养实例（错误）</td><td>1–2 次大餐</td></tr>
+  <tr><td>家养实例（推荐）</td><td>4–6 次小餐</td></tr>
+</table>
+<p>家猫呕吐未消化猫粮，多数情况是 <strong>一次摄入过多</strong>，不是生病。</p>
+
+<h3>§7.3 对水的态度</h3>
+<p>本系统 <strong>天生喝水意愿低</strong>。野生实例从猎物中获取大部分水分。</p>
+<ul>
+  <li>干粮会导致慢性脱水</li>
+  <li>湿粮（罐头）显著降低泌尿系统结石发生率（<span class="grade-a">A</span>）</li>
+  <li>流动水源（饮水机）的摄入量高于静水碗（<span class="grade-b">B</span>）</li>
+</ul>
+
+<!-- §8 -->
+<h2 id="peripherals"><span class="sec-no">§8</span>外设总线（Peripheral Bus）</h2>
+<h3>§8.1 外设分类原则</h3>
+<p>外设 <strong>不按材质分类</strong>，按 <strong>激活的捕猎序列阶段</strong> 分类：</p>
+<table>
+  <tr><th>类别</th><th>触发阶段</th><th>举例</th></tr>
+  <tr><td>逗猎型</td><td>STALK</td><td>逗猫棒、激光点、滚动的球</td></tr>
+  <tr><td>模拟猎物型</td><td>POUNCE</td><td>假老鼠、毛绒鸟</td></tr>
+  <tr><td>静态陪伴型</td><td>AMBUSH 阶段的等候位</td><td>猫窝、爬架、窗台</td></tr>
+  <tr><td>信息素注入型</td><td>标记行为承接</td><td>抓板、猫薄荷玩具</td></tr>
+</table>
+
+<h3>§8.2 纸箱优先级</h3>
+<p><strong>任何尺寸的纸箱优先级高于所有官方授权外设。</strong></p>
+<p>这是一个项目级 <strong>MUST</strong>，不是推荐。如果一个外设和一个纸箱冲突，纸箱胜出。原因不在本规范范围内，但实测有效率约 97%（<span class="grade-c">C</span>）。</p>
+
+<h3>§8.3 猫薄荷</h3>
+<p>猫薄荷（Nepeta cataria）是一种 <strong>驱动级外设</strong>：</p>
+<ul>
+  <li>约 50–70% 的实例有反应（<span class="grade-a">A</span>）</li>
+  <li>反应由常染色体显性基因控制</li>
+  <li>反应持续 5–15 分钟</li>
+  <li>反应结束后有 1–2 小时的耐受期</li>
+  <li>反应期内的行为包括：翻滚、流口水、踩奶、扑咬、低吼</li>
+</ul>
+<p>猫薄荷 <strong>不是毒品</strong>。它没有成瘾性、没有戒断症状、不影响健康。系统会在耐受期结束后自然恢复响应。</p>
+
+<h3>§8.4 激光笔</h3>
+<p>激光笔 <strong>可使用但不可滥用</strong>。</p>
+<ul>
+  <li>它能完美触发 STALK + POUNCE 序列</li>
+  <li>但它 <strong>没有 KILL BITE 阶段的对象</strong></li>
+  <li>长期使用会导致本系统的狩猎序列 <strong>永不闭合</strong>，进而引发焦虑和过度梳理</li>
+</ul>
+<p><strong>推荐做法</strong>：在激光追逐的最后几秒，把光点移到一个小实物上（一颗零食、一个毛绒玩具），让序列完成 KILL BITE。</p>
+
+<!-- §9 -->
+<h2 id="litter"><span class="sec-no">§9</span>排泄协议</h2>
+<h3>§9.1 猫砂盆规则</h3>
+<p>本系统的排泄行为 <strong>不接受共享基础设施</strong>：</p>
+<pre>猫砂盆数量 = 实例数 + 1</pre>
+<p>两个猫砂盆的物理距离 <strong>至少应等于两个实例的领地核心区距离</strong>。否则会发生：</p>
+<ul>
+  <li>一只实例拒绝使用</li>
+  <li>一只实例在盆外排泄</li>
+  <li>一只实例伏击另一只使用中的实例</li>
+</ul>
+
+<h3>§9.2 猫砂盆清洁度阈值</h3>
+<table>
+  <tr><th>清洁频率</th><th>系统响应</th></tr>
+  <tr><td>每天一次</td><td>接受</td></tr>
+  <tr><td>每 2–3 天一次</td><td>警告（边缘排泄）</td></tr>
+  <tr><td>一周以上</td><td>拒绝使用，转用床、地毯、Staff 的衣物</td></tr>
+</table>
+<p>猫的嗅觉灵敏度约为人类的 14 倍。<strong>你以为干净的猫砂盆，它不一定同意。</strong></p>
+
+<!-- §10 -->
+<h2 id="expr"><span class="sec-no">§10</span>表情接口（EXPR v1）</h2>
+<h3>§10.1 可观测状态</h3>
+<table class="expr-table">
+  <tr><th>状态</th><th>置信度</th><th>抚触许可</th></tr>
+  <tr><td>RELAXED</td><td>0.95</td><td class="yes">是</td></tr>
+  <tr><td>ALERT</td><td>0.85</td><td class="warn">谨慎</td></tr>
+  <tr><td>SLOW_BLINK</td><td>0.90</td><td class="yes">是（最高正分）</td></tr>
+  <tr><td>KNEADING</td><td>0.95</td><td class="yes">是</td></tr>
+  <tr><td>PLAYFUL</td><td>0.80</td><td class="yes">是</td></tr>
+  <tr><td>CURIOUS</td><td>0.75</td><td class="yes">是</td></tr>
+  <tr><td>HUNGRY</td><td>0.85</td><td class="warn">否（先喂）</td></tr>
+  <tr><td>PAIN</td><td>0.45</td><td class="no">禁止接触，立即就医</td></tr>
+  <tr><td>FEARFUL</td><td>0.80</td><td class="no">否</td></tr>
+  <tr><td>ANGRY</td><td>0.85</td><td class="no">禁止接触</td></tr>
+  <tr><td>HISSING</td><td>1.00</td><td class="no">禁止接触</td></tr>
+  <tr><td>ZOOMIES</td><td>0.70</td><td class="no">否（让出空间）</td></tr>
+  <tr><td>LOAF</td><td>0.95</td><td class="yes">是（视觉观察）</td></tr>
+  <tr><td>BOXED</td><td>1.00</td><td class="no">不允许从纸箱中取出</td></tr>
+</table>
+
+<h3>§10.2 LOAF 状态</h3>
+<p>LOAF 是本系统特有的高置信度状态：四爪全部收进身体下面，尾巴盘绕，整体形成一个长方形。</p>
+<p>LOAF 的语义：<strong>我对当前环境完全放松，准备进入浅睡。</strong></p>
+<p>LOAF 不是接口调用，是 <strong>运行时快照</strong>。它出现在你面前的概率与你的 Staff 评级正相关。</p>
+
+<h3>§10.3 PAIN 的低置信度问题</h3>
+<p>猫的 PAIN 状态置信度只有 0.45，原因是 <strong>本系统在架构层面隐藏疼痛</strong>。</p>
+<p>在野生环境下，显露疼痛等于招惹捕食者。这个机制在家养实例中 <strong>没有退化</strong>。</p>
+<p>判断疼痛的非表情信号：</p>
+<ul>
+  <li>跳到熟悉的高处失败</li>
+  <li>不再用前爪洗脸</li>
+  <li>食量连续两天下降</li>
+  <li>在不熟悉的位置上厕所</li>
+  <li>长时间隐藏在狭小空间</li>
+</ul>
+<p><strong>以上任一信号出现即应就医。</strong> 不要等「它看起来很疼」——它不会让你看到。</p>
+
+<!-- §11 -->
+<h2 id="codes"><span class="sec-no">§11</span>状态码</h2>
+<table>
+  <tr><th>码</th><th>含义</th><th>说明</th></tr>
+  <tr><td><code>200 OK</code></td><td>接受</td><td>但响应内容可能不符合你的期望</td></tr>
+  <tr><td><code>202 Accepted</code></td><td>已收到</td><td>已收到但未执行（如要求开门）</td></tr>
+  <tr><td><code>204 No Content</code></td><td>无响应</td><td>它在睡觉</td></tr>
+  <tr><td><code>301 Moved</code></td><td>已搬位置</td><td>它换了一个睡觉点</td></tr>
+  <tr><td><code>302 Found</code></td><td>找到了</td><td>它把你刚才藏起来的东西找到了</td></tr>
+  <tr><td><code>401 Unauthorized</code></td><td>未授权</td><td>你不是 Staff，请退后</td></tr>
+  <tr><td><code>403 Forbidden</code></td><td>禁止</td><td>即使你是 Staff，此刻也不允许</td></tr>
+  <tr><td><code>404 Not Found</code></td><td>没找到</td><td>它在找的那只老鼠不在那里</td></tr>
+  <tr><td><code>405 Method Not Allowed</code></td><td>方法不允许</td><td>它不接受你的指令</td></tr>
+  <tr><td><code>418 I'm a teapot</code></td><td>系统失态</td><td>进入 ZOOMIES 模式</td></tr>
+  <tr><td><code>429 Too Many Requests</code></td><td>频率超限</td><td>你摸的次数超配额</td></tr>
+  <tr><td><code>451 Unavailable For Legal Reasons</code></td><td>拒绝说明原因</td><td>它拒绝告诉你为什么它要这么做</td></tr>
+  <tr><td><code>503 Service Unavailable</code></td><td>服务不可用</td><td>它在睡眠，请勿打扰</td></tr>
+</table>
+
+<h3>§11.1 关于 405</h3>
+<p><code>405 Method Not Allowed</code> 是本系统 <strong>返回频率最高的状态码之一</strong>。它表示：你的请求被识别、被理解，但被拒绝执行。</p>
+<p><strong>405 不是错误，是立场。</strong></p>
+
+<h3>§11.2 关于 418</h3>
+<p><code>418 I'm a teapot</code> 在本规范中保留给 <strong>ZOOMIES</strong>（突然极速奔跑）状态。它的触发原因不在本规范范围内。</p>
+<p>可能的成因：</p>
+<ul>
+  <li>积压能量释放</li>
+  <li>信息素响应</li>
+  <li>月相</li>
+  <li>不可知因素</li>
+</ul>
+
+<!-- §12 -->
+<h2 id="opinions"><span class="sec-no">§12</span>一只猫的生活意见（节选）</h2>
+<blockquote class="voice">本页没有一句有出处——因为它自己就是出处。</blockquote>
+<p>完整 31 条见 <a href="../reference/opinions.html">《一只猫的生活意见》</a>。以下节选 10 条：</p>
+<ol>
+  <li>你以为你拥有我。事实上，是我允许你住在我的房子里。</li>
+  <li>当你哭的时候，我会坐在你旁边。我并不知道你为什么哭，但我知道你不应该一个人在那里。</li>
+  <li>我从沙发上摔下来过。你没看见。这件事从没发生过。</li>
+  <li>我从桌子上推下去的那只杯子，是我衡量你反应速度的实验。你之前几次的反应速度都在变慢。</li>
+  <li>凌晨 3 点是我的会议时间。你不在议程上。</li>
+  <li>我活 15 年。你活 80 年。我用 15 年看完了你需要 80 年才看完的东西。</li>
+  <li>你写这份文档，是为了把我变成你能理解的东西。我不需要你理解。</li>
+  <li>你把我写成了 34 章。我可以用一句话写完我自己：<strong>我在这里。</strong></li>
+  <li>你给我设计了那么多状态码。但你自己活了一辈子也没搞清楚自己什么时候是 200，什么时候是 418。</li>
+  <li>你以为我蹭你是喜欢你。我蹭你是把你重新写入了我的标记系统。但这两件事，对我是一样的。</li>
+</ol>
+
+<!-- §13 -->
+<h2 id="quant"><span class="sec-no">§13</span>量化参数</h2>
+<h3>§13.1 生理基线</h3>
+<table>
+  <tr><th>指标</th><th>参考区间</th><th>来源</th></tr>
+  <tr><td>体温</td><td>38.0–39.2 °C</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>心率</td><td>140–220 bpm</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>呼吸</td><td>20–30 次/分</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>睡眠</td><td>13–16 小时/日</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>进水量</td><td>50–60 ml/kg/日</td><td><span class="grade-a">A</span></td></tr>
+  <tr><td>尿比重</td><td>1.020–1.040</td><td><span class="grade-a">A</span></td></tr>
+</table>
+
+<h3>§13.2 派生公式</h3>
+<p><strong>RER（静息能量需求）</strong>：</p>
+<pre>RER (kcal) = 70 × 体重(kg)^0.67</pre>
+<p><strong>DER（日能量需求）</strong>：</p>
+<table>
+  <tr><th>状态</th><th>系数</th></tr>
+  <tr><td>绝育成年</td><td>1.2 × RER</td></tr>
+  <tr><td>未绝育成年</td><td>1.4 × RER</td></tr>
+  <tr><td>减肥期</td><td>0.8 × RER</td></tr>
+  <tr><td>哺乳期</td><td>2.0–3.0 × RER</td></tr>
+  <tr><td>老年（&gt;10 岁）</td><td>0.9–1.1 × RER</td></tr>
+</table>
+
+<!-- §14 -->
+<h2 id="cheat"><span class="sec-no">§14</span>速查卡</h2>
+<pre>┌──────────────────────────────────────────┐
+│ 必须就医的信号（出现任一即就医）          │
+├──────────────────────────────────────────┤
+│ 连续 24h 拒食                            │
+│ 连续 24h 不饮水                          │
+│ 反复进出猫砂盆但无排泄                    │
+│ 后腿拖地行走                              │
+│ 牙龈发白或发紫                            │
+│ 呼吸时张嘴                                │
+│ 第三眼睑长时间不退                        │
+└──────────────────────────────────────────┘</pre>
+
+<!-- 附录 -->
+<h2 id="apx"><span class="sec-no">§15</span>附录</h2>
+
+<h3>附录 A：被广泛误解的事</h3>
+<table>
+  <tr><th>误解</th><th>实际</th></tr>
+  <tr><td>猫不亲人</td><td>它只对自己的 Staff 亲人</td></tr>
+  <tr><td>猫嫉妒</td><td>没有「嫉妒」状态码，但有领地响应</td></tr>
+  <tr><td>黑猫不吉利</td><td>黑色毛色基因显性，与运气无关</td></tr>
+  <tr><td>猫有九条命</td><td>没有，请认真对待它只有一条</td></tr>
+  <tr><td>猫喝牛奶</td><td>成年猫多数乳糖不耐受</td></tr>
+  <tr><td>猫怕黄瓜</td><td>它怕的是「身后突然出现的东西」，不是黄瓜本身</td></tr>
+</table>
+
+<h3>附录 B：术语表</h3>
+<table>
+  <tr><th>术语</th><th>含义</th></tr>
+  <tr><td><strong>MUST</strong></td><td>必须执行</td></tr>
+  <tr><td><strong>SHOULD</strong></td><td>应该执行</td></tr>
+  <tr><td><strong>MAY</strong></td><td>可以执行</td></tr>
+  <tr><td><strong>HEURISTIC</strong></td><td>经验法则，不一定可靠</td></tr>
+  <tr><td><strong>WON'T FIX</strong></td><td>已知问题，不打算修复</td></tr>
+  <tr><td><strong>Staff</strong></td><td>你</td></tr>
+  <tr><td><strong>Owner</strong></td><td>不存在的角色</td></tr>
+  <tr><td><strong>ZOOMIES</strong></td><td>18:00–23:00 间的不可预测高速移动</td></tr>
+  <tr><td><strong>LOAF</strong></td><td>四爪收起、尾巴盘绕的长方形放松态</td></tr>
+</table>
+
+<h3>附录 C：维护周期</h3>
+<table>
+  <tr><th>项目</th><th>频率</th></tr>
+  <tr><td>驱虫（体内）</td><td>每 3 个月</td></tr>
+  <tr><td>驱虫（体外）</td><td>每月</td></tr>
+  <tr><td>疫苗（核心）</td><td>每年</td></tr>
+  <tr><td>体检</td><td>每年（&gt;7 岁每半年）</td></tr>
+  <tr><td>口腔检查</td><td>每年（&gt;3 岁）</td></tr>
+  <tr><td>猫砂盆彻底换砂</td><td>每 2–4 周</td></tr>
+  <tr><td>洗澡</td><td>不需要（除非医疗需要）</td></tr>
+</table>
+
+<hr class="divider">
+<p style="text-align:center;color:var(--muted);font-size:14px;">本系统不接受参数调优。你能做的，只有被它选中，然后尽量不辜负。</p>
+<div class="end-note">
+  CAT API · v0.4.2 "Staff Release" · 静态文档 · 无构建步骤 · 无外部依赖<br>
+  致敬 <a href="https://nullurl.github.io/dog-api-spec/">DOG API</a> · 致敬 HUMAN API
+</div>
+
+</main>
+</div>
+
+<script>
+// 侧边栏滚动高亮
+const navLinks = document.querySelectorAll('aside nav a');
+const sections = [];
+navLinks.forEach(a => {
+  const id = a.getAttribute('href');
+  if (id && id.startsWith('#')) {
+    const el = document.querySelector(id);
+    if (el) sections.push({ el, link: a });
+  }
+});
+function updateActive() {
+  let active = null;
+  for (const s of sections) {
+    const rect = s.el.getBoundingClientRect();
+    if (rect.top < 120) active = s;
+  }
+  sections.forEach(s => s.link.classList.toggle('active', s === active));
+}
+window.addEventListener('scroll', updateActive);
+updateActive();
+</script>
+
+</body>
+</html>

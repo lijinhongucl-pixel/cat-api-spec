@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAT API — 猫咪接口规范</title>
+<meta name="description" content="受《DOG API — 狗狗接口规范》启发，本项目用同一套工程文体处理另一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<link rel="stylesheet" href="assets/css/spec.css">
+<style>
+  .stat-row { display: flex; gap: 26px; flex-wrap: wrap; margin: 26px 0 0; }
+  .stat { border-left: 2px solid var(--accent); padding-left: 12px; }
+  .stat .n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 12px; color: var(--faint); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <span class="doc-tag">CAT API / 状态：持续 Revising</span>
+  <h1>CAT API — 猫咪接口规范</h1>
+  <p class="lead">
+    受《<a href="https://nullurl.github.io/dog-api-spec/">DOG API — 狗狗接口规范</a>》启发，本项目用同一套工程文体处理另一种已经大规模部署、
+    却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。区别在于，这次我们把权限模型写反了——
+    系统从架构层面否认 Owner 角色的存在。
+  </p>
+  <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
+  <a class="btn ghost" href="reference/opinions.html" style="margin-left:8px;">一只猫的生活意见</a>
+  <a class="btn ghost" href="reference/voice.html" style="margin-left:8px;">口吻与文体</a>
+  <a class="btn ghost" href="reference/cheatsheet.html" style="margin-left:8px;">速查卡</a>
+  <a class="btn ghost" href="reference/errors.html" style="margin-left:8px;">错误码对照</a>
+
+  <div class="stat-row">
+    <div class="stat"><div class="n">16</div><div class="l">CAT 正文章节</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">附录（A–C）</div></div>
+    <div class="stat"><div class="n">13</div><div class="l">状态码</div></div>
+    <div class="stat"><div class="n">14</div><div class="l">表情状态</div></div>
+    <div class="stat"><div class="n">4</div><div class="l">通信接口（声/视/化/触）</div></div>
+    <div class="stat"><div class="n">31</div><div class="l">当事猫意见</div></div>
+    <div class="stat"><div class="n">0</div><div class="l">Owner 角色定义</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">Staff 角色（你）</div></div>
+  </div>
+</div>
+
+<div class="section-title">规范文档</div>
+<div class="grid">
+  <a class="card" href="spec/cat.html">
+    <div class="kicker">正典条目</div>
+    <h3>CAT API — 猫咪接口规范</h3>
+    <p>权限模型反转、领地三层协议、喵叫的双声部语义、呼噜的自愈频率、纸箱优先级 MUST、凌晨三点会议时间，以及一份从架构层面否定 Owner 角色的接口定义。</p>
+    <div class="foot">16 章 + 附录 A–C · 31 条当事猫意见</div>
+  </a>
+</div>
+
+<div class="section-title">声部</div>
+<div class="grid">
+  <a class="card" href="reference/voice.html">
+    <div class="kicker">定义口径</div>
+    <h3>口吻与文体</h3>
+    <p>这份文档有两个人说话：规范编写组给事实与出处，当事猫给结论与立场。混淆两个声部等同于权限提升攻击，系统会拒绝响应。</p>
+    <div class="foot">REFERENCE / VOICE</div>
+  </a>
+  <a class="card" href="reference/opinions.html">
+    <div class="kicker">第二声部</div>
+    <h3>一只猫的生活意见</h3>
+    <p>31 条意见分五组：关于人、关于自己、关于食物、关于时间，以及关于这份规范。本页没有一句有出处——因为它自己就是出处。</p>
+    <div class="foot">REFERENCE / OPINIONS · 31 条</div>
+  </a>
+</div>
+
+<div class="section-title">权限</div>
+<div class="grid">
+  <a class="card" href="spec/cat.html#permissions">
+    <div class="kicker">§2 正文</div>
+    <h3>权限模型</h3>
+    <p>本系统承认的角色只有两个：Staff 和入侵者。Owner 不存在。被选中的判据不公开，选中后通过脸部摩擦写入信息素签名，有效期 7–14 天。</p>
+    <div class="foot">§2 权限模型 · 无申诉接口</div>
+  </a>
+  <a class="card" href="spec/cat.html#territory">
+    <div class="kicker">§3 正文</div>
+    <h3>领地协议</h3>
+    <p>核心区、家区、巡猎区三层防御。信息素标记不是磨爪，是写入声明。真空吸尘器触发无条件 FLEE，黄瓜被误判为蛇。</p>
+    <div class="foot">§3 领地协议 · 入侵者响应矩阵</div>
+  </a>
+</div>
+
+<div class="section-title">通信</div>
+<div class="grid">
+  <a class="card" href="spec/cat.html#voice">
+    <div class="kicker">§4.1 声学</div>
+    <h3>VOICE v1 — 声学接口</h3>
+    <p>喵叫几乎不用于猫与猫之间——它是猫为人类开发的外部接口。呼噜有双重语义：25Hz 是舒适，100–150Hz 是自愈。频率区间被证实能促进骨骼愈合。</p>
+    <div class="foot">5 信道 · 来源等级 A</div>
+  </a>
+  <a class="card" href="spec/cat.html#gaze">
+    <div class="kicker">§4.2 视觉</div>
+    <h3>GAZE v1 — 视觉接口</h3>
+    <p>缓慢眨眼是系统给出的最高正面信号。盯着看等于「我正在评估你作为猎物」。猫的尾巴语义跟狗完全相反，不能互通。</p>
+    <div class="foot">瞳孔 · 眨眼 · 耳廓 · 尾巴</div>
+  </a>
+  <a class="card" href="spec/cat.html#scent">
+    <div class="kicker">§4.3 化学</div>
+    <h3>SCENT v1 — 化学接口</h3>
+    <p>四组腺体维护一张持久化的人际图谱。你回家时它蹭你不是欢迎你，是重新写入你身上的标签——因为你在外面沾了一身不属于这个家的味道。</p>
+    <div class="foot">颞腺 · 口周 · 爪间 · 肛腺</div>
+  </a>
+  <a class="card" href="spec/cat.html#touch">
+    <div class="kicker">§4.4 触觉</div>
+    <h3>触觉接口</h3>
+    <p>踩奶是幼猫期哺乳行为的保留态，表示系统进入了幼态安全模式。每天的抚触配额不公开、动态调整，超配额会直接出爪——没有第三次警告。</p>
+    <div class="foot">踩奶 · 抚触配额 · 出爪阈值</div>
+  </a>
+</div>
+
+<div class="section-title">外设</div>
+<div class="grid">
+  <a class="card" href="spec/cat.html#peripherals">
+    <div class="kicker">§8 正文</div>
+    <h3>外设总线（Peripheral Bus）</h3>
+    <p>外设不按材质分类，按激活的捕猎序列阶段分类。纸箱的优先级高于所有官方授权外设——这是项目级 MUST。激光笔可用但不可滥用，因为它让狩猎序列永不闭合。</p>
+    <div class="foot">4 类 · 纸箱 MUST · 激光笔警告</div>
+  </a>
+</div>
+
+<div class="section-title">参考</div>
+<div class="grid">
+  <a class="card" href="reference/cheatsheet.html">
+    <div class="kicker">一页看完</div>
+    <h3>速查卡</h3>
+    <p>接口清单、RER/DER 公式、领地分层、状态码速查、必须就医指标。含三条最常被忽略的 MUST。可打印。</p>
+    <div class="foot">REFERENCE / CHEATSHEET</div>
+  </a>
+  <a class="card" href="reference/errors.html">
+    <div class="kicker">逐条对照</div>
+    <h3>状态码对照</h3>
+    <p>13 个状态码逐条对照：哪些是它拒绝执行、哪些是它给你开发的接口、哪些是它在凌晨三点开的会议。</p>
+    <div class="foot">13 个状态码</div>
+  </a>
+  <a class="card" href="reference/glossary.html">
+    <div class="kicker">公共约定</div>
+    <h3>术语表</h3>
+    <p>符号约定、规范强度（MUST / SHOULD / MAY / HEURISTIC / WON'T FIX）、Staff 与 Owner 的边界、ZOOMIES 的定义。</p>
+    <div class="foot">符号 · 强度 · 约定</div>
+  </a>
+</div>
+
+<div class="section-title">怎么读这套东西</div>
+<div class="grid" style="grid-template-columns:1fr;">
+  <div class="card" style="cursor:default;">
+    <p style="font-size:14.5px;line-height:1.9;">
+      它表面上是一份玩笑文档，实际上每一章的参数都有出处。文体是故意的：把「猫」写成「系统」之后，
+      那些我们习以为常的事就显出了原来的形状。
+      比如：某个系统从架构层面否认你拥有它；某个系统为你专门开发了一套叫「喵叫」的外部接口；
+      以及，某个系统在你哭的时候坐在你旁边——它不知道你为什么哭，但它知道你不应该一个人在那里。
+    </p>
+    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
+      这份文档有两个人说话：规范编写组给事实，<strong>当事猫给结论</strong>。
+      后者的声部收录在 <a href="reference/opinions.html">《一只猫的生活意见》</a> 里。
+    </p>
+    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
+      本项目致敬 <a href="https://nullurl.github.io/dog-api-spec/">DOG API</a> 和 HUMAN API。
+      它们在同一套文体下处理了另外两种系统。而猫，可能是这套文体唯一写不动的系统——
+      <strong>因为它不接受被写成任何东西</strong>。
+    </p>
+  </div>
+</div>
+
+<div class="end-note" style="max-width:940px;margin:20px auto 80px;padding:0 28px;">
+  CAT API · 静态站点，无构建步骤，无外部依赖 · 打开 index.html 即可阅读<br>
+  <span style="color:var(--faint);">v0.4.2 "Staff Release" · 致敬 DOG API · 致敬 HUMAN API</span>
+</div>
+
+<script>
+// 简单的顶部导航高亮
+</script>
+
+</body>
+</html>

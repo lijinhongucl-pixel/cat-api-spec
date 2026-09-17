@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>术语表 · CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="voice.html">口吻</a>
+      <a href="opinions.html">生活意见</a>
+      <a href="cheatsheet.html">速查卡</a>
+      <a href="errors.html">状态码</a>
+      <a href="glossary.html" class="on">术语表</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<aside>
+  <div class="doc-name">术语表</div>
+  <div class="doc-sub">公共约定</div>
+  <nav>
+    <div class="nav-label">分组</div>
+    <a href="#strength">规范强度</a>
+    <a href="#roles">角色</a>
+    <a href="#states">状态</a>
+    <a href="#misc">其他</a>
+  </nav>
+</aside>
+
+<main>
+<span class="doc-tag">符号 · 强度 · 约定</span>
+<h1>术语表</h1>
+<p class="subtitle">公共约定 · 读懂这份规范的前提</p>
+
+<h2 id="strength">规范强度</h2>
+<table>
+  <tr><th>关键词</th><th>含义</th><th>违反后果</th></tr>
+  <tr><td><strong>MUST</strong></td><td>必须执行</td><td>系统拒绝运行或健康受损</td></tr>
+  <tr><td><strong>SHOULD</strong></td><td>应该执行</td><td>长期违反可能导致行为异常</td></tr>
+  <tr><td><strong>MAY</strong></td><td>可以执行</td><td>不执行无负面后果</td></tr>
+  <tr><td><strong>HEURISTIC</strong></td><td>经验法则</td><td>不一定可靠，仅供参考</td></tr>
+  <tr><td><strong>WON'T FIX</strong></td><td>已知问题</td><td>不打算修复，这是特性不是 bug</td></tr>
+</table>
+
+<h2 id="roles">角色</h2>
+<table>
+  <tr><th>角色</th><th>是否存在</th><th>权限</th></tr>
+  <tr><td><strong>Staff</strong></td><td>存在</td><td>后勤操作（喂食、清理、配额内抚触）</td></tr>
+  <tr><td><strong>Owner</strong></td><td><span style="color:var(--danger);">❌ 不存在</span></td><td>N/A</td></tr>
+  <tr><td><strong>入侵者</strong></td><td>存在</td><td>触发 HISS / SWIPE / FLEE</td></tr>
+</table>
+
+<h2 id="states">状态</h2>
+<table>
+  <tr><th>状态</th><th>定义</th></tr>
+  <tr><td><strong>LOAF</strong></td><td>四爪收起、尾巴盘绕、整体成长方形的高置信度放松态</td></tr>
+  <tr><td><strong>ZOOMIES</strong></td><td>18:00–23:00 间的不可预测高速移动，触发原因不明</td></tr>
+  <tr><td><strong>BOXED</strong></td><td>进入纸箱后的封闭态，禁止从外部提取</td></tr>
+  <tr><td><strong>KNEADING</strong></td><td>踩奶，幼态安全模式的外显</td></tr>
+  <tr><td><strong>SLOW_BLINK</strong></td><td>系统给出的最高正面信号</td></tr>
+</table>
+
+<h2 id="misc">其他</h2>
+<table>
+  <tr><th>术语</th><th>含义</th></tr>
+  <tr><td>来源等级 A</td><td>同行评议或大规模实测</td></tr>
+  <tr><td>来源等级 B</td><td>临床指南共识</td></tr>
+  <tr><td>来源等级 C</td><td>社区经验或本项目定义的复合指标</td></tr>
+  <tr><td>信息素签名</td><td>通过脸部摩擦写入的 Staff 身份标签</td></tr>
+  <tr><td>狩猎序列</td><td>STALK → AMBUSH → POUNCE → KILL BITE → CONSUME</td></tr>
+  <tr><td>飞机耳</td><td>耳朵侧平展开的恐惧态</td></tr>
+</table>
+
+<div class="end-note">
+  术语表 · CAT API v0.4.2
+</div>
+
+</main>
+</div>
+
+</body>
+</html>

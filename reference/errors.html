@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>状态码对照 · CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="voice.html">口吻</a>
+      <a href="opinions.html">生活意见</a>
+      <a href="cheatsheet.html">速查卡</a>
+      <a href="errors.html" class="on">状态码</a>
+      <a href="glossary.html">术语表</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<aside>
+  <div class="doc-name">状态码</div>
+  <div class="doc-sub">13 条逐条对照</div>
+  <nav>
+    <div class="nav-label">分组</div>
+    <a href="#success">2xx 成功</a>
+    <a href="#redirect">3xx 重定向</a>
+    <a href="#client">4xx 客户端</a>
+    <a href="#server">5xx 服务端</a>
+  </nav>
+</aside>
+
+<main>
+<span class="doc-tag">13 个状态码</span>
+<h1>状态码对照</h1>
+<p class="subtitle">逐条解读 · 哪些是立场、哪些是协议、哪些是凌晨三点的会议</p>
+
+<h2 id="success">2xx 成功</h2>
+<table>
+  <tr><th>码</th><th>含义</th><th>说明</th></tr>
+  <tr><td><code>200 OK</code></td><td>接受</td><td>但响应内容可能不符合你的期望。系统接受请求 ≠ 系统按你的预期执行。</td></tr>
+  <tr><td><code>202 Accepted</code></td><td>已收到</td><td>已收到但未执行。典型场景：你要求它从桌上下来，它看着你，然后什么都没做。</td></tr>
+  <tr><td><code>204 No Content</code></td><td>无响应</td><td>它在睡觉。这不是错误，是正常态（占比 60%+）。</td></tr>
+</table>
+
+<h2 id="redirect">3xx 重定向</h2>
+<table>
+  <tr><th>码</th><th>含义</th><th>说明</th></tr>
+  <tr><td><code>301 Moved</code></td><td>已搬位置</td><td>它换了一个睡觉点。旧位置的缓存不再有效。</td></tr>
+  <tr><td><code>302 Found</code></td><td>找到了</td><td>它把你刚才藏起来的东西找到了。你不应该试图藏任何东西。</td></tr>
+</table>
+
+<h2 id="client">4xx 客户端</h2>
+<table>
+  <tr><th>码</th><th>含义</th><th>说明</th></tr>
+  <tr><td><code>401 Unauthorized</code></td><td>未授权</td><td>你不是 Staff。退后。不要试图协商。</td></tr>
+  <tr><td><code>403 Forbidden</code></td><td>禁止</td><td>即使你是 Staff，此刻也不允许。与 401 的区别：系统知道你是谁，但不在意。</td></tr>
+  <tr><td><code>404 Not Found</code></td><td>没找到</td><td>它在找的那只老鼠不在那里。可能从未存在。</td></tr>
+  <tr><td><code>405 Method Not Allowed</code></td><td>方法不允许</td><td><strong>返回频率最高的状态码之一</strong>。请求被识别、被理解、被拒绝执行。<strong>不是错误，是立场。</strong></td></tr>
+  <tr><td><code>418 I'm a teapot</code></td><td>系统失态</td><td>进入 ZOOMIES 模式。触发原因不可知。可能跟月相有关。</td></tr>
+  <tr><td><code>429 Too Many Requests</code></td><td>频率超限</td><td>你摸的次数超过今日配额。配额不公开、动态调整。</td></tr>
+  <tr><td><code>451 Unavailable For Legal Reasons</code></td><td>拒绝说明原因</td><td>它拒绝告诉你为什么它要把那只杯子推下去。</td></tr>
+</table>
+
+<h2 id="server">5xx 服务端</h2>
+<table>
+  <tr><th>码</th><th>含义</th><th>说明</th></tr>
+  <tr><td><code>503 Service Unavailable</code></td><td>服务不可用</td><td>它在睡眠，请勿打扰。系统不关机，但也不接受请求。</td></tr>
+</table>
+
+<hr class="divider">
+
+<h3>关于状态码的使用建议</h3>
+<p>作为 Staff，你需要理解的最重要的状态码是 <code>405</code> 和 <code>429</code>：</p>
+<ul>
+  <li><code>405</code> 告诉你：它听到了，它懂了，它不做。</li>
+  <li><code>429</code> 告诉你：你今天的额度用完了。</li>
+</ul>
+<p>两者都不需要重试。重试会被降级。</p>
+
+<div class="end-note">
+  13 个状态码 · CAT API v0.4.2
+</div>
+
+</main>
+</div>
+
+</body>
+</html>

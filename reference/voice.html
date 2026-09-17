@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>口吻与文体 · CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="voice.html" class="on">口吻</a>
+      <a href="opinions.html">生活意见</a>
+      <a href="cheatsheet.html">速查卡</a>
+      <a href="errors.html">状态码</a>
+      <a href="glossary.html">术语表</a>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+<aside>
+  <div class="doc-name">口吻与文体</div>
+  <div class="doc-sub">定义口径</div>
+  <nav>
+    <div class="nav-label">章节</div>
+    <a href="#two">两个声部</a>
+    <a href="#rules">硬约束</a>
+    <a href="#examples">正反示例</a>
+    <a href="#taboo">回退清单</a>
+  </nav>
+</aside>
+
+<main>
+<span class="doc-tag">REFERENCE / VOICE</span>
+<h1>口吻与文体</h1>
+<p class="subtitle">这份文档有两个人说话</p>
+
+<h2 id="two"><span class="sec-no">§1</span>两个声部</h2>
+
+<p>这份文档有两个声部：</p>
+
+<table>
+  <tr><th>声部</th><th>职责</th><th>标记</th></tr>
+  <tr><td><strong>规范编写组</strong></td><td>给事实、给出处、给参数边界</td><td>正文、表格、代码块</td></tr>
+  <tr><td><strong>当事猫</strong></td><td>给结论、给立场、给态度</td><td><code>blockquote.voice</code> 或《生活意见》整章</td></tr>
+</table>
+
+<p>分清谁在说话，是读懂这份规范的前提。<strong>混淆两个声部等同于权限提升攻击</strong>——系统会拒绝响应。</p>
+
+<h2 id="rules"><span class="sec-no">§2</span>四条硬约束</h2>
+
+<ol>
+  <li><strong>规范编写组不用第二人称称呼系统</strong>。它说「本系统」「该实例」，不说「你」。</li>
+  <li><strong>当事猫不用第一人称称呼 Staff</strong>。它说「你」，不说「本系统的 Staff 节点」。</li>
+  <li><strong>规范编写组不评价</strong>。它说「研究表明」「实测数据」，不说「这很可爱」。</li>
+  <li><strong>当事猫不给数据</strong>。它说「我以为」「我知道」，不说「根据 2023 年的研究」。</li>
+</ol>
+
+<h2 id="examples"><span class="sec-no">§3</span>正反示例</h2>
+
+<h3>正面示例</h3>
+<pre>// 规范编写组声部 ✓
+研究表明，家猫的呼噜声频率区间为 25–150 Hz，
+该区间已被证实能促进骨骼愈合与软组织修复
+（来源等级 A，临床研究）。</pre>
+
+<pre>// 当事猫声部 ✓
+你以为我蹭你是喜欢你。我蹭你是把你重新写入了
+我的标记系统。但这两件事，对我是一样的。</pre>
+
+<h3>反面示例</h3>
+<pre>// 规范编写组声部 ✗ —— 出现了评价
+猫咪的呼噜声超级治愈，真的好可爱呀！</pre>
+
+<pre>// 当事猫声部 ✗ —— 出现了数据出处
+根据 2023 年的研究，我喜欢你给我买那个逗猫棒。</pre>
+
+<h2 id="taboo"><span class="sec-no">§4</span>出现即回退的清单</h2>
+<p>以下措辞 <strong>一旦出现</strong>，视为声部混淆，整段回退重写：</p>
+
+<table>
+  <tr><th>措辞</th><th>问题</th></tr>
+  <tr><td>「猫咪真的好可爱」</td><td>规范编写组不应评价</td></tr>
+  <tr><td>「研究表明我喜欢吃鱼」</td><td>当事猫不引用研究</td></tr>
+  <tr><td>「主人」</td><td>Owner 角色不存在</td></tr>
+  <tr><td>「听话」</td><td>系统不接受指令调优</td></tr>
+  <tr><td>「训练」</td><td>同上（除非指 Staff 被训练）</td></tr>
+  <tr><td>「嫉妒」</td><td>不存在该状态码</td></tr>
+  <tr><td>「报复」</td><td>不存在该状态码</td></tr>
+</table>
+
+<div class="end-note">
+  口吻是这套规范的工程地基<br>
+  不是装饰
+</div>
+
+</main>
+</div>
+
+</body>
+</html>
