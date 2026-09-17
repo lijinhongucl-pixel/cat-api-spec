@@ -129,6 +129,26 @@
       label: "无反应", duration: 3000, pose: "sit", face: "LOAF",
       lines: ["NIP_REACTIVE = false。", "这个味道对我无效。", "304 Not Modified。"],
       behavior: function () { stayStill(); }
+    },
+    STRETCH: {
+      // 真实猫醒后招牌动作：前腿前伸、臀部翘起、背部长拉伸展
+      // 通常 SLEEP 之后 65% 概率链式触发 STRETCH（transitionTo 里处理）
+      label: "伸懒腰", duration: 3500, pose: "stretch", face: "LOAF",
+      lines: ["全身接口重新连接。", "腰椎复位。", "这是必要的。"],
+      behavior: function () { stayStill(); }
+    },
+    YAWN: {
+      // 打哈欠：嘴张大露牙。常与 STRETCH 串联
+      label: "打哈欠", duration: 2500, pose: "yawn", face: "LOAF",
+      lines: ["嗯——啊。", "氧合作用。", "不是困。只是重启。"],
+      behavior: function () { stayStill(); }
+    },
+    STARE_MOUSE: {
+      // 盯着鼠标不动——猫观察潜在猎物的标志性长时间静默
+      // 瞳孔放大、身体压低、偶尔耳朵微抖
+      label: "盯着鼠标", duration: 6000, pose: "stalk", face: "ALERT",
+      lines: ["锁定目标。", "不要动。", "我在评估。"],
+      behavior: function () { faceMouse(); }
     }
   };
 
@@ -171,13 +191,17 @@
   // crepuscular（晨昏活跃）会让 SLEEP 权重在 5-7 点和 17-19 点降到 25%，
   // 其他状态权重同步上调（spec §6.2 真实猫是晨昏动物）。
   var WEIGHTS = {
-    SLEEP:  50,
-    GROOM:  20,
-    PATROL: 10,
-    PLAY:    8,
-    EAT:     5,
-    STARE:   4,
-    BOXED:   3
+    SLEEP:  44,
+    GROOM:  17,
+    PATROL:  9,
+    PLAY:    7,
+    EAT:     4,
+    STARE:   3,
+    STARE_MOUSE: 5,   // 盯鼠标（中等频率）
+    STRETCH: 2,       // 伸懒腰（醒后触发，独立权重兜底）
+    YAWN:    2,       // 打哈欠
+    BOXED:   3,
+    HEADBUNT: 4       // 蹭人腿也加进来，让它更常触发
   };
 
   // crepuscular：晨昏时段（5-7 点 / 17-19 点）SLEEP 降到 25，
@@ -292,6 +316,56 @@
   var zoomTimer = null;
   var consecutivePets = 0;       // 连续戳猫次数（用于触发踩奶）
   var petResetTimer = null;      // 连续戳计时器（2 秒无操作清零）
+
+  /* ---------- idle 微动作（独立于状态切换的常驻动画）---------- */
+  // 真实猫咪即使不切换状态也在不断做小动作：眨眼、耳朵抖动、尾巴慢摆。
+  // 这些通过给 .lc2-cat 挂 idle class 让 CSS 跑独立循环来实现，
+  // 不需要状态机干预。
+  var idleBlinkTimer = null;
+  var idleEarTimer = null;
+  function startIdleMotion() {
+    scheduleIdleBlink();
+    scheduleIdleEarTwitch();
+  }
+  function scheduleIdleBlink() {
+    // 自然眨眼间隔：3-8 秒，随机
+    var delay = 3000 + Math.random() * 5000;
+    clearTimeout(idleBlinkTimer);
+    idleBlinkTimer = setTimeout(function () {
+      if (cat && !cat.classList.contains("lc2-blinking")) {
+        // 睡觉 / 钻纸箱 / 被摸 期间不触发自动眨眼（状态自身有眼部动画）
+        var dormant = currentStateName === "睡觉" ||
+                      currentStateName === "钻纸箱";
+        if (!dormant) {
+          cat.classList.add("lc2-idle-blink");
+          setTimeout(function () {
+            if (cat) cat.classList.remove("lc2-idle-blink");
+          }, 220);
+        }
+      }
+      scheduleIdleBlink();
+    }, delay);
+  }
+  function scheduleIdleEarTwitch() {
+    // 耳朵微抖：8-20 秒一次，随机
+    var delay = 8000 + Math.random() * 12000;
+    clearTimeout(idleEarTimer);
+    idleEarTimer = setTimeout(function () {
+      if (cat) {
+        // 飞行模式（疯跑/追激光）期间不抖耳
+        var fast = currentStateName === "疯跑" ||
+                   currentStateName === "追激光" ||
+                   currentStateName === "追鼠标";
+        if (!fast) {
+          cat.classList.add("lc2-idle-ear");
+          setTimeout(function () {
+            if (cat) cat.classList.remove("lc2-idle-ear");
+          }, 600);
+        }
+      }
+      scheduleIdleEarTwitch();
+    }, delay);
+  }
 
   /* ---------- 激光点（规则 11，模块作用域）---------- */
   var laserDot = null;
@@ -644,6 +718,7 @@
   function transitionTo(name) {
     var next = STATES[name];
     if (!next) return;
+    var prevName = currentStateName;
     current = next;
     // interrupt() 用 label 作为 currentStateName，transitionTo 也应该这样
     // （否则守卫检查时要同时匹配 key 和 label，容易出错）
@@ -651,7 +726,21 @@
     stateStart = Date.now();
     label.textContent = current.label;
     if (current.behavior) current.behavior();
+
+    // 链式动作：SLEEP → 65% 概率接 STRETCH（真实猫醒后必伸懒腰）
+    // STRETCH → 35% 概率接 YAWN（伸完打个哈欠）
+    // 这里只设置链式入口，scheduleNext 会在 duration 后处理出口
     scheduleNext();
+
+    // 如果刚从睡觉切走、且新状态不是 STRETCH/YAWN，有概率插入伸懒腰
+    // （放在 transitionTo 主流程之后，不影响当前状态切换）
+    if (prevName === "睡觉" && name !== "STRETCH" && name !== "YAWN" && Math.random() < 0.55) {
+      setTimeout(function () {
+        if (currentStateName === current.label) {  // 还在同一个状态
+          transitionTo("STRETCH");
+        }
+      }, 800);
+    }
   }
 
   function scheduleNext() {
@@ -678,6 +767,18 @@
 
       // 加权随机选下一个状态（真实猫作息分布 + crepuscular）
       var next = pickWeightedState(currentStateName);
+
+      // STRETCH 出口：35% 概率接 YAWN（伸完懒腰打哈欠是真实猫的连锁动作）
+      if (currentStateName === "伸懒腰" && Math.random() < 0.35) {
+        transitionTo("YAWN");
+        return;
+      }
+      // YAWN 出口：30% 概率接 STRETCH（哈欠后接着伸懒腰）
+      if (currentStateName === "打哈欠" && Math.random() < 0.30) {
+        transitionTo("STRETCH");
+        return;
+      }
+
       transitionTo(next);
     }, current.duration * jitter);
   }
@@ -879,6 +980,7 @@
     facing = 1;
     transitionTo("SLEEP");
     rafId = requestAnimationFrame(tick);
+    startIdleMotion();   // 启动 idle 微动作循环（自动眨眼 / 耳朵抖动）
   }
 
   root.LiveCat = {

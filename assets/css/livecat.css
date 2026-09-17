@@ -336,6 +336,111 @@
   20%, 80% { transform: rotate(-15deg) translateY(2px); }
 }
 
+/* ---------- 新增：伸懒腰 STRETCH ---------- */
+/* 真实猫醒后招牌动作：前腿前伸、臀部翘起、背部长拉伸展。
+   一次伸展持续约 2-3 秒，然后回到正常姿态。 */
+.state-stretch .lc2-body {
+  transform-origin: 50% 90%;
+  animation: lc2-stretch 3.5s ease-out;
+}
+@keyframes lc2-stretch {
+  0%   { transform: scaleY(1) scaleX(1) translateY(0); }
+  25%  { transform: scaleY(1.18) scaleX(0.92) translateY(-6px); }  /* 背部拱起 */
+  55%  { transform: scaleY(1.22) scaleX(0.88) translateY(-8px); }  /* 持续伸展顶点 */
+  80%  { transform: scaleY(1.12) scaleX(0.94) translateY(-3px); }  /* 缓慢回落 */
+  100% { transform: scaleY(1) scaleX(1) translateY(0); }
+}
+.state-stretch .lc2-tail {
+  transform-origin: 71.9px 33.6px;
+  transform: rotate(60deg);   /* 尾巴高高翘起 */
+}
+.state-stretch .lc2-mouth {
+  animation: lc2-yawn-shape 3.5s ease-out;   /* 伸展时常伴随张嘴 */
+}
+
+/* ---------- 新增：打哈欠 YAWN ---------- */
+/* 嘴张大露牙，持续约 2 秒。眼睛眯起。*/
+.state-yawn .lc2-body {
+  transform: translateY(0);
+}
+.state-yawn .lc2-mouth {
+  transform-origin: center top;
+  animation: lc2-yawn-shape 2.5s ease-in-out;
+}
+.state-yawn .lc2-eyes {
+  animation: lc2-yawn-eyes 2.5s ease-in-out;
+}
+.state-yawn .lc2-tail {
+  transform-origin: 71.9px 33.6px;
+  animation: lc2-tail-swish 3s ease-in-out infinite;
+}
+@keyframes lc2-yawn-shape {
+  0%, 100% { transform: scaleY(1); }
+  40%      { transform: scaleY(2.5) translateY(-2px); }    /* 嘴张大 */
+  60%      { transform: scaleY(2.5) translateY(-2px); }    /* 保持张嘴 */
+}
+@keyframes lc2-yawn-eyes {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  40%, 60% { opacity: 0.4; transform: scaleY(0.25); }      /* 眼睛眯起 */
+}
+
+/* ---------- 新增：盯鼠标 STARE_MOUSE（pose=stalk）---------- */
+/* 猫观察猎物的标志性动作：身体压低、瞳孔放大、几乎不动。
+   与 ALERT 表情配合，让猫显得正在认真评估猎物。 */
+.state-stalk .lc2-body {
+  transform: scaleY(0.82) translateY(6px);   /* 身体压低贴近地面 */
+  transform-origin: 50% 90%;
+}
+.state-stalk .lc2-pupil-l {
+  transform: scaleY(1.4);                    /* 瞳孔放大（兴奋） */
+  transform-origin: center;
+}
+.state-stalk .lc2-tail {
+  transform-origin: 71.9px 33.6px;
+  animation: lc2-stalk-tail 2.5s ease-in-out infinite;  /* 尾巴尖端微抖 */
+}
+@keyframes lc2-stalk-tail {
+  0%, 100% { transform: rotate(5deg); }
+  50%      { transform: rotate(-8deg); }
+}
+
+/* ---------- idle 微动作：自动眨眼 ---------- */
+/* 每 3-8 秒一次的自然眨眼，独立于状态切换。
+   比 slow-blink 快得多（220ms vs 1.5s），看起来更像无意识的生理动作。 */
+.lc2-idle-blink .lc2-eye-l,
+.lc2-idle-blink .lc2-eye-r {
+  animation: lc2-idle-blink 220ms ease-in-out;
+}
+@keyframes lc2-idle-blink {
+  0%   { transform: scaleY(1); }
+  50%  { transform: scaleY(0.08); }
+  100% { transform: scaleY(1); }
+}
+.lc2-idle-blink .lc2-pupil-l,
+.lc2-idle-blink .lc2-pupil-r {
+  animation: lc2-idle-blink-pupil 220ms ease-in-out;
+}
+@keyframes lc2-idle-blink-pupil {
+  0%, 100% { height: 6.4px; }
+  50%      { height: 0.5px; }
+}
+
+/* ---------- idle 微动作：耳朵抖动 ---------- */
+/* 真实猫每 10-30 秒会独立抖动耳朵一次（排除异物 / 警觉反射）。
+   600ms 的快速双抖，很有辨识度。 */
+.lc2-idle-ear .lc2-ear-l,
+.lc2-idle-ear .lc2-ear-r {
+  animation: lc2-idle-ear 600ms ease-in-out;
+}
+@keyframes lc2-idle-ear {
+  0%   { transform: rotate(0deg); }
+  15%  { transform: rotate(-12deg); }
+  30%  { transform: rotate(0deg); }
+  45%  { transform: rotate(-8deg); }
+  60%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
+}
+
 /* ---------- 气泡 ---------- */
 .lc2-bubble {
   position: fixed;
@@ -444,6 +549,12 @@
   .state-nip .lc2-body, .state-nip .lc2-tail,
   .state-laser .lc2-body, .state-laser .lc2-tail,
   .state-confused .lc2-body,
+  .state-stretch .lc2-body, .state-stretch .lc2-tail, .state-stretch .lc2-mouth,
+  .state-yawn .lc2-mouth, .state-yawn .lc2-eyes, .state-yawn .lc2-tail,
+  .state-stalk .lc2-body, .state-stalk .lc2-pupil-l, .state-stalk .lc2-tail,
+  .lc2-idle-blink .lc2-eye-l, .lc2-idle-blink .lc2-eye-r,
+  .lc2-idle-blink .lc2-pupil-l, .lc2-idle-blink .lc2-pupil-r,
+  .lc2-idle-ear .lc2-ear-l, .lc2-idle-ear .lc2-ear-r,
   .lc2-laser-dot {
     animation: none !important;
     transition: none !important;
