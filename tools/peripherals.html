@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>外设控制台 — CAT API Peripheral Bus v1</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .qwrap { max-width: 1240px; margin: 0 auto; padding: 36px 28px 120px; }
+  .qhead { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 26px; }
+  .qhead h1 { font-size: 30px; }
+  .qhead p { color: var(--muted); font-size: 15px; max-width: 820px; }
+  .qcols { display: grid; grid-template-columns: 330px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 1040px) { .qcols { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .panel > h3 { margin: 0 0 14px; font-size: 14px; letter-spacing: .06em; color: var(--accent); text-transform: uppercase; }
+  .fld { display: grid; grid-template-columns: 1fr 104px; gap: 10px; align-items: center; margin: 9px 0; }
+  .fld label { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .fld input, .fld select { width: 100%; padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; font-family: inherit; font-size: 13.5px; background: #fff; color: var(--ink); }
+  .chk { display: grid; grid-template-columns: 18px 1fr; gap: 8px; align-items: start; margin: 6px 0; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+  .chk input { margin-top: 4px; width: 15px; height: 15px; }
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 760px) { .scores { grid-template-columns: repeat(2, 1fr); } }
+  .sc { border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; background: var(--panel); }
+  .sc .k { font-size: 11.5px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+  .sc .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  .sc .b { font-size: 12.5px; color: var(--muted); }
+  .sc.good .v { color: var(--ok); }
+  .sc.warn .v { color: var(--warn); }
+  .sc.bad .v { color: #b91c1c; }
+  .banner { border-radius: 10px; padding: 15px 20px; margin-bottom: 16px; font-size: 14.5px; line-height: 1.8; }
+  .banner.p0 { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+  .banner.p1 { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+  .banner.info { background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; }
+  .banner.box { background: #fefce8; border: 1px solid #fcd34d; color: #92400e; }
+  .bar { display: grid; grid-template-columns: 116px 1fr 80px; gap: 10px; align-items: center; font-size: 13px; margin: 7px 0; }
+  .bar .track { background: var(--code-bg); border-radius: 5px; height: 9px; overflow: hidden; }
+  .bar .fill { height: 100%; background: var(--accent); border-radius: 5px; }
+  .bar .fill.low { background: #b91c1c; }
+  .bar .fill.mid { background: var(--warn); }
+  .bar .num { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .note { font-size: 13px; color: var(--muted); line-height: 1.75; }
+  .grade { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .grade.A { background: #dcfce7; color: #15803d; }
+  .grade.B { background: #fef3c7; color: #92400e; }
+  .grade.C { background: #f1f2f4; color: #4b5563; }
+  .vtag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 4px; white-space: nowrap; }
+  .vtag.ok { background: #dcfce7; color: #15803d; }
+  .vtag.cond { background: #fef3c7; color: #92400e; }
+  .vtag.fail { background: #fee2e2; color: #991b1b; }
+  .vtag.ban { background: #1f2430; color: #f8fafc; }
+  .devwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table.dev { font-size: 12.5px; margin: 0; width: 100%; }
+  table.dev th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); white-space: nowrap; padding: 9px 6px; }
+  table.dev td { padding: 6px; vertical-align: middle; }
+  table.dev input[type=number] { width: 56px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; font-family: inherit; font-size: 12.5px; background: #fff; color: var(--ink); }
+  table.dev select { padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; font-family: inherit; font-size: 12.5px; background: #fff; color: var(--ink); max-width: 120px; }
+  table.dev input[type=checkbox] { width: 15px; height: 15px; }
+  table.dev .rm { border: 1px solid var(--line); background: #fff; border-radius: 5px; cursor: pointer; padding: 3px 8px; font-size: 12px; color: var(--muted); }
+  table.dev .rm:hover { color: #b91c1c; border-color: #fca5a5; }
+  .seq-step { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 2px; }
+  .seq-step.done { background: #dcfce7; color: #15803d; }
+  .seq-step.partial { background: #fef3c7; color: #92400e; }
+  .seq-step.miss { background: #fee2e2; color: #991b1b; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 1040px) { .grid2 { grid-template-columns: 1fr; } }
+  .jsonout { background: #1f2430; border-radius: 10px; padding: 15px 18px; max-height: 460px; overflow: auto; }
+  .jsonout pre { background: none; border: none; padding: 0; margin: 0; color: #d1d5db; font-size: 12.5px; }
+  .gate-row { display: grid; grid-template-columns: 44px 1fr 50px; gap: 9px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; align-items: baseline; }
+  .gate-row:last-child { border-bottom: none; }
+  .gate-row .st { font-size: 11px; font-weight: 700; }
+  .st.pass { color: var(--ok); } .st.warn { color: var(--warn); } .st.fail { color: #b91c1c; } .st.na { color: var(--faint); }
+</style>
+</head>
+<body>
+<script src="../assets/js/peripherals.js"></script>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="peripherals.html" class="on">外设控制台</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+      <a href="https://nullurl.github.io/dog-api-spec/tools/peripherals.html" target="_blank">DOG 版 ↗</a>
+    </div>
+  </div>
+</div>
+
+<div class="qwrap">
+  <div class="qhead">
+    <span class="doc-tag">TOOL / 实算</span>
+    <h1>CAT API 外设总线控制台</h1>
+    <p>
+      §8 的实现。左侧填入实例档案与一份外设清单，右侧立刻产出序列闭合检查、纸箱 MUST 判定、激光笔滥用警告、逐设备门槛判定与健康评分。
+      全部由 <code>assets/js/peripherals.js</code> 完成——页面上没有任何写死的配额。
+    </p>
+    <p style="font-size:13.5px;color:var(--faint);margin-top:12px;">
+      本页的核心结论只有两句：<strong>外设不按材质分类，按激活的捕猎序列阶段分类</strong>；<strong>纸箱的优先级高于所有官方外设</strong>。
+    </p>
+  </div>
+
+  <div class="qcols">
+    <!-- 左侧：输入 -->
+    <div>
+      <div class="panel">
+        <h3>① 实例档案 · Profile</h3>
+        <div class="fld"><label>体重（kg）<span style="color:#b91c1c">*</span></label><input id="f-weight" type="number" step="0.1" value="4.5"></div>
+        <div class="fld"><label>月龄（月）</label><input id="f-age" type="number" value="36"></div>
+        <div class="fld"><label>活动等级（1–5）</label>
+          <select id="f-activity">
+            <option value="1">1 · 沙发猫</option>
+            <option value="2">2 · 偶尔跑动</option>
+            <option value="3" selected>3 · 正常</option>
+            <option value="4">4 · 活跃</option>
+            <option value="5">5 · 狩猎驱动极强</option>
+          </select>
+        </div>
+        <div class="fld"><label>狩猎驱动（1–5）</label>
+          <select id="f-hunt">
+            <option value="1">1 · 无感</option>
+            <option value="2">2 · 偶尔追</option>
+            <option value="3" selected>3 · 正常</option>
+            <option value="4">4 · 猎性重</option>
+            <option value="5">5 · 一切皆猎物</option>
+          </select>
+        </div>
+        <div class="fld"><label>家中实例数</label><input id="f-count" type="number" value="1" min="1"></div>
+        <label class="chk"><input id="f-nip" type="checkbox" checked><span>对猫薄荷有反应（约 50–70%）</span></label>
+      </div>
+
+      <div class="panel">
+        <h3>② 环境速记 · Environment</h3>
+        <div class="fld"><label>室内面积（㎡）</label><input id="f-area" type="number" value="60"></div>
+        <div class="fld"><label>垂直空间层数</label><input id="f-vertical" type="number" value="2"></div>
+        <label class="chk"><input id="f-indoor" type="checkbox" checked><span>纯室内</span></label>
+      </div>
+    </div>
+
+    <!-- 右侧：结果 -->
+    <div>
+      <div id="banner-area"></div>
+
+      <div class="panel">
+        <h3>综合评分</h3>
+        <div class="scores" id="scores"></div>
+      </div>
+
+      <div class="panel">
+        <h3>狩猎序列闭合检查</h3>
+        <div id="seq-check"></div>
+        <div id="seq-note" class="note" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="panel">
+        <h3>配额承接</h3>
+        <div id="quota-bars"></div>
+      </div>
+
+      <div class="panel">
+        <h3>逐设备门槛判定</h3>
+        <div id="gates"></div>
+      </div>
+
+      <div class="panel">
+        <h3>环境丰富度建议</h3>
+        <div id="enrich" class="note"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title" style="padding:0;margin:34px 0 10px;">外设清单 · 部署了什么</div>
+  <div class="devwrap">
+    <table class="dev" id="devtable"></table>
+  </div>
+  <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <button class="btn" id="add">＋ 添加设备</button>
+    <button class="btn ghost" id="reset">恢复默认清单</button>
+    <span class="note" id="devcount"></span>
+  </div>
+
+  <div class="section-title" style="padding:0;margin:34px 0 10px;">设备注册表 · 14 类</div>
+  <div class="panel">
+    <div id="registry"></div>
+  </div>
+
+  <div class="section-title" style="padding:0;margin:34px 0 10px;">门槛注册表 · 13 道</div>
+  <div class="panel">
+    <div id="gatereg"></div>
+  </div>
+
+  <div class="section-title" style="padding:0;margin:34px 0 10px;">输出 JSON（对应 POST /api/v1/peripherals/enumerate）</div>
+  <div class="panel">
+    <button class="btn" id="copy">复制 JSON</button>
+    <span id="copy-msg" style="font-size:13px;color:var(--ok);margin-left:10px;"></span>
+    <div class="jsonout" style="margin-top:12px;"><pre id="json"></pre></div>
+  </div>
+
+  <div class="end-note">
+    本页不发送任何网络请求，不保存任何数据 · 外设内核 <code>assets/js/peripherals.js</code><br>
+    本页不含第二份配额数据：序列权重每次都从引擎现读。
+  </div>
+</div>
+
+<script>
+(function () {
+  var P = window.CatPeriph;
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+
+  var DEFAULT = [
+    { cls: "WAND",    minutes: 10, sessions: 2, diameter: null, hasSmallParts: false, hasString: true, stringLen: 12, hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
+    { cls: "MOUSE",   minutes: 8,  sessions: 1, diameter: 45, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: true },
+    { cls: "BOX",     minutes: 120,sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
+    { cls: "SCRATCH", minutes: 0,  sessions: 3, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false },
+    { cls: "TREE",    minutes: 0,  sessions: 1, diameter: null, hasSmallParts: false, hasString: false, stringLen: 0,  hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: false }
+  ];
+  var state = JSON.parse(JSON.stringify(DEFAULT));
+
+  function opts(arr, cur) {
+    return arr.map(function (o) {
+      return '<option value="' + esc(o.v) + '"' + (String(o.v) === String(cur) ? " selected" : "") + ">" + esc(o.l) + "</option>";
+    }).join("");
+  }
+
+  function renderTable() {
+    var head = "<tr>" +
+      ["类别", "单次<br>min", "次/日", "最小<br>外径mm", "小件", "绳索<br>cm", "尖点", "电池<br>密封", "KILL<br>对象", ""]
+        .map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr>";
+
+    var body = state.map(function (d, i) {
+      var clsOpts = opts(P.CLASSES.map(function (x) { return { v: x.code, l: x.code + " · " + x.name }; }), d.cls);
+      return "<tr>" +
+        '<td><select data-i="' + i + '" data-k="cls">' + clsOpts + "</select></td>" +
+        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="minutes" value="' + d.minutes + '"></td>' +
+        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="sessions" value="' + d.sessions + '"></td>' +
+        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="diameter" value="' + (d.diameter || "") + '" placeholder="—"></td>' +
+        '<td><input type="checkbox" data-i="' + i + '" data-k="hasSmallParts"' + (d.hasSmallParts ? " checked" : "") + "></td>" +
+        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-k="stringLen" value="' + (d.stringLen || 0) + '"></td>' +
+        '<td><input type="checkbox" data-i="' + i + '" data-k="hasSharpEdge"' + (d.hasSharpEdge ? " checked" : "") + "></td>" +
+        '<td><input type="checkbox" data-i="' + i + '" data-k="batterySealed"' + (d.batterySealed ? " checked" : "") + "></td>" +
+        '<td><input type="checkbox" data-i="' + i + '" data-k="killObject"' + (d.killObject ? " checked" : "") + "></td>" +
+        '<td><button class="rm" data-i="' + i + '">移除</button></td>' +
+        "</tr>";
+    }).join("");
+
+    $("devtable").innerHTML = head + body;
+    $("devcount").textContent = state.length + " 件外设";
+
+    Array.prototype.forEach.call($("devtable").querySelectorAll("[data-i]"), function (el) {
+      var i = +el.getAttribute("data-i"), k = el.getAttribute("data-k");
+      var ev = el.type === "checkbox" ? "change" : "input";
+      el.addEventListener(ev, function () {
+        if (el.type === "checkbox") state[i][k] = el.checked;
+        else if (el.type === "number") state[i][k] = el.value === "" ? null : parseFloat(el.value);
+        else state[i][k] = el.value;
+        recalc();
+      });
+    });
+    Array.prototype.forEach.call($("devtable").querySelectorAll(".rm"), function (btn) {
+      btn.addEventListener("click", function () {
+        state.splice(+this.getAttribute("data-i"), 1);
+        renderTable(); recalc();
+      });
+    });
+  }
+
+  function getProfile() {
+    return {
+      weight: parseFloat($("f-weight").value) || 4.5,
+      ageMonths: parseInt($("f-age").value) || 36,
+      activityLevel: parseInt($("f-activity").value) || 3,
+      huntDrive: parseInt($("f-hunt").value) || 3,
+      catCount: parseInt($("f-count").value) || 1,
+      nipReactive: $("f-nip").checked,
+      area: parseFloat($("f-area").value) || 60,
+      vertical: parseInt($("f-vertical").value) || 2,
+      indoor: $("f-indoor").checked
+    };
+  }
+
+  function recalc() {
+    var profile = getProfile();
+    var r = P.evaluate(profile, {}, state);
+
+    // Banner
+    var banners = [];
+    if (r.triage === "P0") banners.push('<div class="banner p0"><strong>P0 · 立即处理</strong> —— 存在可能导致死亡的外设问题。请移除不合格设备。</div>');
+    else if (r.triage === "P1") banners.push('<div class="banner p1"><strong>P1 · 当日处理</strong> —— 存在受伤风险的外设问题。</div>');
+
+    if (!r.hasBox) banners.push('<div class="banner box"><strong>纸箱缺失</strong> —— 项目级 MUST 违规。任何尺寸的纸箱优先级高于所有官方外设。实测有效率 97%。</div>');
+    if (r.seqStuck) banners.push('<div class="banner p1"><strong>狩猎序列卡死</strong> —— 激光笔使用 ' + r.laserMinutes + ' 分钟但无 KILL BITE 对象。长期使用会导致焦虑和过度梳理。<br>推荐做法：在激光追逐最后几秒把光点移到实物上。</div>');
+    if (r.waterWarning) banners.push('<div class="banner info">' + r.waterWarning + '</div>');
+    if (r.nipWarning) banners.push('<div class="banner info">' + esc(r.nipWarning) + '</div>');
+    $("banner-area").innerHTML = banners.join("");
+
+    // Scores
+    var hCls = r.healthScore >= 85 ? "good" : r.healthScore >= 60 ? "warn" : "bad";
+    var seqPct = r.quota.hunt.value;
+    var seqCls = seqPct >= 80 ? "good" : seqPct >= 40 ? "warn" : "bad";
+    $("scores").innerHTML =
+      '<div class="sc ' + hCls + '"><div class="k">健康评分</div><div class="v">' + r.healthScore + '</div><div class="b">' + (r.triage === "OK" ? "全部合格" : "有待处理项") + '</div></div>' +
+      '<div class="sc ' + seqCls + '"><div class="k">序列闭合</div><div class="v">' + seqPct + '%</div><div class="b">' + (r.seqComplete ? "完整" : r.seqStuck ? "卡死" : "部分") + '</div></div>' +
+      '<div class="sc ' + (r.quota.play.value >= 80 ? "good" : r.quota.play.value >= 40 ? "warn" : "bad") + '"><div class="k">互动配额</div><div class="v">' + r.quota.play.value + '%</div><div class="b">' + (r.playGap > 0 ? "缺 " + r.playGap + " min" : "已满足") + '</div></div>';
+
+    // 序列
+    var stages = [
+      { name: "STALK", label: "潜伏接近", score: r.stages.STALK },
+      { name: "AMBUSH", label: "静止等待", score: r.stages.AMBUSH },
+      { name: "POUNCE", label: "爆发起跳", score: r.stages.POUNCE },
+      { name: "KILL_BITE", label: "咬杀", score: r.stages.KILL_BITE },
+      { name: "CONSUME", label: "吞食", score: r.stages.CONSUME }
+    ];
+    $("seq-check").innerHTML = stages.map(function (s) {
+      var cls = s.score > 0.3 ? "done" : s.score > 0.1 ? "partial" : "miss";
+      return '<span class="seq-step ' + cls + '">' + s.name + '</span>';
+    }).join("");
+
+    var seqNote = r.seqComplete
+      ? "序列完整闭合。外设配置可以满足从 STALK 到 CONSUME 的全部阶段。这是理想状态。"
+      : r.seqStuck
+      ? "序列卡在 STALK→POUNCE 之后无法闭合。原因：激光笔触发了追猎但没有实物完成 KILL BITE。"
+      : r.seqPartial
+      ? "序列部分闭合。有 STALK 和 POUNCE，但 KILL BITE 阶段缺失。加入仿真鼠或滚球等可咬住的外设。"
+      : "狩猎序列未被触发。考虑加入逗猎型外设（逗猫棒、激光笔等）。";
+    if (r.stages.CONSUME < 0.15) seqNote += " 注意：CONSUME 阶段通常由真实进食完成，益智喂食器可以承接。";
+    $("seq-note").textContent = seqNote;
+
+    // 配额
+    var qbars = "";
+    ["hunt","play","scratch","enrichment","box"].forEach(function (k) {
+      var q = r.quota[k];
+      var pct = Math.min(100, q.value);
+      var cls = pct >= 80 ? "" : pct >= 40 ? "mid" : "low";
+      qbars += '<div class="bar"><span>' + q.label + '</span>' +
+        '<div class="track"><div class="fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+        '<span class="num">' + q.value + '%</span></div>';
+    });
+    if (r.playGap > 0) qbars += '<div class="note" style="margin-top:10px;">每日互动需求 ' + r.dailyPlayNeed + ' 分钟，当前覆盖 ' + (r.dailyPlayNeed - r.playGap) + ' 分钟，缺 ' + r.playGap + ' 分钟。</div>';
+    if (r.scratchGap > 0) qbars += '<div class="note">猫砂盆规则：抓板/猫柱数量应 ≥ ' + r.scratchNeed + '（实例数 + 1）。当前缺 ' + r.scratchGap + ' 个。</div>';
+    $("quota-bars").innerHTML = qbars;
+
+    // 门槛判定
+    if (r.failures.length === 0) {
+      $("gates").innerHTML = '<div class="note" style="color:var(--ok);">所有外设通过全部门槛检查。</div>';
+    } else {
+      $("gates").innerHTML = r.failures.map(function (f) {
+        var dev = state[f.device] ? P.cls(state[f.device].cls) : null;
+        var devName = dev ? dev.name : "?";
+        var sc = f.severity === "P0" ? "fail" : f.severity === "P1" ? "warn" : "na";
+        return '<div class="gate-row"><span class="st ' + sc + '">' + f.severity + '</span>' +
+          '<span><strong>' + esc(devName) + '</strong> · ' + esc(f.gate) + ' ' + esc(f.mode) + '<br>' + esc(f.msg) + '</span>' +
+          '<span class="st ' + sc + '">' + f.severity + '</span></div>';
+      }).join("");
+    }
+
+    // 丰富度建议
+    var tips = [];
+    if (!r.hasBox) tips.push(" deploy 一个纸箱。任何尺寸。纸箱 MUST 优先于所有外设。");
+    if (r.playGap > 0) tips.push(" 每日逗猎时间不足 " + r.playGap + " 分钟。增加逗猫棒或互动玩具的使用时长。");
+    if (r.laserMinutes > 10 && r.stages.KILL_BITE < 0.2) tips.push(" 激光笔使用应配合实物收尾。在最后几秒把光点移到零食或毛绒玩具上。");
+    if (!r.hasScratch) tips.push(" 缺少抓挠标记位。每 " + r.catCount + " 只猫需要至少 " + r.scratchNeed + " 个猫砂盆和同等数量的抓挠位。");
+    if (!r.hasWater) tips.push(" 干粮喂养的实例建议部署流动饮水机，降低泌尿系统结石风险。");
+    if (profile.vertical < 3 && profile.area < 80) tips.push(" 室内面积偏小且垂直空间不足。增加猫爬架或壁挂跳板可以扩展有效领地面积。");
+    if (r.totalHuntScore < 1.5) tips.push(" 环境丰富度偏低。本系统在能量充足时仍保留狩猎驱动——这不是生理需求，是行为需求。");
+    if (tips.length === 0) tips.push(" 当前外设配置良好。系统接受了你的部署方案。");
+    $("enrich").innerHTML = tips.map(function (t, i) { return (i + 1) + "." + t; }).join("<br>");
+
+    // JSON 输出
+    $("json").textContent = JSON.stringify({
+      profile: profile,
+      peripherals: state,
+      result: {
+        healthScore: r.healthScore,
+        triage: r.triage,
+        seqComplete: r.seqComplete,
+        seqStuck: r.seqStuck,
+        stages: r.stages,
+        quota: r.quota,
+        failures: r.failures,
+        hasBox: r.hasBox,
+        laserMinutes: r.laserMinutes,
+        dailyPlayNeed: r.dailyPlayNeed,
+        playGap: r.playGap
+      }
+    }, null, 2);
+  }
+
+  // 设备注册表
+  function renderRegistry() {
+    $("registry").innerHTML = '<table class="dev" style="font-size:12px;">' +
+      "<tr><th>CODE</th><th>名称</th><th>阶段</th><th>角色</th><th>狩猎权重</th><th>说明</th></tr>" +
+      P.CLASSES.map(function (c) {
+        return "<tr><td><code>" + c.code + "</code></td><td>" + esc(c.name) + "</td>" +
+          "<td>" + c.stage + "</td><td>" + c.role + "</td>" +
+          '<td style="text-align:center;">' + c.huntWeight + "</td>" +
+          '<td style="color:var(--muted);">' + esc(c.note) + "</td></tr>";
+      }).join("") + "</table>";
+  }
+
+  // 门槛注册表
+  function renderGates() {
+    $("gatereg").innerHTML = '<table class="dev" style="font-size:12px;">' +
+      "<tr><th>ID</th><th>名称</th><th>规则</th><th>等级</th><th>严重度</th></tr>" +
+      P.GATES.map(function (g) {
+        return "<tr><td><code>" + g.id + "</code></td><td>" + esc(g.name) + "</td>" +
+          '<td style="color:var(--muted);">' + esc(g.rule) + "</td>" +
+          '<td><span class="grade ' + g.grade + '">' + g.grade + "</span></td>" +
+          "<td>" + g.severity + "</td></tr>";
+      }).join("") + "</table>";
+  }
+
+  // 事件
+  ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical"].forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+  });
+  ["f-nip","f-indoor"].forEach(function (id) {
+    $(id).addEventListener("change", recalc);
+  });
+
+  $("add").addEventListener("click", function () {
+    state.push({ cls: "BALL", minutes: 10, sessions: 1, diameter: 35, hasSmallParts: false, hasString: false, stringLen: 0, hasSharpEdge: false, hasBattery: false, batterySealed: true, killObject: true });
+    renderTable(); recalc();
+  });
+  $("reset").addEventListener("click", function () {
+    state = JSON.parse(JSON.stringify(DEFAULT));
+    renderTable(); recalc();
+  });
+
+  $("copy").addEventListener("click", function () {
+    var txt = $("json").textContent;
+    var done = function () {
+      $("copy-msg").textContent = "已复制";
+      setTimeout(function () { $("copy-msg").textContent = ""; }, 1600);
+    };
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done);
+    else done();
+  });
+
+  // 启动
+  renderTable();
+  renderRegistry();
+  renderGates();
+  recalc();
+})();
+</script>
+</body>
+</html>
