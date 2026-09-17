@@ -418,92 +418,56 @@
     document.addEventListener("visibilitychange", onVisibility);
   }
 
-  /* ---------- SVG 猫身体 v4（精修设计版）---------- */
-  // 暖炭灰三色调 + 金色放射渐变虹膜 + 双层眼高光 + 脸颊绒毛 + 弧形胡须 + 胸前毛领
-  // 头身比 1:1.5，贝塞尔有机轮廓，虎斑 clipPath，全部 class 与动画锚点保留
+  /* ---------- SVG 猫身体 v7（黑猫侧影·精修版）---------- */
+  // 按真实黑猫站姿解剖结构：小头+高尖耳+细颈+深胸+平背+腹部后收+长腿+粗根细尾
+  // 头身长比 ≈ 1:2.3；JS scaleX(facing) 自动左右翻转
   function svgCat() {
     return '' +
     '<svg class="lc2-body" width="100" height="70" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
       '<defs>' +
-        '<linearGradient id="lc2-belly-grad" x1="0" y1="0" x2="0" y2="1">' +
-          '<stop offset="0" stop-color="#5E5956"/>' +
-          '<stop offset="1" stop-color="#7A736E"/>' +
-        '</linearGradient>' +
-        '<radialGradient id="lc2-iris-grad" cx="0.35" cy="0.3" r="0.95">' +
+        '<radialGradient id="lc2-iris-grad" cx="0.35" cy="0.35" r="0.95">' +
           '<stop offset="0" stop-color="#FFE9A8"/>' +
           '<stop offset="0.45" stop-color="#FFC53D"/>' +
           '<stop offset="1" stop-color="#D4880F"/>' +
         '</radialGradient>' +
-        '<clipPath id="lc2-body-clip">' +
-          '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z"/>' +
-        '</clipPath>' +
       '</defs>' +
       '<g class="lc2-purr">' +
-        '<circle class="lc2-purr-r1" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
-        '<circle class="lc2-purr-r2" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
-        '<circle class="lc2-purr-r3" cx="52" cy="42" r="22" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r1" cx="48" cy="34" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r2" cx="48" cy="34" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
+        '<circle class="lc2-purr-r3" cx="48" cy="34" r="20" fill="none" stroke="#4b5563" stroke-width="0.8" opacity="0"/>' +
       '</g>' +
-      '<path class="lc2-tail" d="M72 46 C85 51 95 42 91.5 29 C89.5 20.5 80.5 20.5 81.5 29" fill="none" stroke="#3F3B38" stroke-width="7" stroke-linecap="round"/>' +
-      '<circle cx="81.5" cy="29" r="3.7" fill="#5E5956"/>' +
-      '<rect class="lc2-back-leg2" x="70" y="50" width="9" height="16" rx="4.5" fill="#3F3B38"/>' +
-      '<rect class="lc2-front-leg2" x="46" y="51" width="8" height="15" rx="4" fill="#3F3B38"/>' +
-      '<path d="M32 59 C27 50 28 36 37 28 C45 21 61 21 69 28 C77 35 78 50 73 59 C60 63 45 63 32 59 Z" fill="#4A4543"/>' +
-      '<path d="M37 28 C45 21 61 21 69 28 C73.5 32 76 37 76.5 42.5 C65 36.5 45 36.5 33.5 43.5 C33 37 34 31.5 37 28 Z" fill="#3F3B38" opacity="0.6"/>' +
-      '<path fill="url(#lc2-belly-grad)" clip-path="url(#lc2-body-clip)" d="M36 58 C40 49 64 49 68 56 C70 61 66 65 52 65 C40 65 34 62 36 58 Z"/>' +
-      '<g clip-path="url(#lc2-body-clip)" fill="none" stroke="#332F2C" stroke-width="4" stroke-linecap="round" opacity="0.85">' +
-        '<path d="M41 17 C35 27 34 44 38 61"/>' +
-        '<path d="M53 14 C55 27 52 44 52 62"/>' +
-        '<path d="M65 17 C71 27 72 44 68 61"/>' +
-      '</g>' +
-      '<rect class="lc2-back-leg" x="60" y="49" width="9" height="17" rx="4.5" fill="#4A4543"/>' +
-      '<rect class="lc2-front-leg" x="35" y="50" width="8" height="16" rx="4" fill="#4A4543"/>' +
-      '<ellipse cx="39" cy="65" rx="4.6" ry="2.7" fill="#5E5956"/>' +
-      '<ellipse cx="50" cy="65" rx="4.4" ry="2.6" fill="#5E5956"/>' +
-      '<ellipse cx="64.5" cy="65" rx="5" ry="2.9" fill="#5E5956"/>' +
-      '<ellipse cx="74.5" cy="65" rx="4.8" ry="2.8" fill="#5E5956"/>' +
-      '<g fill="#F293A0">' +
-        '<ellipse cx="39" cy="65.6" rx="1.6" ry="1.1"/>' +
-        '<circle cx="37.1" cy="63.9" r="0.75"/>' +
-        '<circle cx="40.9" cy="63.9" r="0.75"/>' +
-        '<ellipse cx="64.5" cy="65.6" rx="1.6" ry="1.1"/>' +
-        '<circle cx="62.6" cy="63.9" r="0.75"/>' +
-        '<circle cx="66.4" cy="63.9" r="0.75"/>' +
-      '</g>' +
-      '<path d="M 27.5 25 C 31.5 22.5 36 25 37.2 30 C 38.2 35 35 39.8 30.5 39.2 C 26.5 38.2 24.8 31.5 27.5 25 Z" fill="#6B6562"/>' +
+      // 尾巴：根粗尖细，上卷
+      '<path class="lc2-tail" d="M 74 28 C 82 26.5 88.5 20.5 86 10.5 C 84.6 4.5 78.6 3.8 79.2 10.5" fill="none" stroke="#262422" stroke-width="6" stroke-linecap="round"/>' +
+      // 远侧腿（深色）
+      '<path class="lc2-back-leg2" d="M 71 40 C 72.5 46 73 53 72.5 59 L 72.8 62 Q 73 64.5 70.9 64.5 L 68 64.5 Q 66.2 64.5 66.3 62.3 C 65.9 55 66.4 47 68 40.5 Z" fill="#1F1C1A"/>' +
+      '<path class="lc2-front-leg2" d="M 36.5 43.5 C 36.2 50 36.2 57 36.8 62.5 Q 37 64.5 39.2 64.5 L 41.6 64.5 Q 43.8 64.5 43.4 62.5 C 43.2 56 42.6 49 42 43.5 Z" fill="#1F1C1A"/>' +
+      // 躯干：颈-肩-平背-臀弧-深胸-腹部后收
+      '<path d="M 25 24 C 33 20.5 52 19.5 66 22.5 C 72 24 75.5 28 76 34 C 76.3 39 74 42.5 70.5 43.8 C 66 45 52 47.5 42 47.8 C 36 48 30 47 28.5 44 C 26.5 40 25.8 36 26 32 C 26.2 29 25.4 26.5 25 24 Z" fill="#262422"/>' +
+      // 背部光泽
+      '<path d="M 28 24.5 C 36 21 54 20 65 23 C 55 23 40 24.5 30.5 28 C 29.3 26.8 28.5 25.6 28 24.5 Z" fill="#3D3835" opacity="0.5"/>' +
+      // 近侧腿
+      '<path class="lc2-back-leg" d="M 64.5 40.5 C 66.5 46 67.2 53 66.5 59 L 66.7 62 Q 66.9 64.5 64.8 64.5 L 61.8 64.5 Q 59.9 64.5 60 62.3 C 59.6 55 60.2 47 62 41 Z" fill="#262422"/>' +
+      '<path class="lc2-front-leg" d="M 29.5 44 C 29 50 29 57 29.6 62.5 Q 29.8 64.5 31.9 64.5 L 34.4 64.5 Q 36.5 64.5 36 62.5 C 35.8 56 35.2 49 34.5 43.5 Z" fill="#262422"/>' +
+      // 头部（侧脸，朝左，小而收）
       '<g class="lc2-head">' +
-        '<path class="lc2-ear lc2-ear-l" d="M 7 11 C 7.5 6 9.5 2 12 0.5 C 14.5 2.5 16 6 16.5 10 C 13 8.5 10 9 7 11 Z" fill="#3F3B38"/>' +
-        '<path class="lc2-ear lc2-ear-l-inner" d="M 9.6 8.6 C 10.1 5.6 11.5 3.6 12.4 3.1 C 13.5 4.6 14.4 6.6 14.9 9 C 13 8.1 11.1 8.1 9.6 8.6 Z" fill="#F2A7B8"/>' +
-        '<path class="lc2-ear lc2-ear-r" d="M 19.5 10 C 20 6 21.5 2.5 24 0.5 C 26.5 2 29 6 29 11 C 26 9 22.5 8.5 19.5 10 Z" fill="#3F3B38"/>' +
-        '<path class="lc2-ear lc2-ear-r-inner" d="M 21.6 9 C 22.1 6.6 23.1 4.6 24.1 3.6 C 25.4 4.6 26.4 6.4 26.9 8.6 C 25 8 23.1 8 21.6 9 Z" fill="#F2A7B8"/>' +
-        '<path d="M 4.5 19 C 3.5 9 9.5 3 18 3 C 26.5 3 32.5 9 31.5 19 C 32.8 21.5 33 24 32.3 26.5 L 34.8 28.2 L 31.5 30.2 C 28.6 35 23.5 37.8 18 37.8 C 12.5 37.8 7.4 35 4.5 30.2 L 1.2 28.2 L 3.7 26.5 C 3 24 3.2 21.5 4.5 19 Z" fill="#4A4543"/>' +
-        '<path d="M 7 19 C 6.4 11 11.6 6 18 6 C 24.4 6 29.6 11 29 19 C 29.9 22 29.9 25.6 28.5 28.8 C 26 33.4 22 35.4 18 35.4 C 14 35.4 10 33.4 7.5 28.8 C 6.1 25.6 6.1 22 7 19 Z" fill="#5E5956"/>' +
-        '<path d="M 13.5 8.5 L 15.7 12 L 18 9 L 20.3 12 L 22.5 8.5" stroke="#332F2C" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path class="lc2-ear lc2-ear-r" d="M 20.5 8 C 20.2 4.2 21.8 1.5 24.5 0.8 C 27.5 2.4 29.2 5.3 29 9 C 26.2 6.8 23.2 6.5 20.5 8 Z" fill="#1F1C1A"/>' +
+        '<path class="lc2-ear lc2-ear-l" d="M 15 7.5 C 14 3.5 15 0.8 17.8 0 C 21 1 23.5 4.2 24 8.5 C 20.8 6.2 17.8 6 15 7.5 Z" fill="#262422"/>' +
+        '<path class="lc2-ear lc2-ear-l-inner" d="M 16.6 6.8 C 16.2 4.4 16.9 2.7 18.4 2 C 20.2 3 21.6 5 21.9 7.2 C 20 5.8 18.2 5.7 16.6 6.8 Z" fill="#B5818A"/>' +
+        '<path d="M 25 26 C 26 19.5 25.5 11.5 20.5 7.5 C 16 3.8 9.5 6 7.2 10.8 C 5.9 13.2 4 15.2 3 17.8 C 2.4 19.3 3.2 20.5 4.8 21.3 C 6.2 22.2 8.2 23 10 23.8 C 13.5 25.8 20 28 25 26 Z" fill="#262422"/>' +
+        '<path d="M 2.8 18 Q 4 17.2 5.2 18 L 4.4 19.6 Q 3.3 19.4 2.8 18 Z" fill="#14110E"/>' +
+        '<path class="lc2-mouth" d="M 5.5 20.2 Q 7.6 21.7 9.8 22" stroke="#14110E" stroke-width="0.7" fill="none" stroke-linecap="round"/>' +
         '<g class="lc2-eyes">' +
           '<g class="lc2-eye lc2-eye-l">' +
-            '<ellipse cx="12.5" cy="18" rx="4.2" ry="5" fill="url(#lc2-iris-grad)"/>' +
-            '<rect class="lc2-pupil lc2-pupil-l" x="11.7" y="13" width="1.6" height="9" rx="0.8" fill="#17130F"/>' +
-            '<circle cx="14" cy="15.6" r="1.35" fill="#FFFFFF" opacity="0.95"/>' +
-            '<circle cx="11.4" cy="20.4" r="0.62" fill="#FFFFFF" opacity="0.55"/>' +
-          '</g>' +
-          '<g class="lc2-eye lc2-eye-r">' +
-            '<ellipse cx="23.5" cy="18" rx="4.2" ry="5" fill="url(#lc2-iris-grad)"/>' +
-            '<rect class="lc2-pupil lc2-pupil-r" x="22.7" y="13" width="1.6" height="9" rx="0.8" fill="#17130F"/>' +
-            '<circle cx="25" cy="15.6" r="1.35" fill="#FFFFFF" opacity="0.95"/>' +
-            '<circle cx="22.4" cy="20.4" r="0.62" fill="#FFFFFF" opacity="0.55"/>' +
+            '<path d="M 9.8 15 Q 13 12.2 16.4 15 Q 13 17.6 9.8 15 Z" fill="url(#lc2-iris-grad)"/>' +
+            '<rect class="lc2-pupil lc2-pupil-l" x="12.25" y="12.2" width="1.5" height="5.8" rx="0.75" fill="#14100B"/>' +
+            '<circle cx="14.6" cy="13.3" r="0.9" fill="#FFFFFF" opacity="0.9"/>' +
+            '<circle cx="11.6" cy="16.5" r="0.5" fill="#FFFFFF" opacity="0.5"/>' +
           '</g>' +
         '</g>' +
-        '<ellipse cx="7.6" cy="26.6" rx="2.3" ry="1.35" fill="#F5A9B8" opacity="0.5"/>' +
-        '<ellipse cx="28.4" cy="26.6" rx="2.3" ry="1.35" fill="#F5A9B8" opacity="0.5"/>' +
-        '<path d="M 16.4 25.4 Q 18 24.7 19.6 25.4 L 18 28.1 Z" fill="#F293A0"/>' +
-        '<path d="M 18 28.1 L 18 30" stroke="#2A2521" stroke-width="0.8" stroke-linecap="round"/>' +
-        '<path class="lc2-mouth" d="M 18 30 Q 15.6 32.2 13.6 31.2 M 18 30 Q 20.4 32.2 22.4 31.2" stroke="#2A2521" stroke-width="1" fill="none" stroke-linecap="round"/>' +
-        '<g class="lc2-whiskers" stroke="#B8B2AC" stroke-width="0.55" fill="none" stroke-linecap="round">' +
-          '<path d="M 7.4 24.6 Q 3.8 22.6 0.6 20.8"/>' +
-          '<path d="M 7 26.8 Q 3.6 26.9 0.6 27.7"/>' +
-          '<path d="M 7.4 29.2 Q 4.2 31.2 1.2 33.6"/>' +
-          '<path d="M 28.6 24.6 Q 32.2 22.6 35.4 20.8"/>' +
-          '<path d="M 29 26.8 Q 32.4 26.9 35.4 27.7"/>' +
-          '<path d="M 28.6 29.2 Q 31.8 31.2 34.8 33.6"/>' +
+        '<g class="lc2-whiskers" stroke="#D8D3CC" stroke-width="0.5" fill="none" stroke-linecap="round" opacity="0.75">' +
+          '<path d="M 7.6 19.8 Q 4 18 0.6 16.8"/>' +
+          '<path d="M 7.9 20.8 Q 4 20.4 0.8 21"/>' +
+          '<path d="M 7.6 21.8 Q 4.4 23.2 1.6 25.2"/>' +
         '</g>' +
       '</g>' +
     '</svg>';
