@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>360° 猫档案 — CAT API</title>
+<meta name="description" content="360° 猫综合评估：六维雷达图、季度环比、能力档案、关键事件。当事猫自评版。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .review-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-top: 28px;
+  }
+  @media (max-width: 820px) { .review-grid { grid-template-columns: 1fr; } }
+
+  .radar-card, .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .radar-card h3, .summary-card h3 {
+    margin: 0 0 14px;
+    font-size: 14px;
+  }
+  .radar-wrap { display: flex; justify-content: center; }
+  .radar-wrap svg { width: 100%; max-width: 360px; height: auto; }
+
+  .dim-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 36px;
+    align-items: center;
+    gap: 10px;
+    margin: 9px 0;
+    font-size: 13px;
+  }
+  .dim-name { color: var(--ink); font-weight: 500; }
+  .dim-bar-bg {
+    height: 8px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .dim-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width .5s ease;
+  }
+  .dim-val {
+    text-align: right;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .score-big {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .score-big .n {
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .score-big .l {
+    font-size: 12px;
+    color: var(--faint);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .score-big .grade {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 5px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .grade.s { background: #dcfce7; color: #166534; }
+  .grade.a { background: #dbeafe; color: #1e40af; }
+  .grade.b { background: #fef3c7; color: #92400e; }
+  .grade.c { background: #fed7aa; color: #9a3412; }
+  .grade.d { background: #fee2e2; color: #991b1b; }
+
+  .qoq-section { margin-top: 36px; }
+  .qoq-section h3 { font-size: 15px; margin: 0 0 16px; }
+
+  .qoq-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .qoq-table th, .qoq-table td {
+    padding: 11px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+  }
+  .qoq-table th {
+    background: rgba(0,0,0,0.03);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .qoq-table tr:last-child td { border-bottom: none; }
+  .qoq-table .delta-up   { color: #2ea043; font-weight: 700; }
+  .qoq-table .delta-down { color: #cb2431; font-weight: 700; }
+  .qoq-table .delta-flat { color: var(--faint); }
+
+  .events-section { margin-top: 36px; }
+  .events-section h3 { font-size: 15px; margin: 0 0 16px; }
+  .event-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .event-date {
+    font-size: 11.5px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    border-right: 2px solid var(--line);
+    padding-right: 14px;
+  }
+  .event-body { font-size: 13px; line-height: 1.65; }
+  .event-body .impact {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .impact.pos { background: #dcfce7; color: #166534; }
+  .impact.neg { background: #fee2e2; color: #991b1b; }
+
+  .controls {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+
+  .footnote {
+    margin-top: 40px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">360° 猫档案</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    六维评估 · 季度环比 · 关键事件。评分由当事猫自评（系统仅作记录）。
+  </p>
+
+  <div class="review-grid">
+    <div class="radar-card">
+      <h3>六维能力雷达</h3>
+      <div class="radar-wrap">
+        <svg id="radar" viewBox="0 0 320 320"></svg>
+      </div>
+    </div>
+    <div class="summary-card">
+      <h3>综合评估</h3>
+      <div class="score-big">
+        <div class="n" id="score-num">0</div>
+        <div class="l">综合得分（满分 100）</div>
+        <div class="grade s" id="score-grade">S</div>
+      </div>
+      <div id="dim-list"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btn-reroll">重新评估</button>
+    <button class="btn ghost" id="btn-reset">恢复默认评分</button>
+  </div>
+
+  <div class="qoq-section">
+    <h3>季度环比（QoQ）</h3>
+    <table class="qoq-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>Q2 (上季度)</th>
+          <th>Q3 (本季度)</th>
+          <th>变化</th>
+          <th>归因</th>
+        </tr>
+      </thead>
+      <tbody id="qoq-body"></tbody>
+    </table>
+  </div>
+
+  <div class="events-section">
+    <h3>本季度关键事件</h3>
+    <div id="events-list"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>评分主体声明。</strong>
+    本档案所有评分由当事猫自评产生，Staff 不得修改、注释或申诉。
+    雷达图各维度定义：优雅度=体态与动作分；破坏力=家具/纸箱/数据线的损毁能力；
+    食物动机=听见塑料袋响声后的平均响应延迟；粘人度=主动蹭人的频率权重；
+    夜间活跃=02:00–05:00 的活动积分；自理能力= grooming 时长占比。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DIMS = [
+    { key: 'elegant',  name: '优雅度',     color: '#6b7280', q2: 88, q3Default: 92, attr: '体态优雅，走路无声，跳跃姿势满分。' },
+    { key: 'destruct', name: '破坏力',     color: '#cb2431', q2: 76, q3Default: 84, attr: '本季度损毁：2 根数据线、1 个纸箱（主动）、1 个马克杯（蹭下桌）。' },
+    { key: 'food',     name: '食物动机',   color: '#d69e2e', q2: 95, q3Default: 97, attr: '塑料袋响声后平均响应延迟 0.8 秒。金枪鱼相关响应延迟 0.3 秒。' },
+    { key: 'affection',name: '粘人度',     color: '#2ea043', q2: 71, q3Default: 78, attr: '主动蹭人日均 14 次，较上季 +3。踩奶触发 2 次（毛衣 + 毛毯）。' },
+    { key: 'night',    name: '夜间活跃',   color: '#6b46c1', q2: 89, q3Default: 94, attr: '02:00–05:00 ZOOMIES 触发 27 次（90 天内）。Staff 睡眠剥夺指数同比 +12%。' },
+    { key: 'grooming', name: '自理能力',   color: '#0891b2', q2: 82, q3Default: 80, attr: '日均 grooming 45 分钟。本季度毛球呕吐 3 次（正常区间）。' }
+  ];
+
+  var EVENTS = [
+    { date: '2026-09-03', text: '单日首次完成「从冰箱顶到书架」的连续跳跃路线，空中转体 180°。', impact: 'pos', label: '+优雅度 2' },
+    { date: '2026-08-22', text: '成功将 Staff 的 AirPods 叼进沙发底——第三次。Staff 标记为「不可恢复」。', impact: 'neg', label: '+破坏力 4' },
+    { date: '2026-08-14', text: '听到塑料袋响声后从深度睡眠到厨房的响应时间突破历史记录：0.6 秒。', impact: 'pos', label: '+食物动机 1' },
+    { date: '2026-07-30', text: 'Staff 加班时主动趴在键盘上不让打字。事后审核判定：蓄意的。', impact: 'pos', label: '+粘人度 3' },
+    { date: '2026-07-18', text: '凌晨 03:17 完成本季度最长 ZOOMIES：连续 23 分钟无停顿。走廊尽头有 mirror，被误判为另一只猫。', impact: 'pos', label: '+夜间活跃 5' },
+    { date: '2026-06-25', text: '首次拒绝 Staff 提供的化毛膏。理由：口感违和。改用猫草替代方案。', impact: 'neg', label: '-自理 2' }
+  ];
+
+  var dims = DIMS.map(function(d){ return Object.assign({}, d, { q3: d.q3Default }); });
+
+  function radarPath(values, cx, cy, r) {
+    var n = values.length;
+    var pts = values.map(function(v, i) {
+      var angle = -Math.PI/2 + (Math.PI*2*i)/n;
+      var rr = r * (v/100);
+      return [cx + rr*Math.cos(angle), cy + rr*Math.sin(angle)];
+    });
+    return pts.map(function(p){ return p[0].toFixed(1)+','+p[1].toFixed(1); }).join(' ');
+  }
+
+  function renderRadar() {
+    var svg = document.getElementById('radar');
+    var cx = 160, cy = 160, r = 110;
+    var n = dims.length;
+
+    var rings = '';
+    for (var lvl = 1; lvl <= 4; lvl++) {
+      var rr = r * lvl / 4;
+      var poly = '';
+      for (var i = 0; i < n; i++) {
+        var a = -Math.PI/2 + (Math.PI*2*i)/n;
+        poly += (cx + rr*Math.cos(a)).toFixed(1) + ',' + (cy + rr*Math.sin(a)).toFixed(1) + ' ';
+      }
+      rings += '<polygon points="'+poly.trim()+'" fill="none" stroke="var(--line)" stroke-width="1" opacity="'+(0.4+lvl*0.1)+'"/>';
+    }
+
+    var axes = '';
+    var labels = '';
+    for (var j = 0; j < n; j++) {
+      var ang = -Math.PI/2 + (Math.PI*2*j)/n;
+      var xe = cx + r * Math.cos(ang);
+      var ye = cy + r * Math.sin(ang);
+      axes += '<line x1="'+cx+'" y1="'+cy+'" x2="'+xe.toFixed(1)+'" y2="'+ye.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/>';
+      // label
+      var lx = cx + (r+18) * Math.cos(ang);
+      var ly = cy + (r+18) * Math.sin(ang);
+      var anchor = (Math.abs(Math.cos(ang)) < 0.3) ? 'middle' : (Math.cos(ang) > 0 ? 'start' : 'end');
+      labels += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="'+anchor+'" dominant-baseline="middle" font-size="11" fill="var(--muted)" font-family="inherit">'+dims[j].name+'</text>';
+      // value label
+      var vx = cx + (r*dims[j].q3/100 + 12) * Math.cos(ang);
+      var vy = cy + (r*dims[j].q3/100 + 12) * Math.sin(ang);
+      labels += '<text x="'+vx.toFixed(1)+'" y="'+vy.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="'+dims[j].color+'" font-weight="700">'+dims[j].q3+'</text>';
+    }
+
+    var dataPath = radarPath(dims.map(function(d){return d.q3;}), cx, cy, r);
+    var dataPoly = '<polygon points="'+dataPath+'" fill="rgba(26,95,122,0.15)" stroke="var(--accent)" stroke-width="2"/>';
+    var dots = dims.map(function(d, i){
+      var a = -Math.PI/2 + (Math.PI*2*i)/n;
+      var rr = r * d.q3/100;
+      var px = cx + rr*Math.cos(a);
+      var py = cy + rr*Math.sin(a);
+      return '<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="3.5" fill="'+d.color+'"/>';
+    }).join('');
+
+    svg.innerHTML = rings + axes + dataPoly + dots + labels;
+  }
+
+  function renderDims() {
+    var list = document.getElementById('dim-list');
+    list.innerHTML = dims.map(function(d){
+      return '<div class="dim-row">' +
+        '<span class="dim-name">'+d.name+'</span>' +
+        '<div class="dim-bar-bg"><div class="dim-bar-fill" style="width:'+d.q3+'%;background:'+d.color+';"></div></div>' +
+        '<span class="dim-val" style="color:'+d.color+';">'+d.q3+'</span>' +
+      '</div>';
+    }).join('');
+
+    var avg = Math.round(dims.reduce(function(s,d){return s+d.q3;},0) / dims.length);
+    document.getElementById('score-num').textContent = avg;
+    var grade = avg >= 90 ? 's' : avg >= 80 ? 'a' : avg >= 70 ? 'b' : avg >= 60 ? 'c' : 'd';
+    var gEl = document.getElementById('score-grade');
+    gEl.className = 'grade ' + grade;
+    gEl.textContent = grade.toUpperCase();
+  }
+
+  function renderQoQ() {
+    var body = document.getElementById('qoq-body');
+    body.innerHTML = dims.map(function(d){
+      var delta = d.q3 - d.q2;
+      var cls = delta > 0 ? 'delta-up' : delta < 0 ? 'delta-down' : 'delta-flat';
+      var arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+      var reason = delta > 0 ? '本季度相关事件正向贡献' : delta < 0 ? '外部干扰或自我调节' : '稳定';
+      return '<tr>' +
+        '<td><strong>'+d.name+'</strong></td>' +
+        '<td>'+d.q2+'</td>' +
+        '<td>'+d.q3+'</td>' +
+        '<td class="'+cls+'">'+arrow+' '+Math.abs(delta)+'</td>' +
+        '<td style="color:var(--muted);font-size:12px;">'+reason+'</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  function renderEvents() {
+    var list = document.getElementById('events-list');
+    list.innerHTML = EVENTS.map(function(e){
+      return '<div class="event-card">' +
+        '<div class="event-date">'+e.date+'</div>' +
+        '<div class="event-body">'+e.text+'<span class="impact '+e.impact+'">'+e.label+'</span></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderAll() {
+    renderRadar();
+    renderDims();
+    renderQoQ();
+    renderEvents();
+  }
+
+  document.getElementById('btn-reroll').addEventListener('click', function(){
+    dims.forEach(function(d){
+      d.q3 = Math.max(50, Math.min(100, d.q3 + Math.floor(Math.random()*11) - 5));
+    });
+    renderAll();
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', function(){
+    dims = DIMS.map(function(d){ return Object.assign({}, d, { q3: d.q3Default }); });
+    renderAll();
+  });
+
+  renderAll();
+
+})();
+</script>
+</body>
+</html>
