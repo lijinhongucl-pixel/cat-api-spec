@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>健康检查面板 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 28px;
+  }
+  .svc-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color .2s, transform .2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .svc-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--status-color, var(--line));
+  }
+  .svc-card.healthy { --status-color: #2ea043; }
+  .svc-card.warn    { --status-color: #d69e2e; }
+  .svc-card.down    { --status-color: #cb2431; }
+  .svc-card.limited { --status-color: #6b7280; }
+
+  .svc-head { display: flex; justify-content: space-between; align-items: flex-start; }
+  .svc-name {
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .svc-desc { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .svc-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: 'SF Mono', Consolas, monospace;
+    white-space: nowrap;
+  }
+  .svc-badge.healthy { background: #dcfce7; color: #166534; }
+  .svc-badge.warn    { background: #fef3c7; color: #92400e; }
+  .svc-badge.down    { background: #fee2e2; color: #991b1b; }
+  .svc-badge.limited { background: #f1f5f9; color: #475569; }
+
+  .svc-metric {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+  }
+  .svc-metric .v {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--status-color);
+    animation: pulse 1.8s ease-in-out infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.85); }
+    50%      { opacity: 1; transform: scale(1.1); }
+  }
+  .uptime-bar {
+    display: flex;
+    gap: 2px;
+    margin-top: 14px;
+    height: 24px;
+  }
+  .uptime-bar .bar {
+    flex: 1;
+    border-radius: 2px;
+    background: #2ea043;
+  }
+  .uptime-bar .bar.warn { background: #d69e2e; }
+  .uptime-bar .bar.down { background: #cb2431; }
+  .uptime-bar .bar.empty { background: var(--line); opacity: 0.3; }
+
+  .uptime-label {
+    display: flex; justify-content: space-between;
+    font-size: 11px; color: var(--faint); margin-top: 5px;
+  }
+
+  .incidents {
+    margin-top: 32px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .incidents h3 { margin: 0 0 14px; font-size: 15px; }
+  .incident {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .incident:last-child { border-bottom: none; }
+  .incident-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .incident-date { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .incident-sev {
+    padding: 2px 8px; border-radius: 3px; font-size: 10.5px; font-weight: 700;
+  }
+  .sev-major   { background: #fee2e2; color: #991b1b; }
+  .sev-minor   { background: #fef3c7; color: #92400e; }
+  .sev-maint   { background: #dbeafe; color: #1e40af; }
+  .incident-body { color: var(--muted); line-height: 1.7; }
+
+  .overall-banner {
+    margin-top: 18px;
+    padding: 14px 20px;
+    background: linear-gradient(90deg, #ecfdf5, #f0fdf4);
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #166534;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .overall-banner .pulse { background: #2ea043; }
+  .overall-banner.warn {
+    background: linear-gradient(90deg, #fffbeb, #fefce8);
+    border-color: #fde68a;
+    color: #92400e;
+  }
+  .overall-banner.warn .pulse { background: #d69e2e; }
+
+  .legend-strip {
+    margin-top: 14px;
+    display: flex; gap: 18px;
+    font-size: 12px; color: var(--muted);
+  }
+  .legend-strip span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend-strip .dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <span class="doc-tag">CAT API · 健康检查面板</span>
+  <h1 style="font-size:28px;margin:14px 0 8px;">系统健康检查</h1>
+  <p style="font-size:14px;color:var(--muted);line-height:1.8;max-width:680px;">
+    把猫的各项生理与行为指标当成微服务健康检查。每个卡片是一项服务，
+    90 天 uptime 条显示历史可用性，下方是近 7 次事件。
+    数据为模拟，但指标阈值参考 §13 量化参数。
+  </p>
+
+  <div class="overall-banner" id="overall">
+    <span class="pulse"></span>
+    <span><strong>所有系统正常</strong> · 最近一次检查 2 分钟前 · 下次检查 5 分钟后</span>
+  </div>
+
+  <div class="legend-strip">
+    <span><span class="dot" style="background:#2ea043;"></span>Healthy</span>
+    <span><span class="dot" style="background:#d69e2e;"></span>Degraded</span>
+    <span><span class="dot" style="background:#cb2431;"></span>Down</span>
+    <span><span class="dot" style="background:#6b7280;"></span>Limited</span>
+    <span style="margin-left:auto;font-variant-numeric:tabular-nums;color:var(--faint);">最后更新 <span id="ts">—</span></span>
+  </div>
+
+  <div class="dashboard-grid" id="grid"></div>
+
+  <div class="incidents">
+    <h3>近 7 次事件</h3>
+    <div id="incidentList"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var services = [
+    {
+      name: 'PURR Service',
+      desc: '呼噜服务 · 25Hz 正向 / 100-150Hz 自愈',
+      status: 'healthy',
+      badge: 'HEALTHY',
+      metrics: [
+        { k: '频率', v: '25.3 Hz' },
+        { k: '持续时间', v: '14 min' },
+        { k: '触发阈值', v: '正常' }
+      ],
+      uptime: 99.4
+    },
+    {
+      name: 'VOMIT Queue',
+      desc: '呕吐队列 · 毛球清理进程',
+      status: 'warn',
+      badge: '2 PENDING',
+      metrics: [
+        { k: '队列长度', v: '2' },
+        { k: '上次清理', v: '3 天前' },
+        { k: '预计下次', v: '今天' }
+      ],
+      uptime: 87.2
+    },
+    {
+      name: 'APPETITE Gateway',
+      desc: '食欲网关 · 进食请求路由',
+      status: 'healthy',
+      badge: 'RESPONDING',
+      metrics: [
+        { k: '今日请求', v: '7 次' },
+        { k: '响应码', v: '200 / 200 / 304' },
+        { k: '偏好', v: '湿粮 > 干粮' }
+      ],
+      uptime: 99.1
+    },
+    {
+      name: 'AFFECTION API',
+      desc: '亲昵接口 · 配额动态调整',
+      status: 'limited',
+      badge: '429 QUOTA',
+      metrics: [
+        { k: '今日配额', v: '0 / 5' },
+        { k: '剩余次数', v: '0' },
+        { k: '重置时间', v: '次日 0:00' }
+      ],
+      uptime: 71.5
+    },
+    {
+      name: 'SLEEP Subsystem',
+      desc: '睡眠子系统 · 日均 13-16h',
+      status: 'healthy',
+      badge: 'RUNNING',
+      metrics: [
+        { k: '今日累计', v: '11h 22min' },
+        { k: '深睡比例', v: '38%' },
+        { k: 'REM 周期', v: '正常' }
+      ],
+      uptime: 99.8
+    },
+    {
+      name: 'TERRITORY Guard',
+      desc: '领地守卫 · 入侵检测',
+      status: 'healthy',
+      badge: 'PATROL OK',
+      metrics: [
+        { k: '今日巡查', v: '14 次' },
+        { k: '入侵警报', v: '0' },
+        { k: '气味标记', v: '刷新 3 处' }
+      ],
+      uptime: 98.6
+    },
+    {
+      name: 'HUNT Sequence',
+      desc: '狩猎序列 · STALK→AMBUSH→POUNCE',
+      status: 'warn',
+      badge: 'DEGRADED',
+      metrics: [
+        { k: '闭合率', v: '23%' },
+        { k: '上次成功', v: '6 天前' },
+        { k: '中断原因', v: '激光笔滥用' }
+      ],
+      uptime: 45.3
+    },
+    {
+      name: 'GROOM Worker',
+      desc: '理毛作业 · 醒时 30%',
+      status: 'healthy',
+      badge: 'IDLE',
+      metrics: [
+        { k: '今日时长', v: '52 min' },
+        { k: '覆盖率', v: '78%' },
+        { k: '难点', v: '后背' }
+      ],
+      uptime: 96.8
+    },
+    {
+      name: 'LITTERBOX I/O',
+      desc: '猫砂盆接口 · 掩埋协议',
+      status: 'healthy',
+      badge: '200 OK',
+      metrics: [
+        { k: '今日写入', v: '3 次' },
+        { k: '掩埋成功率', v: '100%' },
+        { k: '门外异常', v: '0' }
+      ],
+      uptime: 99.5
+    },
+    {
+      name: 'BOX Priority',
+      desc: '纸箱优先级 · 项目级 MUST',
+      status: 'healthy',
+      badge: 'ACQUIRED',
+      metrics: [
+        { k: '当前纸箱', v: '2 个' },
+        { k: '占用时长', v: '4h 30min' },
+        { k: '抢占风险', v: '低' }
+      ],
+      uptime: 100
+    },
+    {
+      name: 'ZOOMIES Daemon',
+      desc: '疯跑守护进程 · 凌晨 3 点激活',
+      status: 'down',
+      badge: 'SCHEDULED',
+      metrics: [
+        { k: '上次触发', v: '昨晚 3:17' },
+        { k: '下次预计', v: '今晚 3:00' },
+        { k: '触发条件', v: '你在睡觉' }
+      ],
+      uptime: 33.3
+    },
+    {
+      name: 'COMM Voice',
+      desc: '声学通信 · 喵叫专用接口',
+      status: 'healthy',
+      badge: 'LISTENING',
+      metrics: [
+        { k: '今日喵叫', v: '23 次' },
+        { k: '高频占比', v: '81%' },
+        { k: '目标受众', v: '你（不是猫）' }
+      ],
+      uptime: 99.0
+    }
+  ];
+
+  var incidents = [
+    { date: '今日 03:17', sev: 'major', sevText: 'MAJOR', body: 'ZOOMIES Daemon 激活，所有其他服务暂停 7 分钟。期间 PURR Service 中断，APPETITE Gateway 积压请求。' },
+    { date: '昨日 21:42', sev: 'minor', sevText: 'MINOR', body: 'AFFECTION API 触发配额限制（429），今日抚摸次数耗尽。预计次日 0:00 自动恢复。' },
+    { date: '昨日 14:08', sev: 'minor', sevText: 'MINOR', body: 'HUNT Sequence 中断：激光笔使用超过阈值，狩猎序列无法闭合。建议减少激光笔使用频次。' },
+    { date: '3 天前 06:30', sev: 'maint', sevText: 'MAINT', body: 'VOMIT Queue 入队 1 项（毛球）。系统正在处理，预计 30 分钟内完成清理。' },
+    { date: '5 天前 18:15', sev: 'minor', sevText: 'MINOR', body: 'TERRITORY Guard 触发警报：门外出现入侵者（邻居家的猫）。已通过窗台嘶吼完成威慑。' },
+    { date: '6 天前 02:48', sev: 'major', sevText: 'MAJOR', body: 'ZOOMIES + HUNT 同时激活，CPU 占用 100%，所有低优先级服务（GROOM / SLEEP）被抢占。' },
+    { date: '一周前 11:20', sev: 'maint', sevText: 'MAINT', body: 'LITTERBOX I/O 例行维护完成，砂盆重置，掩埋协议恢复 100% 成功率。' }
+  ];
+
+  function fmtUptime(p) {
+    return p >= 99 ? p.toFixed(2) + '%' : p.toFixed(1) + '%';
+  }
+
+  function buildUptimeBars(uptime) {
+    // 模拟 30 天历史
+    var html = '';
+    for (var i = 0; i < 30; i++) {
+      var r = Math.random();
+      var cls = '';
+      if (uptime < 50 && r < 0.4) cls = 'down';
+      else if (uptime < 80 && r < 0.2) cls = 'warn';
+      else if (r < 0.05) cls = 'warn';
+      if (cls === '' && r < 0.02) cls = 'down';
+      html += '<div class="bar ' + cls + '"></div>';
+    }
+    return html;
+  }
+
+  var grid = document.getElementById('grid');
+  var html = '';
+  services.forEach(function (s) {
+    var metricsHtml = s.metrics.map(function (m) {
+      return '<div class="svc-metric"><span>' + m.k + '</span><span class="v">' + m.v + '</span></div>';
+    }).join('');
+    html += '<div class="svc-card ' + s.status + '">' +
+      '<div class="svc-head">' +
+        '<div><div class="svc-name">' + s.name + '</div>' +
+        '<div class="svc-desc">' + s.desc + '</div></div>' +
+        '<div class="svc-badge ' + s.status + '">' + s.badge + '</div>' +
+      '</div>' +
+      metricsHtml +
+      '<div class="uptime-bar">' + buildUptimeBars(s.uptime) + '</div>' +
+      '<div class="uptime-label"><span>30 天前</span><span>' + fmtUptime(s.uptime) + '</span></div>' +
+    '</div>';
+  });
+  grid.innerHTML = html;
+
+  // 事件列表
+  var incList = document.getElementById('incidentList');
+  var incHtml = '';
+  incidents.forEach(function (i) {
+    incHtml += '<div class="incident">' +
+      '<div class="incident-head">' +
+        '<span class="incident-sev sev-' + i.sev + '">' + i.sevText + '</span>' +
+        '<span class="incident-date">' + i.date + '</span>' +
+      '</div>' +
+      '<div class="incident-body">' + i.body + '</div>' +
+    '</div>';
+  });
+  incList.innerHTML = incHtml;
+
+  // 顶部 banner 状态判定
+  var downCount = services.filter(function (s) { return s.status === 'down'; }).length;
+  var warnCount = services.filter(function (s) { return s.status === 'warn' || s.status === 'limited'; }).length;
+  var banner = document.getElementById('overall');
+  if (downCount > 0 || warnCount > 2) {
+    banner.className = 'overall-banner warn';
+    banner.querySelector('span:last-child').innerHTML =
+      '<strong>' + (downCount > 0 ? downCount + ' 个服务离线' : warnCount + ' 个服务降级') + '</strong>' +
+      ' · 最近一次检查 2 分钟前 · 下次检查 5 分钟后';
+  }
+
+  // 时间戳
+  function updateTs() {
+    var d = new Date();
+    var t = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') +
+            ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    document.getElementById('ts').textContent = t;
+  }
+  updateTs();
+  setInterval(updateTs, 60000);
+})();
+</script>
+
+</body>
+</html>
