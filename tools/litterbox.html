@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫砂盆审计日志 — CAT API</title>
+<meta name="description" content="猫砂盆访问审计日志：每次进出、停留时间、产出评级、覆盖合规性、Staff 清理事件——全部入档。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 28px;
+  }
+  @media (max-width: 720px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+  .stat-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-box .v { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat-box .l { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+  .controls {
+    margin-top: 28px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .btn {
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    transition: opacity .15s;
+    font-family: inherit;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+
+  .audit-table {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .audit-head {
+    display: grid;
+    grid-template-columns: 90px 70px 1fr 80px 90px 90px;
+    gap: 12px;
+    padding: 12px 18px;
+    background: rgba(0,0,0,0.03);
+    border-bottom: 2px solid var(--line);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .audit-row {
+    display: grid;
+    grid-template-columns: 90px 70px 1fr 80px 90px 90px;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    align-items: center;
+    transition: background .15s;
+  }
+  .audit-row:hover { background: rgba(0,0,0,0.02); }
+  .audit-row:last-child { border-bottom: none; }
+  .audit-row.staff {
+    background: rgba(214, 158, 46, 0.06);
+  }
+
+  .hash {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  .time { font-variant-numeric: tabular-nums; font-size: 12.5px; }
+
+  .grade {
+    display: inline-block;
+    width: 30px; height: 30px;
+    line-height: 30px;
+    text-align: center;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .grade.aplus { background: #dcfce7; color: #166534; }
+  .grade.a     { background: #dcfce7; color: #166534; }
+  .grade.b     { background: #fef3c7; color: #92400e; }
+  .grade.c     { background: #fed7aa; color: #9a3412; }
+  .grade.f     { background: #fee2e2; color: #991b1b; }
+  .grade.staff { background: #dbeafe; color: #1e40af; font-size: 11px; }
+  .grade.na    { background: #f1f5f9; color: #94a3b8; font-size: 11px; }
+
+  .cover-bar {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .cover-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+  }
+  .cover-dot.ok    { background: #2ea043; }
+  .cover-dot.fail  { background: #cb2431; }
+  .cover-dot.none  { background: var(--line); opacity: 0.4; }
+  .cover-label { font-size: 11.5px; margin-left: 6px; color: var(--muted); }
+
+  .dur { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  .note { font-size: 12.5px; color: var(--ink); }
+  .note .tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    margin-right: 6px;
+    background: rgba(0,0,0,0.04);
+    color: var(--muted);
+  }
+  .note .tag.staff-tag { background: #dbeafe; color: #1e40af; }
+  .note .tag.alert { background: #fee2e2; color: #991b1b; }
+
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+
+  .footnote {
+    margin-top: 36px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .audit-row.new {
+    animation: highlight 1.2s ease;
+  }
+  @keyframes highlight {
+    0%   { background: rgba(46, 160, 67, 0.15); }
+    100% { background: transparent; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">猫砂盆审计日志</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    LITTERBOX I/O · 所有访问全部入档，不可篡改。Staff 的清理操作也被审计。
+  </p>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="v" id="s-visits">0</div>
+      <div class="l">24h 访问次数</div>
+    </div>
+    <div class="stat-box">
+      <div class="v" id="s-avg-dur">—</div>
+      <div class="l">平均停留</div>
+    </div>
+    <div class="stat-box">
+      <div class="v" id="s-cover" style="color:#2ea043;">—%</div>
+      <div class="l">覆盖合规率</div>
+    </div>
+    <div class="stat-box">
+      <div class="v" id="s-staff" style="color:#1e40af;">0</div>
+      <div class="l">Staff 清理次数</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btn-record">记录新访问</button>
+    <button class="btn ghost" id="btn-staff">模拟 Staff 清理</button>
+    <button class="btn ghost" id="btn-reset">重置 24h</button>
+    <button class="btn ghost" id="btn-copy">复制 JSON</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="grade a" style="width:18px;height:18px;line-height:18px;font-size:10px;">A+</span> A+ 满分产出</div>
+    <div class="legend-item"><span class="grade b" style="width:18px;height:18px;line-height:18px;font-size:10px;">B</span> B 合格</div>
+    <div class="legend-item"><span class="grade f" style="width:18px;height:18px;line-height:18px;font-size:10px;">F</span> F 事故</div>
+    <div class="legend-item"><span class="cover-dot ok"></span> 覆盖合规</div>
+    <div class="legend-item"><span class="cover-dot fail"></span> 覆盖失败</div>
+    <div class="legend-item"><span class="grade staff" style="width:18px;height:18px;line-height:18px;font-size:9px;">STAFF</span> Staff 操作</div>
+  </div>
+
+  <div class="audit-table">
+    <div class="audit-head">
+      <span>时间</span>
+      <span>评级</span>
+      <span>事件</span>
+      <span>停留</span>
+      <span>覆盖合规</span>
+      <span>commit</span>
+    </div>
+    <div id="audit-body"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>关于这份审计。</strong>
+    所有访问基于 §7 排泄协议。覆盖合规性检查依据 §7.3：
+    猫科动物本能要求排泄物被掩盖以避免掠食者追踪——但当事猫保留
+    「故意不覆盖」的权利（用于向 Staff 发信号或表达领地主张）。
+    Staff 清理操作的提交记录与猫的访问记录共享同一张表——这是架构级平等。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var body = document.getElementById('audit-body');
+  var records = [];
+  var recId = 0;
+
+  function pad(n) { return n < 10 ? '0'+n : ''+n; }
+  function nowStr() {
+    var d = new Date();
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+  function shortHash() {
+    var s = '';
+    for (var i=0;i<7;i++) s += Math.floor(Math.random()*16).toString(16);
+    return s;
+  }
+
+  var VISIT_TYPES = [
+    { grade: 'aplus', label: 'A+', dur: [180, 300], cover: true,  tag: '标准',   note: '正常排泄，完整覆盖，符合 §7.3 规范。' },
+    { grade: 'a',     label: 'A',  dur: [120, 240], cover: true,  tag: '标准',   note: '正常排泄，覆盖合规。' },
+    { grade: 'b',     label: 'B',  dur: [60, 120],  cover: true,  tag: '短停',   note: '短停留——可能只是检查或标记。' },
+    { grade: 'c',     label: 'C',  dur: [15, 45],   cover: false, tag: '标记',   note: '短暂进入未排泄，疑似领地检查。' },
+    { grade: 'b',     label: 'B',  dur: [150, 250], cover: false, tag: '抗议',   note: '正常排泄但<strong>拒绝覆盖</strong>——领地主张或对 Staff 表达不满。' },
+    { grade: 'f',     label: 'F',  dur: [10, 30],   cover: false, tag: '事故',   note: '<span class="tag alert">事故</span>排泄在猫砂盆外。需 Staff 立即处置。', outside: true }
+  ];
+
+  function addVisit(type) {
+    var t = type || VISIT_TYPES[Math.floor(Math.random()*VISIT_TYPES.length)];
+    var dur = Math.floor(t.dur[0] + Math.random()*(t.dur[1]-t.dur[0]));
+    records.unshift({
+      id: ++recId,
+      time: nowStr(),
+      type: 'visit',
+      grade: t.grade,
+      gradeLabel: t.label,
+      dur: dur,
+      cover: t.cover,
+      tag: t.tag,
+      note: t.note,
+      outside: !!t.outside,
+      hash: shortHash()
+    });
+    render();
+  }
+
+  function addStaffClean() {
+    records.unshift({
+      id: ++recId,
+      time: nowStr(),
+      type: 'staff',
+      grade: 'staff',
+      gradeLabel: 'STAFF',
+      dur: 0,
+      cover: null,
+      tag: '清理',
+      note: '<span class="tag staff-tag">STAFF</span>猫砂全部更换，添加新砂约 5cm。下次清理倒计时开始。',
+      hash: shortHash()
+    });
+    render();
+  }
+
+  function formatDur(s) {
+    if (s === 0) return '—';
+    if (s < 60) return s + 's';
+    var m = Math.floor(s/60), r = s%60;
+    return m + 'm' + (r ? ' ' + r + 's' : '');
+  }
+
+  function coverDisplay(r) {
+    if (r.cover === null) return '<span style="color:var(--faint);font-size:11.5px;">N/A</span>';
+    var dots = '';
+    for (var i=0;i<5;i++) {
+      dots += '<span class="cover-dot ' + (r.cover ? 'ok' : 'fail') + '"></span>';
+    }
+    var label = r.cover ? '合规' : (r.outside ? '外部' : '拒绝');
+    return '<div class="cover-bar">' + dots + '<span class="cover-label">' + label + '</span></div>';
+  }
+
+  function render() {
+    if (records.length === 0) {
+      body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--faint);font-style:italic;">// 审计日志为空——等待当事猫访问</div>';
+      updateStats();
+      return;
+    }
+
+    body.innerHTML = records.slice(0, 60).map(function(r, i) {
+      var isNew = i === 0 ? ' new' : '';
+      var staffClass = r.type === 'staff' ? ' staff' : '';
+      return '<div class="audit-row' + staffClass + isNew + '">' +
+        '<span class="time">' + r.time + '</span>' +
+        '<span><span class="grade ' + r.grade + '">' + r.gradeLabel + '</span></span>' +
+        '<span class="note"><span class="tag">' + r.tag + '</span>' + r.note + '</span>' +
+        '<span class="dur">' + formatDur(r.dur) + '</span>' +
+        '<span>' + coverDisplay(r) + '</span>' +
+        '<span class="hash">' + r.hash + '</span>' +
+      '</div>';
+    }).join('');
+
+    updateStats();
+  }
+
+  function updateStats() {
+    document.getElementById('s-visits').textContent = records.filter(function(r){return r.type==='visit';}).length;
+    document.getElementById('s-staff').textContent = records.filter(function(r){return r.type==='staff';}).length;
+
+    var visits = records.filter(function(r){return r.type==='visit' && r.dur > 0;});
+    if (visits.length > 0) {
+      var avg = visits.reduce(function(s,r){return s+r.dur;},0) / visits.length;
+      document.getElementById('s-avg-dur').textContent = formatDur(Math.round(avg));
+    } else {
+      document.getElementById('s-avg-dur').textContent = '—';
+    }
+
+    var coverable = visits.filter(function(r){return r.cover !== null && !r.outside;});
+    if (coverable.length > 0) {
+      var ok = coverable.filter(function(r){return r.cover;}).length;
+      document.getElementById('s-cover').textContent = Math.round(ok / coverable.length * 100) + '%';
+    } else {
+      document.getElementById('s-cover').textContent = '—%';
+    }
+  }
+
+  // 种子数据
+  function seed() {
+    var seeds = [
+      ['02:14:33', 'a', 'A',  198, true,  '标准', '正常排泄，完整覆盖，符合 §7.3 规范。', false],
+      ['04:07:12', 'b', 'B',   87, true,  '短停', '短停留——可能只是检查或标记。', false],
+      ['06:22:08', 'a', 'A',  175, true,  '标准', '正常排泄，覆盖合规。', false],
+      ['07:45:51','staff','STAFF',0,null,'清理','<span class="tag staff-tag">STAFF</span>清晨例行清理，全部更换。', false],
+      ['09:18:22', 'aplus','A+',240,true,  '标准', '正常排泄，完整覆盖，符合 §7.3 规范。', false],
+      ['11:33:07', 'c', 'C',   28, false, '标记', '短暂进入未排泄，疑似领地检查。', false],
+      ['14:08:44', 'b', 'B',  185, false, '抗议', '正常排泄但<strong>拒绝覆盖</strong>——领地主张或对 Staff 表达不满。', false],
+      ['16:51:29', 'a', 'A',  162, true,  '标准', '正常排泄，覆盖合规。', false],
+      ['18:24:18', 'a', 'A',  210, true,  '标准', '正常排泄，覆盖合规。', false],
+      ['21:07:55', 'b', 'B',  143, false, '抗议', '正常排泄但<strong>拒绝覆盖</strong>——领地主张或对 Staff 表达不满。', false],
+      ['23:38:02', 'f', 'F',   18, false, '事故', '<span class="tag alert">事故</span>排泄在猫砂盆外。需 Staff 立即处置。', true]
+    ];
+    seeds.forEach(function(s) {
+      records.push({
+        id: ++recId,
+        time: s[0],
+        type: s[1] === 'staff' ? 'staff' : 'visit',
+        grade: s[1],
+        gradeLabel: s[2],
+        dur: s[3],
+        cover: s[4],
+        tag: s[5],
+        note: s[6],
+        outside: s[7],
+        hash: shortHash()
+      });
+    });
+  }
+
+  // 事件
+  document.getElementById('btn-record').addEventListener('click', function(){ addVisit(); });
+  document.getElementById('btn-staff').addEventListener('click', addStaffClean);
+  document.getElementById('btn-reset').addEventListener('click', function(){
+    records = []; recId = 0; seed(); render();
+  });
+  document.getElementById('btn-copy').addEventListener('click', function(){
+    var data = records.map(function(r){ return {
+      timestamp: r.time, type: r.type, grade: r.gradeLabel,
+      duration_sec: r.dur, covered: r.cover,
+      tag: r.tag, note: r.note.replace(/<[^>]+>/g,''),
+      commit: r.hash
+    };});
+    var json = JSON.stringify(data, null, 2);
+    if (navigator.clipboard) navigator.clipboard.writeText(json).then(function(){
+      alert('已复制 ' + data.length + ' 条审计记录');
+    }); else alert(json);
+  });
+
+  seed();
+  render();
+
+  // 每 20 秒模拟一次新记录
+  setInterval(function(){
+    if (Math.random() < 0.7) addVisit(); else addStaffClean();
+  }, 20000);
+
+})();
+</script>
+</body>
+</html>
