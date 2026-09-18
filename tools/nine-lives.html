@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>九条命燃尽图 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px 80px; }
+  .burn-chart {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 28px 24px 20px;
+    margin-top: 28px;
+  }
+  .burn-chart svg { width: 100%; height: auto; }
+  .burn-grid line { stroke: var(--line); stroke-width: 1; }
+  .burn-axis text { font-size: 11px; fill: var(--faint); font-variant-numeric: tabular-nums; }
+  .burn-ideal { fill: none; stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .burn-actual {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .burn-area { fill: var(--accent); opacity: 0.06; }
+  .burn-dot { fill: var(--accent); stroke: #fff; stroke-width: 2; cursor: pointer; transition: r .15s; }
+  .burn-dot:hover { r: 7; }
+  .burn-dot.crit { fill: #cb2431; }
+  .burn-dot.warn { fill: #d69e2e; }
+  .burn-label {
+    font-size: 11px;
+    fill: var(--ink);
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  .stat-bar {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .life-pip {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--line);
+    border: 2px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--faint);
+    font-weight: 700;
+    transition: all .3s;
+    position: relative;
+  }
+  .life-pip.alive {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(26,95,122,0.15);
+  }
+  .life-pip.lost {
+    background: #fff;
+    border-color: #cb2431;
+    color: #cb2431;
+    text-decoration: line-through;
+  }
+  .life-pip::after {
+    content: attr(data-note);
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: var(--faint);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .life-pip:hover::after { opacity: 1; }
+
+  .cards-title { font-size: 16px; font-weight: 700; margin: 36px 0 14px; }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .incident-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-size: 13px;
+    line-height: 1.7;
+    cursor: pointer;
+    transition: border-color .2s, transform .15s;
+  }
+  .incident-card:hover { transform: translateY(-2px); }
+  .incident-card.crit { border-left-color: #cb2431; }
+  .incident-card.warn { border-left-color: #d69e2e; }
+  .ic-head { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; }
+  .ic-date { color: var(--faint); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .ic-sev {
+    padding: 2px 8px; border-radius: 3px; font-size: 10.5px; font-weight: 700;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .ic-sev.crit { background: #fee2e2; color: #991b1b; }
+  .ic-sev.warn { background: #fef3c7; color: #92400e; }
+  .ic-title { font-weight: 700; margin-bottom: 4px; }
+  .ic-body { color: var(--muted); }
+  .ic-foot { font-size: 12px; color: var(--faint); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+  .controls { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .controls button {
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .controls button:hover { border-color: var(--accent); }
+
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-top: 14px;
+  }
+  .summary-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .summary-box .n { font-size: 26px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .summary-box .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .summary-box.danger .n { color: #cb2431; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <span class="doc-tag">CAT API · 九条命燃尽图</span>
+  <h1 style="font-size:28px;margin:14px 0 8px;">九条命用量追踪器</h1>
+  <p style="font-size:14px;color:var(--muted);line-height:1.8;max-width:680px;">
+    敏捷燃尽图风格，但 Y 轴是猫剩下的命数。每次危险事件消耗一条命，
+    系统记录事件详情与 post-mortem。猫的右翻正位反射与终端速度概念见 §6.4。
+  </p>
+
+  <div class="summary-row">
+    <div class="summary-box">
+      <div class="n" id="livesLeft">9</div>
+      <div class="l">剩余命数</div>
+    </div>
+    <div class="summary-box danger">
+      <div class="n" id="livesLost">0</div>
+      <div class="l">已消耗命数</div>
+    </div>
+    <div class="summary-box">
+      <div class="n" id="sprintDay">—</div>
+      <div class="l">Sprint 进度（天）</div>
+    </div>
+  </div>
+
+  <div class="burn-chart">
+    <svg viewBox="0 0 880 320" id="burnSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="stat-bar" id="livesBar"></div>
+
+  <div class="controls">
+    <button onclick="addRandomIncident()">随机生成危险事件</button>
+    <button onclick="resetBurn()">重置（满血复活）</button>
+  </div>
+
+  <div class="cards-title">Post-mortem 记录</div>
+  <div class="cards" id="cards"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var TOTAL_LIVES = 9;
+  var SPRINT_DAYS = 14;
+  var incidents = [
+    { day: 2, sev: 'warn', title: '差点从阳台跳出去', body: '看到对面楼的鸟，本能启动 POONCE 序列。被 Staff 在 0.3 秒内拦截。', recovery: '没事，只是毛乱了。' },
+    { day: 5, sev: 'crit', title: '被狗吓到掉进小水池', body: '邻居家柯基路过门口，触发 FLEE 响应。撤退路线计算错误，落入观鱼池。', recovery: '湿透了，骂了 20 分钟。' }
+  ];
+
+  var burnSvg = document.getElementById('burnSvg');
+  var livesBar = document.getElementById('livesBar');
+  var cardsEl = document.getElementById('cards');
+
+  function render() {
+    var consumed = incidents.length;
+    var livesLeft = TOTAL_LIVES - consumed;
+
+    document.getElementById('livesLeft').textContent = livesLeft;
+    document.getElementById('livesLost').textContent = consumed;
+    var maxDay = Math.max(SPRINT_DAYS, ...incidents.map(function (i) { return i.day; }), 1);
+    document.getElementById('sprintDay').textContent = '第 ' + maxDay + ' / ' + SPRINT_DAYS + ' 天';
+
+    renderChart(maxDay);
+    renderLives(livesLeft);
+    renderCards();
+  }
+
+  function renderChart(maxDay) {
+    var W = 880, H = 320;
+    var PAD_L = 50, PAD_R = 30, PAD_T = 30, PAD_B = 50;
+    var plotW = W - PAD_L - PAD_R;
+    var plotH = H - PAD_T - PAD_B;
+
+    // 理想燃尽线：从 9 到 0
+    var xIdeal = function (d) { return PAD_L + (d / SPRINT_DAYS) * plotW; };
+    var yIdeal = function (l) { return PAD_T + (1 - l / TOTAL_LIVES) * plotH; };
+    // 实际线
+    var sorted = incidents.slice().sort(function (a, b) { return a.day - b.day; });
+
+    var svg = '';
+    // 网格
+    for (var l = 0; l <= 9; l += 3) {
+      var y = yIdeal(l);
+      svg += '<line class="burn-grid" x1="' + PAD_L + '" y1="' + y + '" x2="' + (W - PAD_R) + '" y2="' + y + '"/>';
+      svg += '<text class="burn-axis" x="' + (PAD_L - 8) + '" y="' + (y + 4) + '" text-anchor="end">' + l + '</text>';
+    }
+    svg += '<text class="burn-axis" x="' + (PAD_L - 8) + '" y="' + (PAD_T - 8) + '" text-anchor="end" font-weight="700">命数</text>';
+    for (var d = 0; d <= SPRINT_DAYS; d += 2) {
+      var x = xIdeal(d);
+      svg += '<line class="burn-grid" x1="' + x + '" y1="' + PAD_T + '" x2="' + x + '" y2="' + (H - PAD_B) + '"/>';
+      svg += '<text class="burn-axis" x="' + x + '" y="' + (H - PAD_B + 18) + '" text-anchor="middle">D' + d + '</text>';
+    }
+    svg += '<text class="burn-axis" x="' + (W - PAD_R) + '" y="' + (H - PAD_B + 18) + '" text-anchor="end">Sprint 进度 →</text>';
+
+    // 理想线
+    svg += '<path class="burn-ideal" d="M ' + xIdeal(0) + ' ' + yIdeal(9) + ' L ' + xIdeal(SPRINT_DAYS) + ' ' + yIdeal(0) + '"/>';
+
+    // 实际线（阶梯式下降）
+    var actualPts = [[0, 9]];
+    sorted.forEach(function (inc) {
+      var last = actualPts[actualPts.length - 1];
+      actualPts.push([inc.day, last[1]]);          // 水平延伸
+      actualPts.push([inc.day, last[1] - 1]);       // 下降
+    });
+    // 末尾延伸到当前
+    var lastPt = actualPts[actualPts.length - 1];
+    actualPts.push([maxDay, lastPt[1]]);
+
+    var pathD = 'M ' + xIdeal(actualPts[0][0]) + ' ' + yIdeal(actualPts[0][1]);
+    var areaD = pathD;
+    actualPts.forEach(function (p) {
+      pathD += ' L ' + xIdeal(p[0]) + ' ' + yIdeal(p[1]);
+    });
+    areaD = pathD + ' L ' + xIdeal(maxDay) + ' ' + yIdeal(0) + ' L ' + xIdeal(0) + ' ' + yIdeal(0) + ' Z';
+
+    svg += '<path class="burn-area" d="' + areaD + '"/>';
+    svg += '<path class="burn-actual" d="' + pathD + '"/>';
+
+    // 事件点
+    sorted.forEach(function (inc) {
+      var cx = xIdeal(inc.day);
+      var idx = actualPts.findIndex(function (p) { return p[0] === inc.day && p[1] < 9; });
+      var cy = yIdeal(actualPts[idx][1]);
+      var cls = inc.sev === 'crit' ? 'crit' : 'warn';
+      svg += '<circle class="burn-dot ' + cls + '" cx="' + cx + '" cy="' + cy + '" r="5" data-day="' + inc.day + '"/>';
+      svg += '<text class="burn-label" x="' + (cx + 8) + '" y="' + (cy - 8) + '">' + inc.title.slice(0, 8) + '…</text>';
+    });
+
+    burnSvg.innerHTML = svg;
+  }
+
+  function renderLives(left) {
+    var html = '';
+    for (var i = 9; i >= 1; i--) {
+      var cls = i <= left ? 'alive' : 'lost';
+      html += '<div class="life-pip ' + cls + '" data-note="第 ' + i + ' 条命">' + i + '</div>';
+    }
+    livesBar.innerHTML = html;
+  }
+
+  function renderCards() {
+    if (incidents.length === 0) {
+      cardsEl.innerHTML = '<div style="color:var(--faint);font-style:italic;padding:20px;text-align:center;grid-column:1/-1;">还没有事件记录。一切安好。</div>';
+      return;
+    }
+    var html = '';
+    incidents.slice().reverse().forEach(function (inc) {
+      html += '<div class="incident-card ' + inc.sev + '">' +
+        '<div class="ic-head">' +
+          '<span class="ic-sev ' + inc.sev + '">' + (inc.sev === 'crit' ? 'P0' : 'P1') + ' · -1 LIFE</span>' +
+          '<span class="ic-date">Sprint D' + inc.day + '</span>' +
+        '</div>' +
+        '<div class="ic-title">' + inc.title + '</div>' +
+        '<div class="ic-body">' + inc.body + '</div>' +
+        '<div class="ic-foot">📊 Post-mortem: ' + inc.recovery + '</div>' +
+      '</div>';
+    });
+    cardsEl.innerHTML = html;
+  }
+
+  window.addRandomIncident = function () {
+    if (incidents.length >= 9) {
+      alert('命数已用完。请重置。');
+      return;
+    }
+    var pool = [
+      { sev: 'warn', title: '窗帘攀爬事故', body: '试图到达窗帘顶端巡视领地，半路滑落。', recovery: '无伤，自尊微损。' },
+      { sev: 'crit', title: '从书架推下花瓶', body: '领地重标记时误推花瓶，被碎片划到肉垫。', recovery: '肉垫浅表划伤，2 天自愈。' },
+      { sev: 'warn', title: '误食塑料袋角', body: '啃包装袋时吞下小片塑料，触发呕吐队列。', recovery: '30 分钟后吐出，没事。' },
+      { sev: 'crit', title: '被门夹到尾巴', body: 'Staff 关门时未检测到尾巴在门缝中。', recovery: '尾巴肿了 2 天，Staff 被骂了 3 天。' },
+      { sev: 'warn', title: '钻沙发底卡住', body: '体围估计偏差，进得去出不来。', recovery: 'Staff 用零食诱导脱困。' },
+      { sev: 'crit', title: '舔到百合花粉', body: '百合对猫剧毒，误舔花粉触发急诊。', recovery: '及时送医，洗胃后观察 24h。' },
+      { sev: 'warn', title: '追苍蝇撞墙', body: 'HUNT 序列闭合前撞上玻璃门。', recovery: '懵了 3 秒，然后假装没事。' }
+    ];
+    var ev = pool[Math.floor(Math.random() * pool.length)];
+    var lastDay = incidents.length > 0 ? Math.max.apply(null, incidents.map(function (i) { return i.day; })) : 0;
+    ev.day = Math.min(SPRINT_DAYS, lastDay + Math.ceil(Math.random() * 3));
+    incidents.push(ev);
+    render();
+  };
+
+  window.resetBurn = function () {
+    incidents = [];
+    render();
+  };
+
+  render();
+})();
+</script>
+
+</body>
+</html>
