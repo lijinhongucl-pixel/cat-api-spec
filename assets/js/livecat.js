@@ -570,39 +570,136 @@
   var tokenCount = 0;         // 累计抓到的 Token 数
 
   function svgMouse() {
-    // 金色 Token 老鼠：圆头 + 大耳朵 + 发光的金币标识
+    // ============================================================
+    //  TOKEN MOUSE v2 — 全新手绘角色
+    //  设计语言：流畅解剖 + 金色渐变 + 嵌入式 Token 核心
+    //  视觉锚点：身体中央的发光金币（站点第二吉祥物）
+    //  尺寸：viewBox 120×80（比 v1 大 50%，更有存在感）
+    // ============================================================
     return ''
-    + '<svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg" class="lc2-mouse-body">'
-    // 尾巴
-    + '<path d="M 68 28 Q 76 20 74 12" fill="none" stroke="#b8860b" stroke-width="2" stroke-linecap="round" class="lc2-mouse-tail"/>'
-    // 身体
-    + '<ellipse cx="42" cy="30" rx="20" ry="12" fill="#d4a017" stroke="#b8860b" stroke-width="1.5"/>'
-    // 头
-    + '<circle cx="24" cy="24" r="13" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
-    // 耳朵（大圆耳）
-    + '<circle cx="17" cy="14" r="6.5" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
-    + '<circle cx="29" cy="13" r="6.5" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
-    + '<circle cx="17" cy="14" r="3.5" fill="#ffc44d"/>'
-    + '<circle cx="29" cy="13" r="3.5" fill="#ffc44d"/>'
-    // 眼睛
-    + '<circle cx="20" cy="23" r="2.2" fill="#1a1a1a"/>'
-    + '<circle cx="29" cy="23" r="2.2" fill="#1a1a1a"/>'
-    + '<circle cx="20.5" cy="22.5" r="0.7" fill="#fff"/>'
-    + '<circle cx="29.5" cy="22.5" r="0.7" fill="#fff"/>'
-    // 鼻子
-    + '<circle cx="15" cy="26" r="1.8" fill="#ff6b6b"/>'
-    // 胡须
-    + '<line x1="13" y1="26" x2="5" y2="24" stroke="#b8860b" stroke-width="0.6"/>'
-    + '<line x1="13" y1="28" x2="5" y2="29" stroke="#b8860b" stroke-width="0.6"/>'
-    + '<line x1="13" y1="27" x2="4" y2="34" stroke="#b8860b" stroke-width="0.6"/>'
-    // Token 金币标识（身体上的发光标记）
-    + '<circle cx="44" cy="30" r="6" fill="#ffd700" stroke="#b8860b" stroke-width="1" opacity="0.9"/>'
-    + '<text x="44" y="33.5" text-anchor="middle" font-size="7" font-weight="bold" fill="#b8860b" font-family="monospace">T</text>'
-    // 腿（简化为小圆点，跑动时不可见）
-    + '<circle cx="32" cy="40" r="3" fill="#b8860b"/>'
-    + '<circle cx="54" cy="40" r="3" fill="#b8860b"/>'
-    // 发光晕
-    + '<circle cx="42" cy="30" r="24" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.3" class="lc2-mouse-glow"/>'
+    + '<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg" class="lc2-mouse-body">'
+    // ---- defs：渐变定义 ----
+    + '<defs>'
+    // 主体金色渐变（上浅下深，模拟立体感）
+    + '<radialGradient id="m-fur" cx="45%" cy="35%" r="65%">'
+    +   '<stop offset="0%" stop-color="#ffe066"/>'
+    +   '<stop offset="45%" stop-color="#ffd429"/>'
+    +   '<stop offset="100%" stop-color="#c69500"/>'
+    + '</radialGradient>'
+    // 头部渐变（稍亮，突出头部）
+    + '<radialGradient id="m-head" cx="40%" cy="30%" r="70%">'
+    +   '<stop offset="0%" stop-color="#ffe87a"/>'
+    +   '<stop offset="50%" stop-color="#ffcc1a"/>'
+    +   '<stop offset="100%" stop-color="#d4a000"/>'
+    + '</radialGradient>'
+    // 耳朵内（浅粉金渐变）
+    + '<radialGradient id="m-ear" cx="50%" cy="50%" r="50%">'
+    +   '<stop offset="0%" stop-color="#fff0a8"/>'
+    +   '<stop offset="70%" stop-color="#ffd87a"/>'
+    +   '<stop offset="100%" stop-color="#e8b923"/>'
+    + '</radialGradient>'
+    // 肚子浅色区
+    + '<linearGradient id="m-belly" x1="0" y1="0" x2="0" y2="1">'
+    +   '<stop offset="0%" stop-color="#fff5cc" stop-opacity="0.8"/>'
+    +   '<stop offset="100%" stop-color="#ffe066" stop-opacity="0.3"/>'
+    + '</linearGradient>'
+    // Token 金币渐变
+    + '<radialGradient id="m-token" cx="35%" cy="30%" r="70%">'
+    +   '<stop offset="0%" stop-color="#fff8dc"/>'
+    +   '<stop offset="30%" stop-color="#ffd700"/>'
+    +   '<stop offset="70%" stop-color="#daa520"/>'
+    +   '<stop offset="100%" stop-color="#8b6914"/>'
+    + '</radialGradient>'
+    // 发光滤镜
+    + '<filter id="m-glow" x="-50%" y="-50%" width="200%" height="200%">'
+    +   '<feGaussianBlur stdDeviation="2.5" result="blur"/>'
+    +   '<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>'
+    + '</filter>'
+    // 阴影滤镜
+    + '<filter id="m-shadow" x="-30%" y="-30%" width="160%" height="160%">'
+    +   '<feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.25"/>'
+    + '</filter>'
+    + '</defs>'
+
+    // ---- 外圈脉冲发光晕（最大层）----
+    + '<circle cx="60" cy="42" r="38" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.15" class="lc2-mouse-glow lc2-mouse-glow-outer"/>'
+
+    // ---- 尾巴（长而细，弯弯曲曲从身体末端伸出）----
+    + '<path d="M 96 42 Q 108 36 112 24 Q 113 18 110 16 Q 108 20 106 28 Q 104 34 98 38"'
+    +       ' fill="none" stroke="#c69500" stroke-width="2.5" stroke-linecap="round" class="lc2-mouse-tail"/>'
+    + '<circle cx="110" cy="16" r="2" fill="#ffd700"/>'  // 尾巴尖端的小球
+
+    // ---- 后腿（可见的前侧后腿，小腿弯曲）----
+    + '<path d="M 72 54 Q 76 62 74 68 Q 73 70 76 71 L 80 71 Q 82 69 80 66 Q 78 60 78 52"'
+    +       ' fill="url(#m-fur)" stroke="#c69500" stroke-width="1.2" stroke-linejoin="round"/>'
+
+    // ---- 身体（流线型椭圆，稍向右下倾斜模拟跑动感）----
+    + '<ellipse cx="60" cy="42" rx="30" ry="18" fill="url(#m-fur)" stroke="#c69500" stroke-width="1.5" filter="url(#m-shadow)"/>'
+
+    // ---- 肚子浅色高光区 ----
+    + '<ellipse cx="58" cy="46" rx="22" ry="11" fill="url(#m-belly)"/>'
+
+    // ---- Token 金币核心（身体的灵魂标识）----
+    // 外光环
+    + '<circle cx="62" cy="40" r="11" fill="none" stroke="#ffd700" stroke-width="0.8" opacity="0.4" class="lc2-mouse-glow"/>'
+    // 金币主体
+    + '<circle cx="62" cy="40" r="9" fill="url(#m-token)" stroke="#8b6914" stroke-width="1.2" filter="url(#m-glow)"/>'
+    // 金币内圈装饰
+    + '<circle cx="62" cy="40" r="7" fill="none" stroke="#fff8dc" stroke-width="0.5" opacity="0.6"/>'
+    // 「T」字符（站点 Token 标识）
+    + '<text x="62" y="44.5" text-anchor="middle" font-size="10" font-weight="900" fill="#8b6914"'
+    +       ' font-family="Georgia, serif" class="lc2-mouse-token-T">T</text>'
+    // 金币顶部高光
+    + '<ellipse cx="59" cy="36" rx="4" ry="2" fill="#fff" opacity="0.35"/>'
+
+    // ---- 前腿（靠近头部，短小）----
+    + '<path d="M 38 48 Q 36 56 38 62 Q 39 66 42 66 L 44 66 Q 46 63 45 58 Q 44 52 44 48"'
+    +       ' fill="url(#m-fur)" stroke="#c69500" stroke-width="1.2" stroke-linejoin="round"/>'
+    // 前爪
+    + '<ellipse cx="42" cy="66" rx="3.5" ry="2" fill="#c69500"/>'
+
+    // ---- 头部（大而圆，身体前方）----
+    + '<ellipse cx="32" cy="32" rx="17" ry="15" fill="url(#m-head)" stroke="#c69500" stroke-width="1.5" filter="url(#m-shadow)"/>'
+
+    // ---- 耳朵（大圆耳，老鼠的标志性特征）----
+    // 左耳（远耳，在后）
+    + '<circle cx="22" cy="18" r="8" fill="url(#m-fur)" stroke="#c69500" stroke-width="1.5"/>'
+    + '<circle cx="22" cy="19" r="5" fill="url(#m-ear)"/>'
+    // 右耳（近耳）
+    + '<circle cx="36" cy="16" r="8.5" fill="url(#m-fur)" stroke="#c69500" stroke-width="1.5"/>'
+    + '<circle cx="36" cy="17" r="5.5" fill="url(#m-ear)"/>'
+
+    // ---- 眼睛（机灵的大眼睛，带高光）----
+    // 眼眶
+    + '<ellipse cx="27" cy="30" rx="3.2" ry="3.5" fill="#1a1a1a"/>'
+    + '<ellipse cx="38" cy="30" rx="3.2" ry="3.5" fill="#1a1a1a"/>'
+    // 瞳孔高光（大眼明亮感）
+    + '<circle cx="28" cy="28.5" r="1.2" fill="#fff"/>'
+    + '<circle cx="39" cy="28.5" r="1.2" fill="#fff"/>'
+    + '<circle cx="26.3" cy="31.3" r="0.5" fill="#fff" opacity="0.7"/>'
+    + '<circle cx="37.3" cy="31.3" r="0.5" fill="#fff" opacity="0.7"/>'
+
+    // ---- 鼻子（粉色小三角，鼻尖朝前）----
+    + '<path d="M 19 35 L 22 35 L 20.5 38 Z" fill="#ff8fa3" stroke="#d4647e" stroke-width="0.5"/>'
+    + '<circle cx="20.5" cy="35.5" r="0.8" fill="#ffb0c0"/>'  // 鼻头高光
+
+    // ---- 嘴巴（小笑脸）----
+    + '<path d="M 20.5 38 Q 19 41 17.5 40" fill="none" stroke="#8b6914" stroke-width="0.8" stroke-linecap="round"/>'
+    + '<path d="M 20.5 38 Q 22 41 23.5 40" fill="none" stroke="#8b6914" stroke-width="0.8" stroke-linecap="round"/>'
+
+    // ---- 胡须（左右各 3 根，细长）----
+    + '<line x1="17" y1="36" x2="6" y2="34" stroke="#8b6914" stroke-width="0.5" stroke-linecap="round" opacity="0.7"/>'
+    + '<line x1="17" y1="38" x2="5" y2="39" stroke="#8b6914" stroke-width="0.5" stroke-linecap="round" opacity="0.7"/>'
+    + '<line x1="17" y1="39" x2="6" y2="43" stroke="#8b6914" stroke-width="0.5" stroke-linecap="round" opacity="0.7"/>'
+    + '<line x1="26" y1="36" x2="36" y2="33" stroke="#8b6914" stroke-width="0.5" stroke-linecap="round" opacity="0.5"/>'
+    + '<line x1="26" y1="38" x2="37" y2="38" stroke="#8b6914" stroke-width="0.5" stroke-linecap="round" opacity="0.5"/>'
+
+    // ---- 头部高光（额头亮区）----
+    + '<ellipse cx="28" cy="24" rx="6" ry="3" fill="#fff" opacity="0.2"/>'
+
+    // ---- 耳朵抖动层（CSS 动画用）----
+    // 通过 class 让耳朵独立抖动
+
     + '</svg>';
   }
 
