@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>抚摸路径规划器 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px 80px; }
+  .pet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; }
+  @media (max-width: 820px) { .pet-grid { grid-template-columns: 1fr; } }
+  .cat-canvas {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+  }
+  .cat-svg-wrap {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    padding: 12px;
+    position: relative;
+    cursor: crosshair;
+  }
+  .cat-svg-wrap svg { width: 100%; height: auto; display: block; }
+  .cat-svg-wrap path.pet-zone {
+    fill: transparent;
+    stroke: transparent;
+    cursor: pointer;
+    transition: fill .2s, stroke .2s;
+  }
+  .cat-svg-wrap path.pet-zone:hover {
+    fill: rgba(26, 95, 122, 0.12);
+    stroke: var(--accent);
+    stroke-width: 1.5;
+    stroke-dasharray: 3 2;
+  }
+  .cat-svg-wrap path.pet-zone.allowed:hover {
+    fill: rgba(46, 160, 67, 0.15);
+    stroke: #2ea043;
+  }
+  .cat-svg-wrap path.pet-zone.forbidden:hover {
+    fill: rgba(203, 36, 49, 0.12);
+    stroke: #cb2431;
+  }
+  .cat-svg-wrap path.pet-zone.highrisk:hover {
+    fill: rgba(214, 158, 46, 0.15);
+    stroke: #d69e2e;
+  }
+  .zone-label {
+    fill: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    pointer-events: none;
+    user-select: none;
+  }
+  .path-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .path-svg polyline {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.7;
+  }
+  .path-svg circle.dot {
+    fill: var(--accent);
+  }
+  .path-svg circle.denied {
+    fill: #cb2431;
+  }
+  .route-log {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    font-size: 13px;
+  }
+  .route-log h3 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+  .log-empty { color: var(--faint); font-style: italic; padding: 20px 0; text-align: center; }
+  .log-entry {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .log-entry.denied .log-num { background: #fde8e8; color: #cb2431; }
+  .log-entry.warn .log-num { background: #fff4d6; color: #d69e2e; }
+  .log-zone { font-weight: 600; }
+  .log-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .log-status.ok { background: #dcfce7; color: #166534; }
+  .log-status.warn { background: #fef3c7; color: #92400e; }
+  .log-status.denied { background: #fee2e2; color: #991b1b; }
+  .route-total {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 2px solid var(--accent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .route-total .score { font-size: 26px; font-weight: 800; color: var(--accent); }
+  .route-total .grade { font-size: 14px; color: var(--muted); }
+  .route-actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .route-actions button {
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--ink);
+    transition: border-color .15s;
+  }
+  .route-actions button:hover { border-color: var(--accent); }
+  .legend {
+    display: flex; gap: 16px; margin-top: 10px;
+    font-size: 12px; color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend .dot.ok { background: #2ea043; }
+  .legend .dot.warn { background: #d69e2e; }
+  .legend .dot.no { background: #cb2431; }
+  .hint { font-size: 12.5px; color: var(--muted); margin-top: 8px; line-height: 1.7; }
+  .speak-bubble {
+    margin-top: 14px;
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px;
+    color: var(--ink);
+    min-height: 20px;
+    transition: opacity .2s;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <span class="doc-tag">CAT API · 哺襯路徑規劃器</span>
+  <h1 style="font-size:28px;margin:14px 0 8px;">抚摸路径规划器</h1>
+  <p style="font-size:14px;color:var(--muted);line-height:1.8;max-width:680px;">
+    在猫的身体图上点击规划抚摸路径。系统会按 §4.4 触觉接口判定沿途每个区域的权限等级与风险评分，
+    返回结构化日志。肚子是最后的禁区，尾巴根是高风险高回报区。
+  </p>
+
+  <div class="pet-grid">
+    <div class="cat-canvas">
+      <div class="cat-svg-wrap" id="catWrap">
+        <svg viewBox="0 0 400 260" xmlns="http://www.w3.org/2000/svg">
+          <!-- 猫身体侧视简图 -->
+          <!-- 头 -->
+          <ellipse cx="80" cy="100" rx="45" ry="42" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.8"/>
+          <!-- 耳朵 -->
+          <polygon points="55,68 48,38 75,60" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <polygon points="108,68 118,40 92,62" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <polygon points="58,63 54,48 68,58" fill="#d4a574" opacity="0.6"/>
+          <polygon points="103,63 110,48 95,58" fill="#d4a574" opacity="0.6"/>
+          <!-- 眼睛 -->
+          <ellipse cx="65" cy="95" rx="4" ry="6" fill="#3a3a38"/>
+          <ellipse cx="95" cy="95" rx="4" ry="6" fill="#3a3a38"/>
+          <!-- 鼻子 -->
+          <path d="M 80 110 L 75 115 L 85 115 Z" fill="#d88989"/>
+          <!-- 嘴 -->
+          <path d="M 80 115 Q 75 120 70 118 M 80 115 Q 85 120 90 118" stroke="#3a3a38" stroke-width="1.2" fill="none"/>
+          <!-- 胡须 -->
+          <line x1="50" y1="108" x2="25" y2="105" stroke="#3a3a38" stroke-width="0.8"/>
+          <line x1="50" y1="113" x2="26" y2="115" stroke="#3a3a38" stroke-width="0.8"/>
+          <line x1="110" y1="108" x2="135" y2="105" stroke="#3a3a38" stroke-width="0.8"/>
+          <line x1="110" y1="113" x2="134" y2="115" stroke="#3a3a38" stroke-width="0.8"/>
+
+          <!-- 身体 -->
+          <ellipse cx="220" cy="135" rx="105" ry="55" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.8"/>
+          <!-- 腿 -->
+          <rect x="150" y="180" width="22" height="40" rx="8" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <rect x="190" y="185" width="22" height="35" rx="8" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <rect x="240" y="185" width="22" height="35" rx="8" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <rect x="285" y="180" width="22" height="40" rx="8" fill="#f5e6d3" stroke="#3a3a38" stroke-width="1.5"/>
+          <!-- 尾巴 -->
+          <path d="M 320 130 Q 360 100 365 60 Q 365 35 345 30" stroke="#3a3a38" stroke-width="10" fill="none" stroke-linecap="round"/>
+          <path d="M 320 130 Q 360 100 365 60 Q 365 35 345 30" stroke="#f5e6d3" stroke-width="6" fill="none" stroke-linecap="round"/>
+
+          <!-- 斑纹 -->
+          <path d="M 180 105 Q 200 100 215 108" stroke="#d4a574" stroke-width="3" fill="none" opacity="0.5"/>
+          <path d="M 230 100 Q 250 95 265 105" stroke="#d4a574" stroke-width="3" fill="none" opacity="0.5"/>
+          <path d="M 200 165 Q 220 170 240 162" stroke="#d4a574" stroke-width="3" fill="none" opacity="0.5"/>
+
+          <!-- 抚摸区域（可点击）-->
+          <path class="pet-zone allowed"    data-zone="头顶" data-code="200" data-risk="1" d="M 40 58 Q 80 35 120 58 L 120 78 Q 80 60 40 78 Z"/>
+          <path class="pet-zone allowed"    data-zone="颈部" data-code="200" data-risk="1" d="M 115 88 Q 130 88 140 100 L 140 130 Q 125 125 115 115 Z"/>
+          <path class="pet-zone allowed"    data-zone="脊背" data-code="200" data-risk="2" d="M 140 95 Q 200 85 280 100 L 280 130 Q 200 120 140 130 Z"/>
+          <path class="pet-zone highrisk"   data-zone="侧腹" data-code="200" data-risk="4" d="M 145 135 Q 200 165 270 145 L 270 175 Q 200 195 145 175 Z"/>
+          <path class="pet-zone forbidden"  data-zone="肚子" data-code="405" data-risk="9" d="M 155 178 Q 200 200 260 178 L 260 205 Q 200 220 155 205 Z"/>
+          <path class="pet-zone highrisk"   data-zone="尾巴根" data-code="202" data-risk="7" d="M 305 115 Q 325 105 345 115 L 345 140 Q 325 135 305 145 Z"/>
+          <path class="pet-zone forbidden"  data-zone="尾巴尖" data-code="403" data-risk="8" d="M 350 35 Q 365 25 375 35 L 375 55 Q 365 50 350 60 Z"/>
+          <path class="pet-zone allowed"    data-zone="下巴" data-code="200" data-risk="1" d="M 65 120 Q 80 135 100 120 L 100 138 Q 80 145 65 138 Z"/>
+
+          <!-- 区域文字标签 -->
+          <text class="zone-label" x="80" y="52" text-anchor="middle">头顶</text>
+          <text class="zone-label" x="130" y="120" text-anchor="middle">颈</text>
+          <text class="zone-label" x="210" y="116" text-anchor="middle">脊背</text>
+          <text class="zone-label" x="210" y="158" text-anchor="middle">侧腹</text>
+          <text class="zone-label" x="210" y="195" text-anchor="middle">肚子 ✗</text>
+          <text class="zone-label" x="325" y="132" text-anchor="middle">尾根</text>
+          <text class="zone-label" x="362" y="52" text-anchor="middle">尾尖 ✗</text>
+          <text class="zone-label" x="82" y="135" text-anchor="middle">下巴</text>
+        </svg>
+        <svg class="path-svg" id="pathSvg" viewBox="0 0 400 260" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="legend">
+        <span><span class="dot ok"></span>允许 200</span>
+        <span><span class="dot warn"></span>高风险 202</span>
+        <span><span class="dot no"></span>禁止 403/405</span>
+      </div>
+      <p class="hint">
+        点击猫身体上的任意区域来规划路径。路径会按点击顺序串联，
+        系统返回每个区域的响应码与风险评估。
+      </p>
+      <div class="speak-bubble" id="bubble">等你规划路径。猫在看你。</div>
+    </div>
+
+    <div class="route-log">
+      <h3>路径日志</h3>
+      <div id="logBody">
+        <div class="log-empty">还没有路径。从头顶开始试试。</div>
+      </div>
+      <div class="route-total" id="totalBox" style="display:none;">
+        <div>
+          <div class="grade" id="gradeText">—</div>
+          <div style="font-size:12px;color:var(--faint);">综合评级</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="score" id="scoreText">0</div>
+          <div style="font-size:12px;color:var(--faint);">/ 100 分</div>
+        </div>
+      </div>
+      <div class="route-actions">
+        <button onclick="resetRoute()">重置路径</button>
+        <button onclick="randomRoute()">随机示例</button>
+        <button onclick="copyLog()">复制日志 JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:32px;padding:18px 20px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:13.5px;line-height:1.85;color:var(--muted);">
+    <strong style="color:var(--ink);">规则来源：</strong>
+    §4.4 触觉接口 · 抚触配额动态调整，超配额出爪；肚子是腹侧脆弱区，写操作一律 405；
+    尾巴根对部分个体是奖励位点，但对另一部分是激惹触发器（高方差）。
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var route = [];
+  var pathSvg = document.getElementById('pathSvg');
+  var logBody = document.getElementById('logBody');
+  var totalBox = document.getElementById('totalBox');
+  var bubble = document.getElementById('bubble');
+  var catWrap = document.getElementById('catWrap');
+
+  // 区域中心坐标（用于路径连线）
+  var zoneCenters = {
+    '头顶':   { x: 80,  y: 58,  cls: 'ok' },
+    '颈部':   { x: 127, y: 108, cls: 'ok' },
+    '脊背':   { x: 210, y: 110, cls: 'ok' },
+    '侧腹':   { x: 208, y: 158, cls: 'warn' },
+    '肚子':   { x: 208, y: 195, cls: 'no' },
+    '尾巴根': { x: 325, y: 128, cls: 'warn' },
+    '尾巴尖': { x: 362, y: 50,  cls: 'no' },
+    '下巴':   { x: 82,  y: 132, cls: 'ok' }
+  };
+
+  // 每个区域的猫反应
+  var reactions = {
+    '头顶':   ['舒适呼噜中。', '可以。', '继续。', '系统正常。'],
+    '颈部':   ['颈部 OK。', '轻度信任。', '频率检测中。'],
+    '脊背':   ['沿着脊椎走。', '系统流畅。', '请求被接受。'],
+    '侧腹':   ['侧腹警告。', '小心。', '这要看你的信用分。'],
+    '肚子':   ['405。肚子不接受写操作。', '致命警告。', '系统拒绝了。'],
+    '尾巴根': { ok: ['奖励位点激活。', '高频呼噜。'], no: ['激惹触发。', '尾巴抽打。'] },
+    '尾巴尖': ['403。尾巴尖不允许。', '出爪协议启动。'],
+    '下巴':   ['下巴 OK。', '幼态模式。', '系统放松。']
+  };
+
+  function speak(msg) {
+    bubble.style.opacity = 0;
+    setTimeout(function () {
+      bubble.textContent = msg;
+      bubble.style.opacity = 1;
+    }, 160);
+  }
+
+  function pickReaction(zone) {
+    var pool = reactions[zone];
+    if (Array.isArray(pool)) return pool[Math.floor(Math.random() * pool.length)];
+    // 尾巴根按 50/50 处理
+    if (Math.random() < 0.5 && pool.ok) return pool.ok[Math.floor(Math.random() * pool.ok.length)];
+    if (pool.no) return pool.no[Math.floor(Math.random() * pool.no.length)];
+    return '...';
+  }
+
+  function renderLog() {
+    if (route.length === 0) {
+      logBody.innerHTML = '<div class="log-empty">还没有路径。从头顶开始试试。</div>';
+      totalBox.style.display = 'none';
+      return;
+    }
+    var html = '';
+    route.forEach(function (r, i) {
+      var cls = r.code === 200 ? (r.risk >= 5 ? 'warn' : 'ok') : 'denied';
+      var statusCls = r.code === 200 ? (r.risk >= 5 ? 'warn' : 'ok') : 'denied';
+      var statusText = r.code === 200 ? (r.risk >= 5 ? '202 Accepted' : '200 OK') :
+                       r.code === 405 ? '405 Not Allowed' : '403 Forbidden';
+      html += '<div class="log-entry ' + cls + '">' +
+                '<div class="log-num">' + (i + 1) + '</div>' +
+                '<div><div class="log-zone">' + r.zone + '</div>' +
+                '<div style="font-size:11.5px;color:var(--faint);margin-top:2px;">风险 ' + r.risk + '/10 · ' + r.reaction + '</div></div>' +
+                '<div class="log-status ' + statusCls + '">' + statusText + '</div>' +
+              '</div>';
+    });
+    logBody.innerHTML = html;
+
+    // 综合评分
+    var score = 0;
+    route.forEach(function (r) {
+      if (r.code === 200) score += (10 - r.risk) * 2;
+      else if (r.code === 202) score += 6;
+      else score -= 15;
+    });
+    score = Math.max(0, Math.min(100, score + 30));
+    var grade = score >= 85 ? 'S 殿堂级抚摸师' :
+                score >= 70 ? 'A 老练' :
+                score >= 55 ? 'B 可以' :
+                score >= 40 ? 'C 危险边缘' :
+                score >= 1 ? 'D 被出爪了吧' : 'F 别再摸了';
+    document.getElementById('scoreText').textContent = score;
+    document.getElementById('gradeText').textContent = grade;
+    totalBox.style.display = 'flex';
+  }
+
+  function renderPath() {
+    var svg = '';
+    // 连线
+    if (route.length > 1) {
+      var pts = route.map(function (r) {
+        var c = zoneCenters[r.zone];
+        return c.x + ',' + c.y;
+      }).join(' ');
+      svg += '<polyline points="' + pts + '"/>';
+    }
+    // 点
+    route.forEach(function (r, i) {
+      var c = zoneCenters[r.zone];
+      var cls = (r.code === 200) ? 'dot' : 'denied';
+      svg += '<circle class="' + cls + '" cx="' + c.x + '" cy="' + c.y + '" r="6"/>';
+      svg += '<text x="' + (c.x + 9) + '" y="' + (c.y - 6) + '" font-size="9" fill="' +
+             (r.code === 200 ? '#1a5f7a' : '#cb2431') + '" font-weight="700">' + (i + 1) + '</text>';
+    });
+    pathSvg.innerHTML = svg;
+  }
+
+  // 点击区域
+  catWrap.querySelectorAll('.pet-zone').forEach(function (el) {
+    el.addEventListener('click', function () {
+      var zone = el.getAttribute('data-zone');
+      var code = parseInt(el.getAttribute('data-code'), 10);
+      var risk = parseInt(el.getAttribute('data-risk'), 10);
+      var reaction = pickReaction(zone);
+      // 尾巴根特殊：50% 概率会失败
+      if (zone === '尾巴根' && Math.random() < 0.4) {
+        code = 429;
+      }
+      route.push({ zone: zone, code: code, risk: risk, reaction: reaction });
+      speak(reaction);
+      renderLog();
+      renderPath();
+    });
+  });
+
+  window.resetRoute = function () {
+    route = [];
+    renderLog();
+    renderPath();
+    speak('路径已清空。从头开始。');
+  };
+
+  window.randomRoute = function () {
+    route = [];
+    var presets = [
+      ['头顶', '颈部', '脊背', '下巴'],
+      ['头顶', '脊背', '尾巴根', '尾巴尖'],
+      ['头顶', '脊背', '侧腹', '肚子'],
+      ['下巴', '颈部', '脊背']
+    ];
+    var p = presets[Math.floor(Math.random() * presets.length)];
+    p.forEach(function (zone) {
+      var c = zoneCenters[zone];
+      var code = (c.cls === 'no') ? 405 : 200;
+      var risk = (c.cls === 'warn') ? 6 : (c.cls === 'no' ? 9 : 1);
+      route.push({ zone: zone, code: code, risk: risk, reaction: pickReaction(zone) });
+    });
+    renderLog();
+    renderPath();
+    speak('示例路径已载入。点击任意区域继续扩展。');
+  };
+
+  window.copyLog = function () {
+    var data = route.map(function (r, i) {
+      return {
+        step: i + 1,
+        zone: r.zone,
+        response: r.code === 200 ? (r.risk >= 5 ? '202 Accepted' : '200 OK') :
+                  r.code === 405 ? '405 Method Not Allowed' :
+                  r.code === 429 ? '429 Too Many Requests' : '403 Forbidden',
+        risk: r.risk,
+        reaction: r.reaction
+      };
+    });
+    var json = JSON.stringify({ route: data, steps: route.length }, null, 2);
+    if (navigator.clipboard) navigator.clipboard.writeText(json);
+    else {
+      var ta = document.createElement('textarea');
+      ta.value = json; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+    }
+    speak('日志已复制到剪贴板。');
+  };
+})();
+</script>
+
+</body>
+</html>
