@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>跳跃判定器 — CAT API</title>
+<meta name="description" content="输入猫的参数和目标高度，判定猫能不能跳上去。基于猫的解剖学与生物力学。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 28px;
+    margin-top: 28px;
+  }
+  @media (max-width: 760px) { .calc-grid { grid-template-columns: 1fr; } }
+
+  .input-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .input-panel h3 { margin: 0 0 16px; font-size: 14px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+  }
+  .field-row { display: flex; align-items: center; gap: 8px; }
+  .field input[type=range] { flex: 1; accent-color: var(--accent); }
+  .field .num {
+    width: 56px;
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px 0;
+    background: var(--bg);
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .field .unit { font-size: 12px; color: var(--faint); white-space: nowrap; }
+  .field .hint { font-size: 11px; color: var(--faint); margin-top: 3px; }
+
+  .preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .preset-btn {
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .viz-panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .viz-panel svg { width: 100%; max-width: 520px; height: auto; margin: 0 auto; }
+
+  .verdict-card {
+    margin-top: 16px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    text-align: center;
+    border: 2px solid;
+  }
+  .verdict-card.ok    { background: #dcfce7; border-color: #2ea043; }
+  .verdict-card.edge  { background: #fef3c7; border-color: #d69e2e; }
+  .verdict-card.no    { background: #fee2e2; border-color: #cb2431; }
+
+  .verdict-card .icon { font-size: 36px; line-height: 1; }
+  .verdict-card .title { font-size: 22px; font-weight: 800; margin: 8px 0 6px; }
+  .verdict-card .desc { font-size: 13px; opacity: 0.8; line-height: 1.6; max-width: 420px; margin: 0 auto; }
+
+  .data-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .data-cell {
+    text-align: center;
+    padding: 12px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+  }
+  .data-cell .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .data-cell .l { font-size: 11px; color: var(--faint); margin-top: 3px; }
+
+  .formula-note {
+    margin-top: 22px;
+    padding: 14px 18px;
+    background: rgba(0,0,0,0.025);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    font-size: 12.5px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .formula-note code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .history-section { margin-top: 32px; }
+  .history-section h3 { font-size: 14px; margin: 0 0 14px; }
+  .history-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+  .history-item {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .history-item .desc { color: var(--muted); }
+  .history-item .badge {
+    padding: 3px 9px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge.ok   { background: #dcfce7; color: #166534; }
+  .badge.edge { background: #fef3c7; color: #92400e; }
+  .badge.no   { background: #fee2e2; color: #991b1b; }
+
+  .footnote {
+    margin-top: 40px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">跳跃判定器</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    Can My Cat Jump This? 基于猫的解剖学、生物力学与实测数据。
+  </p>
+
+  <div class="calc-grid">
+    <div class="input-panel">
+      <h3>输入参数</h3>
+      <div class="field">
+        <label>猫的体重</label>
+        <div class="field-row">
+          <input type="range" id="weight" min="2" max="10" step="0.1" value="4.5">
+          <span class="num" id="weight-num">4.5</span>
+          <span class="unit">kg</span>
+        </div>
+        <div class="hint">2–10 kg</div>
+      </div>
+      <div class="field">
+        <label>体长（不含尾）</label>
+        <div class="field-row">
+          <input type="range" id="length" min="30" max="60" step="1" value="42">
+          <span class="num" id="length-num">42</span>
+          <span class="unit">cm</span>
+        </div>
+        <div class="hint">30–60 cm</div>
+      </div>
+      <div class="field">
+        <label>后腿长</label>
+        <div class="field-row">
+          <input type="range" id="leg" min="8" max="20" step="0.5" value="12">
+          <span class="num" id="leg-num">12</span>
+          <span class="unit">cm</span>
+        </div>
+        <div class="hint">8–20 cm</div>
+      </div>
+      <div class="field">
+        <label>年龄阶段</label>
+        <div class="preset-row" id="age-row">
+          <button class="preset-btn" data-age="kitten">幼猫 (&lt;1y)</button>
+          <button class="preset-btn active" data-age="prime">壮年 (1–7y)</button>
+          <button class="preset-btn" data-age="senior">老年 (&gt;7y)</button>
+        </div>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:18px 0;">
+      <div class="field">
+        <label>目标高度</label>
+        <div class="field-row">
+          <input type="range" id="target" min="30" max="350" step="5" value="180">
+          <span class="num" id="target-num">180</span>
+          <span class="unit">cm</span>
+        </div>
+        <div class="preset-row" style="margin-top:8px;">
+          <button class="preset-btn" data-h="45">椅子</button>
+          <button class="preset-btn" data-h="90">桌面</button>
+          <button class="preset-btn" data-h="180">冰箱顶</button>
+          <button class="preset-btn" data-h="250">吊柜</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="viz-panel">
+      <svg id="jump-viz" viewBox="0 0 520 300"></svg>
+      <div id="verdict"></div>
+      <div class="data-row" id="data-row"></div>
+      <div class="formula-note" id="formula-note"></div>
+    </div>
+  </div>
+
+  <div class="history-section">
+    <h3>常见目标速查</h3>
+    <div class="history-list" id="history-list"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>关于这个判定器。</strong>
+    猫的垂直跳跃高度通常为体长的 5–6 倍，水平跳跃约为体长的 3–4 倍。
+    实际表现受年龄、体重、后腿力量与健康状况影响。
+    家猫的垂直弹跳世界纪录约 2.27 米（非正式）。
+    本工具给出的是「理论上限」——实际能不能跳还得看当事猫当时的心情。
+    判定结果不构成 Staff 决定搬走高处易碎品的依据，但当事猫希望你会。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var AGE_FACTOR = { kitten: 0.7, prime: 1.0, senior: 0.65 };
+  var age = 'prime';
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function compute() {
+    var weight = parseFloat(document.getElementById('weight').value);
+    var length = parseFloat(document.getElementById('length').value);
+    var leg    = parseFloat(document.getElementById('leg').value);
+    var target = parseFloat(document.getElementById('target').value);
+
+    document.getElementById('weight-num').textContent = weight.toFixed(1);
+    document.getElementById('length-num').textContent = length;
+    document.getElementById('leg-num').textContent    = leg;
+    document.getElementById('target-num').textContent = target;
+
+    // 理论跳跃高度 = 体长 × 系数 × 年龄因子 × 体重修正
+    // 体重偏离 4kg 标准越多能力越低
+    var weightFactor = clamp(1.0 - Math.abs(weight - 4) * 0.06, 0.6, 1.05);
+    var legBonus = clamp(leg / 12, 0.85, 1.2); // 后腿越长跳越高
+    var baseJump = length * 5.5 * AGE_FACTOR[age] * weightFactor * legBonus;
+    var maxJump  = baseJump * 1.15; // 极限状态
+    var safeJump = baseJump * 0.85; // 安全区
+
+    var ratio = target / baseJump;
+    var verdict, cls, icon, title, desc;
+
+    if (target <= safeJump) {
+      verdict = 'ok';
+      cls = 'ok';
+      icon = '✓';
+      title = '能。轻松能。';
+      desc = '目标高度在你的安全区内。当事猫评估：一跳到位，不需中间落脚点。';
+    } else if (target <= maxJump) {
+      verdict = 'edge';
+      cls = 'edge';
+      icon = '⚠';
+      title = '能，但需要先蓄力';
+      desc = '目标接近你的极限。当事猫评估：需要一个低处中转点（椅子或桌子），并先盯着目标至少 3 秒。';
+    } else {
+      verdict = 'no';
+      cls = 'no';
+      icon = '✗';
+      title = '不能。换个路线。';
+      desc = '目标超出你的垂直跳跃极限。当事猫评估：请走「椅子→桌面→冰箱顶」的常规路径，不要逞强。';
+    }
+
+    document.getElementById('verdict').innerHTML =
+      '<div class="verdict-card ' + cls + '">' +
+        '<div class="icon">' + icon + '</div>' +
+        '<div class="title">' + title + '</div>' +
+        '<div class="desc">' + desc + '</div>' +
+      '</div>';
+
+    document.getElementById('data-row').innerHTML =
+      '<div class="data-cell"><div class="v">' + Math.round(baseJump) + ' cm</div><div class="l">理论跳跃高度</div></div>' +
+      '<div class="data-cell"><div class="v">' + Math.round(safeJump) + ' cm</div><div class="l">安全区上限</div></div>' +
+      '<div class="data-cell"><div class="v">' + Math.round(maxJump) + ' cm</div><div class="l">极限跳跃</div></div>';
+
+    document.getElementById('formula-note').innerHTML =
+      '<strong>计算依据。</strong><br>' +
+      '<code>baseJump = bodyLength × 5.5 × ageFactor × weightFactor × legBonus</code><br>' +
+      '体长 ' + length + ' cm × 5.5 × ' + AGE_FACTOR[age].toFixed(2) + ' (年龄) × ' + weightFactor.toFixed(2) + ' (体重) × ' + legBonus.toFixed(2) + ' (后腿) ≈ <strong>' + Math.round(baseJump) + ' cm</strong>';
+
+    renderViz(target, baseJump, safeJump, maxJump, verdict);
+    renderHistory(baseJump);
+  }
+
+  function renderViz(target, baseJump, safeJump, maxJump, verdict) {
+    // 视觉化：地面 + 目标高度 + 猫的弹跳弧线
+    var svg = document.getElementById('jump-viz');
+    var W = 520, H = 300;
+    var ground = H - 30;
+    // 缩放：让 maxJump 和 target 都能放下
+    var maxV = Math.max(target, maxJump) * 1.15;
+    var scale = (ground - 30) / maxV;
+
+    // 目标柱
+    var tx = W * 0.75;
+    var tTop = ground - target * scale;
+
+    // 猫起点
+    var sx = W * 0.2;
+
+    // 跳跃弧线
+    var arcColor = verdict === 'ok' ? '#2ea043' : verdict === 'edge' ? '#d69e2e' : '#cb2431';
+    var peakH = Math.min(baseJump, target) * scale;
+    var peakY = ground - peakH;
+    var midX = (sx + tx) / 2;
+    var arcPath = 'M ' + sx + ' ' + ground +
+      ' Q ' + midX + ' ' + (peakY - 10) + ' ' + tx + ' ' + (verdict === 'no' ? ground - safeJump*scale : tTop);
+
+    // 安全区带
+    var safeY = ground - safeJump * scale;
+    var maxY  = ground - maxJump * scale;
+
+    svg.innerHTML =
+      // 安全区背景
+      '<rect x="0" y="' + safeY + '" width="' + W + '" height="' + (ground - safeY) + '" fill="#dcfce7" opacity="0.3"/>' +
+      // 边缘带
+      '<rect x="0" y="' + maxY + '" width="' + W + '" height="' + (safeY - maxY) + '" fill="#fef3c7" opacity="0.3"/>' +
+      // 地面线
+      '<line x1="0" y1="' + ground + '" x2="' + W + '" y2="' + ground + '" stroke="#333" stroke-width="2"/>' +
+      '<text x="10" y="' + (ground - 5) + '" font-size="10" fill="#666">地面 0 cm</text>' +
+      // 安全线
+      '<line x1="0" y1="' + safeY + '" x2="' + W + '" y2="' + safeY + '" stroke="#2ea043" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>' +
+      '<text x="' + (W-8) + '" y="' + (safeY-4) + '" font-size="10" fill="#2ea043" text-anchor="end">安全区 ' + Math.round(safeJump) + 'cm</text>' +
+      // 极限线
+      '<line x1="0" y1="' + maxY + '" x2="' + W + '" y2="' + maxY + '" stroke="#d69e2e" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>' +
+      '<text x="' + (W-8) + '" y="' + (maxY-4) + '" font-size="10" fill="#d69e2e" text-anchor="end">极限 ' + Math.round(maxJump) + 'cm</text>' +
+      // 目标
+      '<rect x="' + (tx-25) + '" y="' + tTop + '" width="50" height="' + (ground - tTop) + '" fill="rgba(203,36,49,0.1)" stroke="#cb2431" stroke-width="2"/>' +
+      '<text x="' + tx + '" y="' + (tTop - 8) + '" text-anchor="middle" font-size="12" fill="#cb2431" font-weight="700">目标 ' + target + 'cm</text>' +
+      // 跳跃弧线
+      '<path d="' + arcPath + '" fill="none" stroke="' + arcColor + '" stroke-width="2.5" stroke-dasharray="6 4"/>' +
+      // 起点（猫）
+      '<circle cx="' + sx + '" cy="' + ground + '" r="8" fill="#1a1a2e"/>' +
+      '<polygon points="' + (sx-5) + ',' + (ground-3) + ' ' + (sx-8) + ',' + (ground-10) + ' ' + (sx-2) + ',' + (ground-7) + '" fill="#1a1a2e"/>' +
+      '<polygon points="' + (sx+5) + ',' + (ground-3) + ' ' + (sx+8) + ',' + (ground-10) + ' ' + (sx+2) + ',' + (ground-7) + '" fill="#1a1a2e"/>' +
+      // 终点
+      (verdict !== 'no' ?
+        '<circle cx="' + tx + '" cy="' + tTop + '" r="6" fill="' + arcColor + '"/>' :
+        '<circle cx="' + tx + '" cy="' + (ground - safeJump*scale) + '" r="6" fill="' + arcColor + '"/>' +
+        '<text x="' + (tx+12) + '" y="' + (ground - safeJump*scale + 4) + '" font-size="10" fill="#cb2431">够不着</text>'
+      );
+  }
+
+  var COMMON = [
+    { h: 45,  name: '椅子' },
+    { h: 75,  name: '床面' },
+    { h: 90,  name: '桌面' },
+    { h: 120, name: '窗台' },
+    { h: 150, name: '矮柜顶' },
+    { h: 180, name: '冰箱顶' },
+    { h: 220, name: '吊柜' },
+    { h: 250, name: '衣柜顶' }
+  ];
+
+  function renderHistory(baseJump) {
+    document.getElementById('history-list').innerHTML = COMMON.map(function(c) {
+      var safeJump = baseJump * 0.85;
+      var cls = c.h <= safeJump ? 'ok' : c.h <= baseJump * 1.15 ? 'edge' : 'no';
+      var label = cls === 'ok' ? '能' : cls === 'edge' ? '勉强' : '不能';
+      return '<div class="history-item">' +
+        '<div><strong>' + c.name + '</strong> <span class="desc">' + c.h + ' cm</span></div>' +
+        '<span class="badge ' + cls + '">' + label + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // 事件
+  ['weight','length','leg','target'].forEach(function(id){
+    document.getElementById(id).addEventListener('input', compute);
+  });
+
+  document.querySelectorAll('#age-row .preset-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('#age-row .preset-btn').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      document.querySelectorAll('#age-row .preset-btn').forEach(function(b){
+        if (b !== btn) { b.style.borderColor = ''; b.style.color = ''; }
+      });
+      age = btn.dataset.age;
+      compute();
+    });
+  });
+
+  document.querySelectorAll('[data-h]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.getElementById('target').value = btn.dataset.h;
+      compute();
+    });
+  });
+
+  compute();
+
+})();
+</script>
+</body>
+</html>
