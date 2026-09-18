@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫语翻译器 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .decoder-card {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 32px 28px;
+  }
+
+  .mic-area {
+    text-align: center;
+    padding: 28px 0;
+  }
+  .mic-btn {
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    transition: all .25s;
+    position: relative;
+    outline: none;
+  }
+  .mic-btn:hover { background: var(--accent-soft); }
+  .mic-btn.recording {
+    background: #fee2e2;
+    border-color: #cb2431;
+    animation: recordPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes recordPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(203, 36, 49, 0.4); }
+    50%      { box-shadow: 0 0 0 20px rgba(203, 36, 49, 0); }
+  }
+
+  .wave-area {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin: 18px 0;
+  }
+  .wave-bar {
+    width: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    transition: height .15s;
+  }
+
+  .status-text {
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--muted);
+    min-height: 22px;
+  }
+  .status-text.recording { color: #cb2431; font-weight: 700; }
+
+  /* 输出 JSON */
+  .output-card {
+    margin-top: 24px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity .3s, transform .3s;
+  }
+  .output-card.show { opacity: 1; transform: translateY(0); }
+  .output-head {
+    background: var(--accent);
+    color: #fff;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+  .output-body { padding: 18px; background: #1e1e1e; }
+  .output-body pre {
+    margin: 0;
+    color: #d4d4d4;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .output-body .k { color: #9cdcfe; }
+  .output-body .s { color: #ce9178; }
+  .output-body .n { color: #b5cea8; }
+
+  .translation-box {
+    margin-top: 18px;
+    padding: 18px 20px;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 10px 10px 0;
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  .translation-box .label {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+  .translation-box .quote {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .history-title { margin: 28px 0 12px; font-size: 14px; color: var(--muted); font-weight: 700; }
+  .history-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    gap: 14px;
+    align-items: center;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .hi-code {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 11.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-align: center;
+  }
+  .hi-code.ok   { background: #dcfce7; color: #166534; }
+  .hi-code.warn { background: #fef3c7; color: #92400e; }
+  .hi-code.err  { background: #fee2e2; color: #991b1b; }
+  .hi-time { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  .api-doc {
+    margin-top: 32px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .api-doc strong { color: var(--ink); }
+  .api-doc code { background: var(--line); padding: 1px 6px; border-radius: 3px; font-size: 12.5px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <span class="doc-tag">CAT API · 猫语翻译器 MEOW Decoder</span>
+  <h1 style="font-size:28px;margin:14px 0 8px;">猫语翻译器</h1>
+  <p style="font-size:14px;color:var(--muted);line-height:1.8;max-width:640px;">
+    点击麦克风录一段喵叫，系统检测音量、时长、频率特征，返回结构化 JSON 响应。
+    成年猫对人专用的高频喵叫不在猫间使用，每只猫音库独立——这就是你的声纹 = Bearer Token。
+  </p>
+
+  <div class="decoder-card">
+    <div class="mic-area">
+      <button class="mic-btn" id="micBtn" onclick="toggleRecord()">🎤</button>
+      <div class="wave-area" id="waveArea"></div>
+      <div class="status-text" id="statusText">点麦克风开始录音（模拟）</div>
+    </div>
+
+    <div class="output-card" id="outputCard">
+      <div class="output-head">
+        <span>POST /api/v1/meow/decode</span>
+        <span id="outputCode">200 OK</span>
+      </div>
+      <div class="output-body">
+        <pre id="outputJson"></pre>
+      </div>
+    </div>
+
+    <div class="translation-box" id="translationBox" style="display:none;">
+      <div class="label">翻译结果</div>
+      <div class="quote" id="translation"></div>
+      <div id="urgencyBar" style="margin-top:10px;height:6px;background:var(--line);border-radius:3px;overflow:hidden;">
+        <div id="urgencyFill" style="height:100%;background:linear-gradient(90deg,#2ea043,#d69e2e,#cb2431);transition:width .5s;width:0%;"></div>
+      </div>
+    </div>
+
+    <div class="history-title">调用历史</div>
+    <div id="history"></div>
+  </div>
+
+  <div class="api-doc">
+    <strong>API 规格：</strong>
+    <code>POST /api/v1/meow/decode</code> · 需要声纹 <code>Bearer</code> 鉴权 ·
+    每分钟限 10 次调用（429 Too Many Requests） ·
+    检测不到声音返回 503（Service Unavailable） ·
+    不在你的声纹库里返回 401 但本系统不返回 401，所以它直接忽略你。
+    <br><br>
+    <strong>字段说明：</strong>
+    <code>intent</code> 意图分类 · <code>urgency</code> 紧迫度 0-10 ·
+    <code>target</code> 受众（默认你，不是猫） · <code>translation</code> 自然语言翻译
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var micBtn = document.getElementById('micBtn');
+  var statusText = document.getElementById('statusText');
+  var waveArea = document.getElementById('waveArea');
+  var outputCard = document.getElementById('outputCard');
+  var outputJson = document.getElementById('outputJson');
+  var outputCode = document.getElementById('outputCode');
+  var translationBox = document.getElementById('translationBox');
+  var translation = document.getElementById('translation');
+  var urgencyFill = document.getElementById('urgencyFill');
+  var historyEl = document.getElementById('history');
+
+  // 模拟波形条
+  var bars = [];
+  for (var i = 0; i < 40; i++) {
+    var b = document.createElement('div');
+    b.className = 'wave-bar';
+    b.style.height = '4px';
+    waveArea.appendChild(b);
+    bars.push(b);
+  }
+
+  var recording = false;
+  var waveTimer = null;
+  var callCount = 0;
+
+  // 意图库
+  var intents = [
+    { intent: 'food_demand',     urgency: 7, target: '你', translations: ['罐头。现在。', '饭盆是空的，别装看不到。', '我饿。你快点。'] },
+    { intent: 'food_demand',     urgency: 9, target: '你', translations: ['我说了。罐头。打开。', '饭。立刻。否则我继续叫。'] },
+    { intent: 'attention_seek',  urgency: 5, target: '你', translations: ['看着我。', '你没在看我。现在看我。', '坐下来，我需要踩奶。'] },
+    { intent: 'door_negotiate',  urgency: 6, target: '门', translations: ['开门。', '这扇门需要打开。立刻。', '里面是禁区？那我更要进。'] },
+    { intent: 'play_request',    urgency: 4, target: '你', translations: ['逗猫棒。', '那个会动的东西，拿出来。', '无聊。给我个任务。'] },
+    { intent: 'territory_alert', urgency: 8, target: '入侵者', translations: ['窗外有东西。', '邻居家的猫回来了。', '领地警戒。'] },
+    { intent: 'zoomies_trigger', urgency: 10, target: '万物', translations: ['抓不住我！', '能量溢出！', '凌晨三点会议开始！'] },
+    { intent: 'null_demand',     urgency: 2, target: '你', translations: ['叫一声看看你还在不在。', '没别的事。确认一下。', '习惯性叫唤。'] },
+    { intent: 'box_request',     urgency: 3, target: '纸箱', translations: ['这个箱子需要我。', '进去蹲一会儿。', '空箱子 = 我的。'] }
+  ];
+
+  function randBar() { return 6 + Math.random() * 56; }
+
+  function startWaveAnim() {
+    waveTimer = setInterval(function () {
+      bars.forEach(function (b) {
+        var h = randBar();
+        b.style.height = h + 'px';
+        b.style.background = 'linear-gradient(180deg, #cb2431, #d69e2e)';
+      });
+    }, 80);
+  }
+  function stopWaveAnim() {
+    clearInterval(waveTimer);
+    bars.forEach(function (b) {
+      b.style.height = '4px';
+      b.style.background = 'var(--line)';
+    });
+  }
+
+  function syntaxHighlight(json) {
+    return json
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (m) {
+        var cls = 'n';
+        if (/^"/.test(m)) cls = /:$/.test(m) ? 'k' : 's';
+        else if (/true|false/.test(m)) cls = 'n';
+        else if (/null/.test(m)) cls = 'n';
+        return '<span class="' + cls + '">' + m + '</span>';
+      });
+  }
+
+  function fakeDecode() {
+    // 模拟分析时间
+    var phases = ['分析声纹特征...', '提取频率分量...', '匹配意图库...', '生成响应...'];
+    var pi = 0;
+    var phaseTimer = setInterval(function () {
+      statusText.textContent = phases[pi];
+      pi++;
+      if (pi >= phases.length) clearInterval(phaseTimer);
+    }, 380);
+
+    setTimeout(function () {
+      var chosen = intents[Math.floor(Math.random() * intents.length)];
+      var translationText = chosen.translations[Math.floor(Math.random() * chosen.translations.length)];
+
+      callCount++;
+      var rateLimited = callCount > 10 && Math.random() < 0.4;
+      var silenceDetected = Math.random() < 0.08;
+
+      var code = '200 OK';
+      var resp;
+
+      if (silenceDetected) {
+        code = '503 Service Unavailable';
+        resp = {
+          error: 'NO_AUDIO',
+          message: '未检测到有效音频。本接口需要喵叫，不接受沉默。'
+        };
+        statusText.textContent = '503 未检测到声音';
+        statusText.className = 'status-text';
+      } else if (rateLimited) {
+        code = '429 Too Many Requests';
+        resp = {
+          error: 'RATE_LIMITED',
+          message: '猫不想再理你了。请 60 秒后重试。',
+          retry_after: 60
+        };
+        statusText.textContent = '429 限流';
+        statusText.className = 'status-text';
+      } else {
+        statusText.textContent = '200 翻译成功';
+        statusText.className = 'status-text';
+        resp = {
+          intent: chosen.intent,
+          urgency: chosen.urgency,
+          target: chosen.target,
+          frequency_hz: 750 + Math.floor(Math.random() * 800),
+          duration_ms: 380 + Math.floor(Math.random() * 1400),
+          confidence: 0.78 + Math.random() * 0.21,
+          translation: translationText
+        };
+
+        // 显示翻译
+        translation.textContent = '「' + translationText + '」';
+        urgencyFill.style.width = (chosen.urgency * 10) + '%';
+        translationBox.style.display = 'block';
+      }
+
+      if (silenceDetected || rateLimited) {
+        translationBox.style.display = 'none';
+      }
+
+      outputJson.innerHTML = syntaxHighlight(JSON.stringify(resp, null, 2));
+      outputCode.textContent = code;
+      outputCard.classList.add('show');
+
+      // 历史
+      var item = document.createElement('div');
+      item.className = 'history-item';
+      var cls = code.startsWith('200') ? 'ok' : (code.startsWith('429') ? 'warn' : 'err');
+      item.innerHTML = '<span class="hi-code ' + cls + '">' + code.split(' ')[0] + '</span>' +
+                       '<span>' + (resp.translation || resp.message || '—') + '</span>' +
+                       '<span class="hi-time">' + new Date().toLocaleTimeString('zh-CN', { hour12: false }) + '</span>';
+      historyEl.insertBefore(item, historyEl.firstChild);
+    }, 1600);
+  }
+
+  window.toggleRecord = function () {
+    if (recording) {
+      recording = false;
+      micBtn.classList.remove('recording');
+      micBtn.textContent = '🎤';
+      statusText.className = 'status-text';
+      statusText.textContent = '处理中...';
+      stopWaveAnim();
+      fakeDecode();
+    } else {
+      recording = true;
+      micBtn.classList.add('recording');
+      micBtn.textContent = '⏹';
+      statusText.className = 'status-text recording';
+      statusText.textContent = '正在录音（模拟）... 再次点击停止';
+      translationBox.style.display = 'none';
+      outputCard.classList.remove('show');
+      startWaveAnim();
+    }
+  };
+})();
+</script>
+
+</body>
+</html>
