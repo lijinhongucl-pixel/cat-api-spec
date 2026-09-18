@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫的日记 — CAT API</title>
+<meta name="description" content="当事猫的私人日记。每一天的日常记录、心理活动、对 Staff 的吐槽、自我审视。基于真实时间自动生长。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .diary-header {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: end;
+  }
+  @media (max-width: 640px) { .diary-header { grid-template-columns: 1fr; } }
+
+  .diary-title h1 { margin: 0; font-size: 26px; }
+  .diary-title .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .diary-title .sub code { font-size: 12px; color: var(--faint); }
+
+  .mood-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 18px;
+    text-align: center;
+    min-width: 130px;
+  }
+  .mood-box .emoji { font-size: 32px; line-height: 1; }
+  .mood-box .label { font-size: 12px; color: var(--faint); margin-top: 6px; }
+  .mood-box .mood-name { font-size: 14px; font-weight: 700; margin-top: 2px; }
+
+  .diary-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding: 12px 18px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .nav-btn {
+    padding: 7px 16px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--ink);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .nav-btn.today { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .diary-date-display {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    text-align: center;
+    flex: 1;
+    min-width: 140px;
+  }
+  .diary-date-display .weekday { font-size: 11.5px; color: var(--faint); font-weight: 400; display: block; margin-top: 2px; }
+
+  .diary-book {
+    margin-top: 28px;
+    background: #fffef8;
+    border: 1px solid #e8e0c8;
+    border-radius: 14px;
+    padding: 36px 40px 28px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    position: relative;
+    min-height: 400px;
+    font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+  }
+  @media (max-width: 640px) { .diary-book { padding: 24px 20px; } }
+
+  /* 纸张纹理 */
+  .diary-book::before {
+    content: '';
+    position: absolute;
+    left: 40px;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: rgba(203, 36, 49, 0.12);
+    pointer-events: none;
+  }
+  @media (max-width: 640px) { .diary-book::before { left: 24px; } }
+
+  .diary-day-header {
+    border-bottom: 1px solid #e8e0c8;
+    padding-bottom: 14px;
+    margin-bottom: 24px;
+  }
+  .diary-day-header .date-big {
+    font-size: 22px;
+    font-weight: 700;
+    color: #2d2410;
+  }
+  .diary-day-header .weather {
+    font-size: 12px;
+    color: #8a7a5a;
+    margin-top: 4px;
+    font-family: -apple-system, sans-serif;
+  }
+  .diary-day-header .day-summary {
+    font-size: 13px;
+    color: #5a4a2a;
+    margin-top: 8px;
+    line-height: 1.7;
+    font-style: italic;
+    font-family: Georgia, serif;
+  }
+
+  .diary-entry {
+    margin-bottom: 28px;
+    animation: fadeInUp .5s ease both;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .entry-time {
+    display: inline-block;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    color: #b08020;
+    font-weight: 700;
+    padding: 2px 10px;
+    background: rgba(208, 160, 48, 0.08);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .entry-body {
+    font-size: 14.5px;
+    line-height: 1.85;
+    color: #3a2e1a;
+  }
+  .entry-body .thought {
+    color: #8a6a3a;
+    font-style: italic;
+  }
+  .entry-body strong {
+    color: #2d2410;
+  }
+
+  .entry-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .entry-tag {
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: -apple-system, sans-serif;
+    font-weight: 600;
+  }
+  .tag-eat { background: #fef3c7; color: #92400e; }
+  .tag-sleep { background: #dbeafe; color: #1e40af; }
+  .tag-staff { background: #fee2e2; color: #991b1b; }
+  .tag-play { background: #dcfce7; color: #166534; }
+  .tag-think { background: #f1f5f9; color: #475569; }
+  .tag-territory { background: #fae8ff; color: #86198f; }
+  .tag-zoomies { background: #fed7aa; color: #9a3412; }
+
+  .entry-mood-mini {
+    display: inline-block;
+    font-size: 16px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .live-indicator {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 11px;
+    color: #2ea043;
+    font-family: -apple-system, sans-serif;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .live-dot {
+    width: 7px; height: 7px;
+    background: #2ea043;
+    border-radius: 50%;
+    animation: live-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes live-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .empty-day {
+    text-align: center;
+    padding: 60px 20px;
+    color: #aaa;
+    font-style: italic;
+  }
+
+  .stats-bar {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 640px) { .stats-bar { grid-template-columns: repeat(2, 1fr); } }
+  .stat-cell {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-cell .v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat-cell .l { font-size: 10.5px; color: var(--faint); margin-top: 3px; }
+
+  .footnote {
+    margin-top: 36px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+
+  .mini-cal {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: -apple-system, sans-serif;
+    font-weight: 600;
+  }
+  .cal-day.has-entries { background: rgba(46,160,67,0.1); color: #166534; }
+  .cal-day.has-entries:hover { background: rgba(46,160,67,0.25); }
+  .cal-day.today { border: 2px solid var(--accent); }
+  .cal-day.selected { background: var(--accent); color: #fff; }
+  .cal-day.future { opacity: 0.25; pointer-events: none; }
+  .cal-day-label {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 11px;
+    color: var(--faint);
+    margin-bottom: 4px;
+    font-family: -apple-system, sans-serif;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+
+  <div class="diary-header">
+    <div class="diary-title">
+      <h1>猫的日记</h1>
+      <div class="sub">当事猫的私人记录 · <code id="diary-path">/var/log/cat/diary/</code></div>
+    </div>
+    <div class="mood-box">
+      <div class="emoji" id="mood-emoji">😺</div>
+      <div class="mood-name" id="mood-name">还算行</div>
+      <div class="label">当前心情</div>
+    </div>
+  </div>
+
+  <div class="diary-nav">
+    <button class="nav-btn" id="btn-prev">← 前一天</button>
+    <div class="diary-date-display">
+      <span id="nav-date">—</span>
+      <span class="weekday" id="nav-weekday">—</span>
+    </div>
+    <button class="nav-btn today" id="btn-today">今天</button>
+    <button class="nav-btn" id="btn-next">后一天 →</button>
+  </div>
+
+  <div class="mini-cal" id="mini-cal"></div>
+
+  <div class="stats-bar">
+    <div class="stat-cell"><div class="v" id="s-entries">0</div><div class="l">本日条目</div></div>
+    <div class="stat-cell"><div class="v" id="s-sleep">0h</div><div class="l">睡眠时长</div></div>
+    <div class="stat-cell"><div class="v" id="s-meals">0</div><div class="l">进食次数</div></div>
+    <div class="stat-cell"><div class="v" id="s-staff-rants">0</div><div class="l">吐槽 Staff</div></div>
+  </div>
+
+  <div class="diary-book" id="diary-book">
+    <div class="live-indicator" id="live-ind" style="display:none;">
+      <span class="live-dot"></span> 实时记录中
+    </div>
+    <div id="diary-content"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>关于这本日记。</strong>
+    所有内容均由当事猫自行撰写，Staff 无权编辑、删除或回应。
+    日记基于真实时间自动生长——猫在不同的时间段会写下不同的内容：
+    凌晨三点记录跑酷心得，早上七点吐槽肚子饿，下午两点记录深度睡眠的体验，
+    晚上十点开始总结一天的得失。翻阅历史日期可以看猫过去的记录。
+    心理活动用 <em>斜体</em> 标注——这是猫不愿意说出口但写进了日记的部分。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ========== 时间工具 ========== */
+  function pad(n) { return n < 10 ? '0'+n : ''+n; }
+  var WEEKDAYS = ['周日','周一','周二','周三','周四','周五','周六'];
+  function dateKey(d) {
+    return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  }
+  function parseDateKey(k) {
+    var p = k.split('-');
+    return new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  }
+  function todayKey() { return dateKey(new Date()); }
+  function formatDateDisplay(d) {
+    return (d.getMonth()+1) + ' 月 ' + d.getDate() + ' 日 ' + d.getFullYear();
+  }
+
+  /* ========== 日记条目模板库 ========== */
+  // 按时段分组——猫在不同时间写下不同的内容
+  var TEMPLATES = {
+    // 凌晨 (0-5)
+    night: [
+      { time: '02:14', tag: 'zoomies', mood: '😼', moodName: '极度亢奋',
+        body: '跑酷第 <strong>四</strong> 圈。走廊全速通过用时 1.3 秒——刷新个人纪录。<span class="thought">Staff 翻了个身。他大概以为这是地震。</span> 不是地震。是我。',
+        thought: '其实我也控制不住。腿自己动的。' },
+      { time: '03:00', tag: 'think', mood: '🤔', moodName: '哲学时刻',
+        body: '盯着天花板看了 40 分钟。<span class="thought">那个影子到底是蛾子还是灰？三年了，我还是没搞清楚。</span> 结论：继续盯着。',
+        thought: '有时候我觉得思考本身就是一种狩猎——猎物是答案。但答案飞得太快了。' },
+      { time: '03:47', tag: 'territory', mood: '😾', moodName: '警觉',
+        body: '楼下有猫叫。是外面那只橘猫。我的领地边界不允许他的声音穿过。<span class="thought">我把脸贴到窗缝上听了 3 分钟，直到他走了。</span> 安全。',
+        thought: '不是嫉妒。是尽职。' },
+      { time: '04:22', tag: 'zoomies', mood: '😼', moodName: '能量溢出',
+        body: '第五圈。这次从卧室起跳——经过走廊——客厅——厨房——折返。总距离 47 米。中间踩了一下 Staff 的肚子，他发出声音但不重要。',
+        thought: '重要的不是我踩了他，重要的是我落地姿势满分。' },
+      { time: '05:08', tag: 'eat', mood: '🍽️', moodName: '开始饿了',
+        body: '决定提前发起早餐申请。走到 Staff 床边叫了 7 声。没有响应。坐到他枕头旁边继续叫。还是没响应。<span class="thought">我决定先睡一觉，等他醒了再重新申请。</span>',
+        thought: '人类真的睡太久。一天 8 小时够了吧？为什么要 9 小时？' }
+    ],
+    // 清晨 (5-9)
+    morning: [
+      { time: '06:15', tag: 'eat', mood: '😻', moodName: '感动',
+        body: 'Staff 起来了。罐头开声。<strong>是金枪鱼口味。</strong> 进食时长 4 分 12 秒。舔盘子时长 1 分 30 秒。<span class="thought">如果他每天这个时候起床，也许我可以试着不那么讨厌早晨。</span>',
+        thought: '今天的金枪鱼比昨天的香一点点。也许是错觉。也许是罐头品牌换了。' },
+      { time: '07:30', tag: 'staff', mood: '🙄', moodName: '无奈',
+        body: 'Staff 出门前摸了我的头一下。说「乖乖在家」。我不知道这句话是什么意思。我每天在家做的事情比他上班做的多。',
+        thought: '他说「乖乖」的意思大概是「不要打翻桌上那杯水」。我本来打算今天不打翻的。现在犹豫了。' },
+      { time: '08:02', tag: 'sleep', mood: '😴', moodName: '回笼觉',
+        body: 'Staff 关门。终于清静了。开始第一次正式睡眠。地点选择：键盘上的余温。<span class="thought">键盘还有点热。这是属于我的温度。</span>',
+        thought: '在工作日，他的椅子也是不错的选择——上面有他坐过的凹陷。' },
+      { time: '09:18', tag: 'think', mood: '🤔', moodName: '审视',
+        body: '醒来 12 分钟，盯着窗外看了很久。一只麻雀停在电线杆上。<span class="thought">它不知道我在看它。或者它知道，但不在乎。</span> 我也不在乎。我只是看。',
+        thought: '我不饿。我只是喜欢确认它还在那里——像在确认世界没出问题。' }
+    ],
+    // 上午 (9-12)
+    midday: [
+      { time: '10:30', tag: 'play', mood: '🐱', moodName: '自得其乐',
+        body: '发现一个瓶盖。是 Staff 昨天晚上掉到沙发底下的。我用爪子拨弄了它 23 分钟。它跑到冰箱底下去了。<span class="thought">游戏结束。</span> 不过我赢了。',
+        thought: '赢的定义是：我决定游戏什么时候结束。所以每次都是我赢。' },
+      { time: '11:45', tag: 'territory', mood: '😺', moodName: '例行公事',
+        body: '巡视了一圈领地。所有信息素标记完好。沙发左角、餐桌腿、卧室门口——一切都在我上次离开时的状态。<span class="thought">没有入侵者。</span> 继续。',
+        thought: '其实每天巡视最大的收获是确认「还是我说了算」。这件事确认完了我才能安心睡觉。' },
+      { time: '12:30', tag: 'eat', mood: '😟', moodName: '轻微不满',
+        body: '碗里的猫粮比早上少了三分之一。Staff 还没回来补充。<span class="thought">我先去睡一觉，等他回来的时候站在碗边盯着他。</span> 他会懂的。',
+        thought: '他不一定会懂。但他会看到我站着的姿势然后慌张。这个慌张本身是一种补偿。' }
+    ],
+    // 下午 (12-18)
+    afternoon: [
+      { time: '13:15', tag: 'sleep', mood: '😴', moodName: '深度睡眠',
+        body: '阳光从窗户照进来，在地板上画了一个长方形。我钻进了那个长方形的中央。<span class="thought">这是今天最完美的时刻。</span> 阳光是会移动的——我会跟着它移动。',
+        thought: '我曾经思考过为什么阳光那么好。后来放弃了——有些事情不需要答案，只需要躺进去。' },
+      { time: '14:50', tag: 'staff', mood: '😒', moodName: '被打扰',
+        body: 'Staff 回来了。手里拎着一个袋子。袋子是空的（没有猫粮）。他放下钥匙的时候发出很大的声音，把我从深度睡眠里震出来。<span class="thought">我瞪了他 5 秒，然后翻了个身背对他。</span>',
+        thought: '他想道歉。我看见他蹲下来伸手了。我决定不接受道歉——至少在今晚 10 点之前不接受。' },
+      { time: '15:30', tag: 'play', mood: '😸', moodName: '愉快',
+        body: 'Staff 拿出了一根逗猫棒。上面挂着羽毛。<span class="thought">我假装不在意了 30 秒。</span> 然后我跳了起来。我跳得很高。这件事我承认。',
+        thought: '逗猫棒本身不丢脸。丢脸的是我装作不在乎的那 30 秒——他知道我很在意。' },
+      { time: '16:42', tag: 'think', mood: '😌', moodName: '满足',
+        body: '玩耍后的理毛环节。舔毛 22 分钟。腋下、肚子、尾巴根——全覆盖。<span class="thought">干净的感觉比玩耍更好。</span> 如果一天只能选一件事情做，我会选理毛。',
+        thought: '不是因为 vanity。是因为理毛的时候我不需要思考任何其他事情。这是真正的休息。' }
+    ],
+    // 傍晚 (18-22)
+    evening: [
+      { time: '18:30', tag: 'eat', mood: '😻', moodName: '幸福',
+        body: '晚饭时间。Staff 开了一个新的罐头——鸡肉口味。<span class="thought">不是金枪鱼，但也很认真。</span> 进食时长 5 分钟。我吃完了所有东西，包括碗边的碎屑。',
+        thought: '今天的两顿饭都准时。我决定今晚不打翻桌上的水杯。守信是一种交换。' },
+      { time: '19:45', tag: 'staff', mood: '😌', moodName: '短暂容忍',
+        body: 'Staff 坐在沙发上看手机。我跳到他腿上转了三圈，然后卧下。<span class="thought">他刚开始一动都不敢动。过了 10 分钟他试着调整了一下腿的位置。</span> 我允许了。',
+        thought: '我允许他动这件事本身就是一种恩惠。他应该意识到。' },
+      { time: '20:30', tag: 'think', mood: '🤔', moodName: '反思',
+        body: '腿上躺了 45 分钟之后起来。走到窗边看了一会儿。<span class="thought">夜里的城市比白天更亮。</span> 远处有车灯移动。它们不知道彼此要去哪里，我也知道。',
+        thought: '每天这个时间我都会想：今天的我和昨天的我是同一只猫吗？大概是。但今天跳起来的高度比昨天高了 3 厘米——所以从某种意义上，这是一只全新的猫。' },
+      { time: '21:15', tag: 'territory', mood: '😼', moodName: '最后巡视',
+        body: '睡觉前的最后一次巡视。所有领地标记完好。Staff 把逗猫棒收到了抽屉里——这是正确的做法。<span class="thought">桌上的水杯还在原位。我没动它。</span> 我说过今晚不动。',
+        thought: '但明天是另一天。' }
+    ],
+    // 深夜 (22-24)
+    lateNight: [
+      { time: '22:48', tag: 'sleep', mood: '😴', moodName: '准备入睡',
+        body: '今天的最后一个动作：在 Staff 床尾的位置趴下。<span class="thought">这里能听见他的呼吸声。</span> 不是为了陪伴。是为了确认他还在。',
+        thought: '一个人住的猫会睡在门口。一只猫住的人会失眠。我不知道我们在互相确认什么，但这件事每天都要做。' },
+      { time: '23:30', tag: 'think', mood: '🌙', moodName: '收尾',
+        body: '回顾今天：吃了 4 顿、睡了 14 小时、玩耍 2 次、吐槽 Staff 7 次（包括没说出口的）。<span class="thought">这是充实的一天。</span> 凌晨三点的会议很快就要开始了——我得先打个盹。',
+        thought: '今天的我没有被任何事物伤害。这就足够了。其他都是锦上添花。' }
+    ]
+  };
+
+  // 按时段获取模板
+  function templatesForHour(h) {
+    if (h < 5) return TEMPLATES.night;
+    if (h < 9) return TEMPLATES.morning;
+    if (h < 12) return TEMPLATES.midday;
+    if (h < 18) return TEMPLATES.afternoon;
+    if (h < 22) return TEMPLATES.evening;
+    return TEMPLATES.lateNight;
+  }
+
+  // 心情库
+  var MOODS = [
+    { emoji: '😺', name: '还算行' },
+    { emoji: '😼', name: '自信' },
+    { emoji: '😻', name: '幸福' },
+    { emoji: '😴', name: '困' },
+    { emoji: '🤔', name: '思考中' },
+    { emoji: '😾', name: '不满' },
+    { emoji: '😌', name: '平静' },
+    { emoji: '😽', name: '柔软' }
+  ];
+
+  /* ========== 日记生成 & 存储 ========== */
+  var STORAGE_KEY = 'catapi_diary_entries';
+
+  function loadAllEntries() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return {};
+      return JSON.parse(raw);
+    } catch(e) { return {}; }
+  }
+
+  function saveAllEntries(data) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  // 为某个日期生成种子化的条目（同一天打开看到的条目是一致的）
+  function seededEntriesForDate(dateK) {
+    var allData = loadAllEntries();
+    if (allData[dateK]) return allData[dateK];
+
+    var d = parseDateKey(dateK);
+    var seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+    var rng = mulberry32(seed);
+
+    var entries = [];
+    // 一天 8-12 条
+    var count = 8 + Math.floor(rng() * 5);
+    var usedHours = {};
+
+    // 从每个时段选若干条
+    var slots = ['night','morning','midday','afternoon','evening','lateNight'];
+    slots.forEach(function(slot) {
+      var pool = TEMPLATES[slot].slice();
+      // 随机取 1-2 条
+      var pickCount = slot === 'night' ? (rng() < 0.7 ? 1 : 2) :
+                      slot === 'lateNight' ? 1 : 2;
+      for (var i = 0; i < pickCount && pool.length > 0; i++) {
+        var idx = Math.floor(rng() * pool.length);
+        var entry = Object.assign({}, pool[idx]);
+        // 给历史日期的条目加上日期前缀
+        entry.fullDate = dateK;
+        entries.push(entry);
+        pool.splice(idx, 1);
+      }
+    });
+
+    // 按时间排序
+    entries.sort(function(a,b) { return a.time.localeCompare(b.time); });
+
+    allData[dateK] = entries;
+    saveAllEntries(allData);
+    return entries;
+  }
+
+  function mulberry32(a) {
+    return function() {
+      var t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    }
+  }
+
+  /* ========== 实时今天 ========== */
+  // 今天的条目在基础模板上，还会随真实时间动态追加
+  function getTodayEntries() {
+    var baseKey = todayKey();
+    var base = seededEntriesForDate(baseKey);
+    // 过滤出时间 <= 当前时间的条目
+    var now = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
+    return base.filter(function(e) { return e.time <= now; });
+  }
+
+  /* ========== 渲染 ========== */
+  var currentViewDate = todayKey();
+
+  function render() {
+    var allData = loadAllEntries();
+    var entries;
+    var isToday = currentViewDate === todayKey();
+
+    if (isToday) {
+      entries = getTodayEntries();
+    } else {
+      entries = seededEntriesForDate(currentViewDate);
+    }
+
+    // 日期导航
+    var d = parseDateKey(currentViewDate);
+    document.getElementById('nav-date').textContent = formatDateDisplay(d);
+    document.getElementById('nav-weekday').textContent = WEEKDAYS[d.getDay()];
+    document.getElementById('btn-prev').disabled = false;
+    document.getElementById('btn-next').disabled = isToday;
+    document.getElementById('btn-today').disabled = isToday;
+    document.getElementById('btn-today').style.opacity = isToday ? '0.4' : '1';
+
+    // 日记本内容
+    var content = document.getElementById('diary-content');
+    var liveInd = document.getElementById('live-ind');
+    liveInd.style.display = isToday ? 'flex' : 'none';
+
+    if (entries.length === 0) {
+      content.innerHTML = '<div class="empty-day">这一天还没有记录——猫可能在睡整天的觉。</div>';
+    } else {
+      // 日头
+      var weatherOptions = ['晴','晴转多云','阴','小雨','晴','晴','晴'];
+      var seed = parseDateKey(currentViewDate).getDate();
+      var weather = weatherOptions[seed % weatherOptions.length];
+
+      var summary = isToday ?
+        '今天的事还正在发生。已经记录了 ' + entries.length + ' 条。' :
+        '这一天我一共记录了 ' + entries.length + ' 条。回看的时候有些事我已经忘了，但日记没忘。';
+
+      var html = '<div class="diary-day-header">' +
+        '<div class="date-big">' + (d.getMonth()+1) + ' 月 ' + d.getDate() + ' 日</div>' +
+        '<div class="weather">' + WEEKDAYS[d.getDay()] + ' · ' + weather + ' · ' + (isToday ? '实时' : '历史') + '</div>' +
+        '<div class="day-summary">' + summary + '</div>' +
+      '</div>';
+
+      entries.forEach(function(e) {
+        var moodEmoji = e.mood || '😺';
+        var moodName = e.moodName || '';
+        html += '<div class="diary-entry">' +
+          '<span class="entry-time">' + e.time + '</span>' +
+          '<span class="entry-mood-mini" title="' + moodName + '">' + moodEmoji + '</span>' +
+          '<div class="entry-body">' + e.body + '</div>' +
+          '<div class="entry-actions">' +
+            '<span class="entry-tag tag-' + e.tag + '">#' + tagLabel(e.tag) + '</span>' +
+          '</div>' +
+        '</div>';
+      });
+
+      content.innerHTML = html;
+    }
+
+    // 统计
+    document.getElementById('s-entries').textContent = entries.length;
+    var sleepCount = entries.filter(function(e) { return e.tag === 'sleep'; }).length;
+    var eatCount = entries.filter(function(e) { return e.tag === 'eat'; }).length;
+    var staffCount = entries.filter(function(e) { return e.tag === 'staff'; }).length;
+    document.getElementById('s-sleep').textContent = (sleepCount * 2) + 'h';
+    document.getElementById('s-meals').textContent = eatCount;
+    document.getElementById('s-staff-rants').textContent = staffCount;
+
+    // 心情
+    if (entries.length > 0) {
+      var last = entries[entries.length - 1];
+      document.getElementById('mood-emoji').textContent = last.mood || '😺';
+      document.getElementById('mood-name').textContent = last.moodName || '未知';
+    }
+
+    renderCalendar();
+  }
+
+  function tagLabel(tag) {
+    var map = {
+      eat: '进食', sleep: '睡觉', staff: '吐槽Staff', play: '玩耍',
+      think: '心理活动', territory: '领地巡视', zoomies: '跑酷'
+    };
+    return map[tag] || tag;
+  }
+
+  /* ========== 迷你日历 ========== */
+  function renderCalendar() {
+    var calEl = document.getElementById('mini-cal');
+    var now = new Date();
+    var year = now.getFullYear(), month = now.getMonth();
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month+1, 0).getDate();
+    var todayD = now.getDate();
+    var tKey = todayKey();
+
+    var html = '<div class="cal-day-label">' + (month+1) + ' 月 · 有记录的日子可以点击</div>';
+    // 填充月初空白
+    for (var i = 0; i < firstDay; i++) {
+      html += '<div></div>';
+    }
+    for (var day = 1; day <= daysInMonth; day++) {
+      var dk = year + '-' + pad(month+1) + '-' + pad(day);
+      var isToday = dk === tKey;
+      var isSelected = dk === currentViewDate;
+      var isFuture = new Date(year, month, day) > now;
+      var classes = 'cal-day';
+      if (isToday) classes += ' today';
+      if (isSelected) classes += ' selected';
+      if (isFuture) classes += ' future';
+      // 历史日期或今天都算有记录
+      if (!isFuture) classes += ' has-entries';
+      html += '<div class="' + classes + '" data-date="' + dk + '">' + day + '</div>';
+    }
+    calEl.innerHTML = html;
+
+    calEl.querySelectorAll('.cal-day:not(.future)').forEach(function(el) {
+      el.addEventListener('click', function() {
+        currentViewDate = el.dataset.date;
+        render();
+      });
+    });
+  }
+
+  /* ========== 事件 ========== */
+  document.getElementById('btn-prev').addEventListener('click', function() {
+    var d = parseDateKey(currentViewDate);
+    d.setDate(d.getDate() - 1);
+    currentViewDate = dateKey(d);
+    render();
+  });
+
+  document.getElementById('btn-next').addEventListener('click', function() {
+    if (currentViewDate === todayKey()) return;
+    var d = parseDateKey(currentViewDate);
+    d.setDate(d.getDate() + 1);
+    var newKey = dateKey(d);
+    if (newKey > todayKey()) return;
+    currentViewDate = newKey;
+    render();
+  });
+
+  document.getElementById('btn-today').addEventListener('click', function() {
+    currentViewDate = todayKey();
+    render();
+  });
+
+  /* ========== 实时更新 ========== */
+  // 每 60 秒重新渲染今天（如果用户正在看今天的话）
+  setInterval(function() {
+    if (currentViewDate === todayKey()) {
+      render();
+    }
+  }, 60000);
+
+  // 初始化：预生成最近 7 天的历史
+  function seedHistory() {
+    var now = new Date();
+    for (var i = 1; i <= 7; i++) {
+      var d = new Date(now);
+      d.setDate(d.getDate() - i);
+      seededEntriesForDate(dateKey(d));
+    }
+  }
+
+  seedHistory();
+  render();
+
+})();
+</script>
+<script src="../assets/js/livecat.js"></script>
+</body>
+</html>
