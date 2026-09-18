@@ -319,7 +319,11 @@
     mainTimer = setInterval(function () {
       heartbeat();
       gcOfflineCursors();
+      gcOfflineCats();
+      gcHerdCursors();
       watchLocalTokens();
+      reportCatState();      // §12 多猫同屏
+      reportHerdCursor();    // §14 协作围捕
     }, 1000);
 
     // 页面隐藏时退出（减少不必要的连接）
@@ -348,6 +352,11 @@
           channel.send({
             type: 'broadcast',
             event: 'leave',
+            payload: { id: identity.id }
+          });
+          channel.send({
+            type: 'broadcast',
+            event: 'cat_leave',
             payload: { id: identity.id }
           });
         } catch (e) {}
@@ -413,8 +422,12 @@
                 remoteCursors[p.id].el.parentNode.removeChild(remoteCursors[p.id].el);
               }
               delete remoteCursors[p.id];
-              renderHUD();
             }
+            // 同步移除远程猫
+            removeRemoteCat(p.id);
+            // 同步移除围捕光标
+            if (herdCursors[p.id]) delete herdCursors[p.id];
+            renderHUD();
           })
           .on('broadcast', { event: 'mouse_caught' }, function (msg) {
             var p = msg && msg.payload;
@@ -428,6 +441,34 @@
             if (root.LiveCat && typeof root.LiveCat.transitionTo === 'function') {
               try { root.LiveCat.triggerMunch && root.LiveCat.triggerMunch(); } catch (e) {}
             }
+          })
+          // §12 多猫同屏：别人的猫上报自己位置 / 状态
+          .on('broadcast', { event: 'cat_state' }, function (msg) {
+            var p = msg && msg.payload;
+            if (!p || !p.id) return;
+            handleRemoteCatState(p);
+          })
+          .on('broadcast', { event: 'cat_leave' }, function (msg) {
+            var p = msg && msg.payload;
+            if (!p || !p.id) return;
+            removeRemoteCat(p.id);
+          })
+          // §13 今日猫碗：有人投喂 / 进度同步
+          .on('broadcast', { event: 'bowl_feed' }, function (msg) {
+            var p = msg && msg.payload;
+            if (!p) return;
+            handleBowlFeed(p);
+          })
+          .on('broadcast', { event: 'bowl_state' }, function (msg) {
+            var p = msg && msg.payload;
+            if (!p || typeof p.level !== 'number') return;
+            setBowlLevel(p.level, p.fromBroadcast);
+          })
+          // §14 协作围捕：别人的光标位置用于驱赶老鼠 AI
+          .on('broadcast', { event: 'herd_cursor' }, function (msg) {
+            var p = msg && msg.payload;
+            if (!p || !p.id) return;
+            herdCursors[p.id] = { x: p.x, y: p.y, ts: Date.now() };
           })
           .subscribe(function (status) {
             if (status === 'SUBSCRIBED') {
@@ -449,13 +490,377 @@
   }
 
   /* =========================================================================
+   * §12 多猫同屏——每个访客一只自己的猫，互相能看到
+   * ======================================================================= */
+  // 复用现有 LiveCat 的 SVG 角色做"远程猫"——同一个角色，但用 CSS hue-rotate 滤镜染色
+  // 这样做的好处：不需要重新画一只猫，只需要把现有猫节点复制 + 染色
+  // 远程猫用更小、更透明的版本，避免抢戏
+  var remoteCats = {};   // { [id]: { el, hue, x, y, state, lastSeen } }
+  var lastCatReport = 0;
+  var CAT_REPORT_INTERVAL = 500;  // 上报间隔：500ms（不像光标那么频繁，避免带宽爆炸）
+
+  function createRemoteCatEl(visitorId, hue) {
+    var el = document.createElement('div');
+    el.className = 'mp-remote-cat';
+    el.setAttribute('aria-hidden', 'true');
+    el.style.setProperty('--hue', hue);
+    // 复用本站已加载的 LiveCat SVG——如果没有，用一个简化版
+    var svg = '';
+    if (root.LiveCat && root.LiveCat.STATES) {
+      // 借用本页 livecat.js 的猫形状（通过临时拷贝 DOM）
+      var localCat = document.querySelector('.lc2-cat');
+      if (localCat) {
+        svg = localCat.innerHTML;
+      }
+    }
+    if (!svg) {
+      // fallback：一个简化的小猫 SVG
+      svg =
+        '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
+          '<ellipse cx="40" cy="36" rx="20" ry="13" fill="hsl(' + hue + ',60%,55%)" stroke="hsl(' + hue + ',70%,30%)" stroke-width="1"/>' +
+          '<circle cx="40" cy="22" r="12" fill="hsl(' + hue + ',65%,60%)" stroke="hsl(' + hue + ',70%,30%)" stroke-width="1"/>' +
+          '<polygon points="32,15 30,8 35,12" fill="hsl(' + hue + ',70%,40%)"/>' +
+          '<polygon points="48,15 50,8 45,12" fill="hsl(' + hue + ',70%,40%)"/>' +
+          '<circle cx="36" cy="22" r="1.5" fill="#222"/>' +
+          '<circle cx="44" cy="22" r="1.5" fill="#222"/>' +
+          '<path d="M 38 26 Q 40 28 42 26" fill="none" stroke="#222" stroke-width="0.8"/>' +
+          '<path d="M 60 38 Q 72 34 70 28" fill="none" stroke="hsl(' + hue + ',70%,30%)" stroke-width="2"/>' +
+        '</svg>';
+    }
+    el.innerHTML =
+      '<div class="mp-remote-cat-body">' + svg + '</div>' +
+      '<span class="mp-remote-cat-label" style="--hue:' + hue + '">访客#' + visitorId + '</span>';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function handleRemoteCatState(payload) {
+    var visitorId = payload.id;
+    if (visitorId === identity.id) return;
+    var existing = remoteCats[visitorId];
+    if (!existing) {
+      var el = createRemoteCatEl(visitorId, payload.hue || 200);
+      existing = remoteCats[visitorId] = {
+        el: el,
+        hue: payload.hue || 200,
+        x: payload.x, y: payload.y,
+        state: payload.state,
+        lastSeen: Date.now()
+      };
+    }
+    existing.lastSeen = Date.now();
+    existing.x = payload.x;
+    existing.y = payload.y;
+    existing.state = payload.state;
+    // 归一化坐标 → 像素
+    var px = (payload.x || 0) * window.innerWidth;
+    var py = (payload.y || 0) * window.innerHeight;
+    existing.el.style.transform = 'translate(' + px + 'px,' + py + 'px)';
+    existing.el.setAttribute('data-cat-state', payload.state || 'idle');
+    existing.el.classList.toggle('mp-remote-cat-sleeping', payload.state === 'sleep');
+  }
+
+  function removeRemoteCat(visitorId) {
+    var c = remoteCats[visitorId];
+    if (!c) return;
+    if (c.el && c.el.parentNode) c.el.parentNode.removeChild(c.el);
+    delete remoteCats[visitorId];
+  }
+
+  function gcOfflineCats() {
+    var now = Date.now();
+    for (var id in remoteCats) {
+      if (!remoteCats.hasOwnProperty(id)) continue;
+      if (now - remoteCats[id].lastSeen > REMOTE_CURSOR_TTL) {
+        removeRemoteCat(id);
+      }
+    }
+  }
+
+  // 上报本访客的猫状态（如果有 livecat）
+  function reportCatState() {
+    if (!connected || !channel) return;
+    if (!root.LiveCat) return;
+    var now = Date.now();
+    if (now - lastCatReport < CAT_REPORT_INTERVAL) return;
+    lastCatReport = now;
+    // 通过 livecat 的接口拿当前位置
+    var state = root.LiveCat.getState ? root.LiveCat.getState() : 'idle';
+    // 归一化坐标——livecat 没暴露位置 getter，我们从 DOM 读取
+    var localCat = document.querySelector('.lc2-cat');
+    var nx = 0.5, ny = 0.5;
+    if (localCat) {
+      var r = localCat.getBoundingClientRect();
+      nx = (r.left + r.width / 2) / window.innerWidth;
+      ny = (r.top + r.height / 2) / window.innerHeight;
+    }
+    try {
+      channel.send({
+        type: 'broadcast',
+        event: 'cat_state',
+        payload: {
+          id: identity.id,
+          hue: identity.hue,
+          page: location.pathname,
+          state: state,
+          x: nx, y: ny
+        }
+      });
+    } catch (e) {}
+  }
+
+  /* =========================================================================
+   * §13 今日猫碗——全站共同填满进度条，满了触发限定事件
+   * ======================================================================= */
+  // 规则：
+  //  - 任何访客点「投喂」按钮 → 本地进度 +N，广播给所有人
+  //  - 全站进度同步——通过广播的累计效应，所有人进度近似一致
+  //  - 满 100% → 触发全站「金色猫碗」事件（站点 logo 变金 + 庆祝粒子 + 所有人听到）
+  //  - 满 1000% → 解锁限定徽章一周
+  //  - 每日凌晨 4 点自动重置（猫饭点）
+  var BOWL_KEY = 'catapi_bowl_state';
+  var BOWL_MAX = 100;      // 满 100 触发第一档
+  var BOWL_LEGENDARY = 1000;  // 传说档
+  var BOWL_RESET_HOUR = 4;   // 凌晨 4 点重置
+
+  var bowlState = { level: 0, totalFed: 0, lastReset: 0, legendaryUnlocked: false };
+  var bowlWidgetEl = null;
+
+  function loadBowlState() {
+    try {
+      var raw = localStorage.getItem(BOWL_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.level === 'number') {
+          bowlState = parsed;
+        }
+      }
+    } catch (e) {}
+    // 检查跨日重置
+    var today4am = new Date();
+    today4am.setHours(BOWL_RESET_HOUR, 0, 0, 0);
+    var today4amTs = today4am.getTime();
+    if (bowlState.lastReset < today4amTs && Date.now() > today4amTs) {
+      // 过了今天的凌晨 4 点，重置
+      bowlState.level = 0;
+      bowlState.lastReset = Date.now();
+      saveBowlState();
+    } else if (!bowlState.lastReset) {
+      bowlState.lastReset = Date.now();
+    }
+  }
+
+  function saveBowlState() {
+    try { localStorage.setItem(BOWL_KEY, JSON.stringify(bowlState)); } catch (e) {}
+  }
+
+  function setBowlLevel(level, fromBroadcast) {
+    var wasFull = bowlState.level >= BOWL_MAX;
+    bowlState.level = Math.max(0, level);
+    if (fromBroadcast) saveBowlState();
+    renderBowlWidget();
+    var isFull = bowlState.level >= BOWL_MAX;
+    if (!wasFull && isFull && !fromBroadcast) {
+      // 本地刚触达满——广播给其他人让他们也庆祝
+      triggerBowlCelebration();
+    }
+    if (bowlState.level >= BOWL_LEGENDARY && !bowlState.legendaryUnlocked) {
+      bowlState.legendaryUnlocked = true;
+      saveBowlState();
+      showToast('🌟 全站解锁传说徽章：金色猫碗！站点 logo 变金一周', 8000);
+    }
+  }
+
+  function handleBowlFeed(payload) {
+    // 收到别人的投喂：累加到本地进度
+    if (typeof payload.delta !== 'number') return;
+    bowlState.totalFed += payload.delta;
+    setBowlLevel(bowlState.level + payload.delta, true);
+    if (payload.by) {
+      var who = '访客#' + payload.by;
+      // 不弹 toast——避免每次投喂都刷屏；只在进度条上做视觉反馈
+    }
+  }
+
+  function feedBowl(delta) {
+    delta = delta || 1;
+    bowlState.totalFed += delta;
+    setBowlLevel(bowlState.level + delta, false);
+    saveBowlState();
+    if (connected && channel) {
+      try {
+        channel.send({
+          type: 'broadcast',
+          event: 'bowl_feed',
+          payload: { by: identity.id, delta: delta, ts: Date.now() }
+        });
+      } catch (e) {}
+    }
+  }
+
+  function triggerBowlCelebration() {
+    showToast('🎉 全站今日猫碗已填满！所有猫进入吃饱喝足模式', 6000);
+    // 撒金币粒子
+    for (var i = 0; i < 16; i++) {
+      setTimeout(spawnBowlParticle, i * 80);
+    }
+    // 广播给全站
+    if (connected && channel) {
+      try {
+        channel.send({
+          type: 'broadcast',
+          event: 'bowl_state',
+          payload: { level: bowlState.level, fromBroadcast: true, ts: Date.now() }
+        });
+      } catch (e) {}
+    }
+  }
+
+  function spawnBowlParticle() {
+    var p = document.createElement('div');
+    p.className = 'mp-bowl-particle';
+    p.style.left = (Math.random() * window.innerWidth) + 'px';
+    p.style.top = '-20px';
+    p.style.setProperty('--drift', ((Math.random() - 0.5) * 60) + 'px');
+    p.style.setProperty('--rot', (360 + Math.random() * 720) + 'deg');
+    document.body.appendChild(p);
+    setTimeout(function () { if (p.parentNode) p.remove(); }, 3500);
+  }
+
+  function ensureBowlWidget() {
+    if (bowlWidgetEl) return bowlWidgetEl;
+    bowlWidgetEl = document.createElement('div');
+    bowlWidgetEl.className = 'mp-bowl-widget';
+    bowlWidgetEl.innerHTML =
+      '<div class="mp-bowl-header">' +
+        '<span class="mp-bowl-icon">🥣</span>' +
+        '<span class="mp-bowl-title">今日猫碗</span>' +
+        '<button class="mp-bowl-feed-btn" type="button" aria-label="投喂">投喂 +1</button>' +
+      '</div>' +
+      '<div class="mp-bowl-progress">' +
+        '<div class="mp-bowl-progress-fill"></div>' +
+        '<span class="mp-bowl-progress-label"></span>' +
+      '</div>' +
+      '<div class="mp-bowl-stats">' +
+        '<span class="mp-bowl-total">累计 <b>0</b></span>' +
+      '</div>';
+    document.body.appendChild(bowlWidgetEl);
+    // 绑定投喂按钮
+    var btn = bowlWidgetEl.querySelector('.mp-bowl-feed-btn');
+    if (btn) {
+      btn.addEventListener('click', function () {
+        feedBowl(1 + Math.floor(Math.random() * 3));   // 每次投喂 +1~3
+      });
+    }
+    return bowlWidgetEl;
+  }
+
+  function renderBowlWidget() {
+    if (!bowlWidgetEl) return;
+    var fill = bowlWidgetEl.querySelector('.mp-bowl-progress-fill');
+    var label = bowlWidgetEl.querySelector('.mp-bowl-progress-label');
+    var total = bowlWidgetEl.querySelector('.mp-bowl-total b');
+    if (fill) {
+      var pct = Math.min(100, (bowlState.level / BOWL_MAX) * 100);
+      fill.style.width = pct + '%';
+    }
+    if (label) {
+      label.textContent = Math.floor(bowlState.level) + ' / ' + BOWL_MAX;
+    }
+    if (total) {
+      total.textContent = bowlState.totalFed || 0;
+    }
+    // 满了之后给按钮加个特效
+    if (bowlState.level >= BOWL_MAX) {
+      bowlWidgetEl.classList.add('mp-bowl-full');
+    } else {
+      bowlWidgetEl.classList.remove('mp-bowl-full');
+    }
+  }
+
+  /* =========================================================================
+   * §14 协作围捕——多人光标驱赶老鼠 AI
+   * ======================================================================= */
+  // 把所有在线访客的光标位置广播出来（共享给一个虚拟的"老鼠 AI"）
+  // 这个老鼠 AI 不在服务端——直接在客户端跑：根据所有光标位置选择逃跑方向
+  // 所以需要每个客户端都收集 herd 光标——通过 broadcast 实时同步
+  // 一旦全站有一只共享老鼠出没，它会"避开所有在线玩家的光标"，必须协作围堵
+  var herdCursors = {};  // { [id]: { x, y, ts } }
+  var HERD_CURSOR_INTERVAL = 120;  // 120ms 上报一次围捕光标（比普通光标稍快）
+  var lastHerdReport = 0;
+
+  function reportHerdCursor() {
+    if (!connected || !channel) return;
+    var now = Date.now();
+    if (now - lastHerdReport < HERD_CURSOR_INTERVAL) return;
+    lastHerdReport = now;
+    try {
+      channel.send({
+        type: 'broadcast',
+        event: 'herd_cursor',
+        payload: {
+          id: identity.id,
+          x: lastMouseXNorm,
+          y: lastMouseYNorm,
+          ts: now
+        }
+      });
+    } catch (e) {}
+  }
+
+  // 缓存本访客最近的鼠标位置（归一化）
+  var lastMouseXNorm = 0.5, lastMouseYNorm = 0.5;
+  document.addEventListener('mousemove', function (e) {
+    lastMouseXNorm = e.clientX / window.innerWidth;
+    lastMouseYNorm = e.clientY / window.innerHeight;
+  }, { passive: true });
+
+  // 给外部用：拿到所有在线玩家的光标位置（像素坐标）
+  // 这是给 livecat.js 或其他模块的接口——如果某只老鼠想躲所有人，调用这个
+  function getHerdCursors() {
+    var result = [];
+    var now = Date.now();
+    for (var id in herdCursors) {
+      if (!herdCursors.hasOwnProperty(id)) continue;
+      var c = herdCursors[id];
+      if (now - c.ts > REMOTE_CURSOR_TTL) continue;
+      result.push({
+        id: id,
+        x: c.x * window.innerWidth,
+        y: c.y * window.innerHeight
+      });
+    }
+    // 加上自己的光标
+    result.push({
+      id: identity.id,
+      x: lastMouseXNorm * window.innerWidth,
+      y: lastMouseYNorm * window.innerHeight
+    });
+    return result;
+  }
+
+  // 定时清理过期的围捕光标
+  function gcHerdCursors() {
+    var now = Date.now();
+    for (var id in herdCursors) {
+      if (!herdCursors.hasOwnProperty(id)) continue;
+      if (now - herdCursors[id].ts > REMOTE_CURSOR_TTL) {
+        delete herdCursors[id];
+      }
+    }
+  }
+
+  /* =========================================================================
    * §10 启动
    * ======================================================================= */
   function start() {
     if (started) return;
     started = true;
-    // 提前创建 HUD——即使没连上，也至少显示「1 只猫在线」
+    // 提前创建 UI——即使没连上，也至少显示「1 只猫在线」+ 今日猫碗（单机模式也能投喂）
     ensureHUD();
+    loadBowlState();
+    ensureBowlWidget();
+    renderBowlWidget();
     connect();
   }
 
@@ -474,6 +879,14 @@
     getIdentity: function () { return identity; },
     getOnlineCount: function () { return onlineCount; },
     broadcastMouseCaught: broadcastMouseCaught,
+    // §12 多猫同屏
+    getRemoteCats: function () { return remoteCats; },
+    // §13 今日猫碗
+    feedBowl: feedBowl,
+    getBowlLevel: function () { return bowlState.level; },
+    getBowlTotal: function () { return bowlState.totalFed; },
+    // §14 协作围捕
+    getHerdCursors: getHerdCursors,
     // 让外部覆盖配置（在加载本脚本前可以预设 SUPABASE_URL/KEY）
     configure: function (url, key) {
       SUPABASE_URL = url || SUPABASE_URL;
