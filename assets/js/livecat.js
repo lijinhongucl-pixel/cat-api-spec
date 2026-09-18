@@ -27,7 +27,9 @@
     "9. 巡视路线优先沿墙边走。",
     "10. 睡觉地点偏好温暖区域（屏幕右下/左下）。",
     "11. 收到激光点会无视一切去追。",
-    "12. 在被禁止的区域（屏幕中央）停留超过 3 秒会自动撤离。"
+    "12. 在被禁止的区域（屏幕中央）停留超过 3 秒会自动撤离。",
+    "13. 走过页面内容时会啃食附近的文字与板块——被啃掉的内容过段时间自动恢复。",
+    "14. 跨页面穿越：从页面边缘走出后会在相邻页面重新出现。"
   ];
 
   /* ---------- DOM ---------- */
@@ -149,6 +151,13 @@
       label: "盯着鼠标", duration: 6000, pose: "stalk", face: "ALERT",
       lines: ["锁定目标。", "不要动。", "我在评估。"],
       behavior: function () { faceMouse(); }
+    },
+    MUNCH: {
+      // §13 啃食内容：猫走到文字或板块上方时会啃掉它们
+      // 被啃的元素 30-90 秒后自动恢复
+      label: "啃食内容", duration: 4000, pose: "munch", face: "HUNGRY",
+      lines: ["这段不需要。", "味道还行。", "帮你们删掉了。", "不用谢。", "这个板块多余了。", "404 Content Eaten。"],
+      behavior: function () { pickMunchTarget(); }
     }
   };
 
@@ -201,7 +210,8 @@
     STRETCH: 2,       // 伸懒腰（醒后触发，独立权重兜底）
     YAWN:    2,       // 打哈欠
     BOXED:   3,
-    HEADBUNT: 4       // 蹭人腿也加进来，让它更常触发
+    HEADBUNT: 4,      // 蹭人腿也加进来，让它更常触发
+    MUNCH:   6        // 啃食内容（比较常见——走过就啃一口）
   };
 
   // crepuscular：晨昏时段（5-7 点 / 17-19 点）SLEEP 降到 25，
@@ -537,6 +547,179 @@
     '</svg>';
   }
 
+  /* ---------- §13 啃食内容系统 ---------- */
+  // 猫走到文字 / 板块上方时会「啃食」它们——被啃的元素变灰 + 显示标签，
+  // 一段时间后（30-90 秒）自动恢复。
+  // 啃食目标选择：寻找猫当前位置附近的可啃 DOM 元素
+  // 可啃类型：p, h1-h3, li, td, blockquote, .card, .stat, strong, em, a
+  var MUNCH_TAGS = ['P','H1','H2','H3','LI','TD','TH','BLOCKQUOTE','STRONG','EM','A','SPAN','DIV','SECTION'];
+  var MUNCH_TAGS_PRIMARY = ['P','H1','H2','H3','LI','TD','BLOCKQUOTE','STRONG']; // 优先啃这些
+  var munchedSet = new WeakSet();     // 本页已啃过的元素（避免重复啃同一个）
+  var munchFullness = 0;              // 饱腹值（0-100），啃太多会停下来
+
+  function pickMunchTarget() {
+    // 从猫当前位置出发，搜索半径 250px 内的可啃元素
+    var candidates = [];
+    var els = document.querySelectorAll('body *:not(.lc2-wrap):not(.lc2-cat):not(script):not(style):not(.lc2-laser-dot):not(.lc2-crumb)');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i];
+      if (munchedSet.has(el)) continue;
+      if (el.classList && el.classList.contains('lc2-munched')) continue;
+      if (el.classList && (el.classList.contains('lc2-wrap') || el.classList.contains('lc2-bubble') || el.classList.contains('lc2-label'))) continue;
+      var tag = el.tagName;
+      var isPrimary = MUNCH_TAGS_PRIMARY.indexOf(tag) >= 0;
+      var isSecondary = MUNCH_TAGS.indexOf(tag) >= 0;
+      if (!isPrimary && !isSecondary) continue;
+      // 只啃有可见文本内容的元素（或卡片容器）
+      var hasText = el.textContent && el.textContent.trim().length > 2;
+      var isCard = el.classList && (el.classList.contains('card') || el.classList.contains('stat') || el.classList.contains('stat-box') || el.classList.contains('svc-card'));
+      if (!hasText && !isCard) continue;
+      // 尺寸过滤：太小的元素不啃
+      var rect = el.getBoundingClientRect();
+      if (rect.width < 30 || rect.height < 12) continue;
+      // 必须在视口内或接近视口
+      if (rect.bottom < -100 || rect.top > window.innerHeight + 100) continue;
+      // 距离猫当前位置
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      var dist = Math.hypot(cx - x, cy - y);
+      if (dist > 350) continue;
+      candidates.push({
+        el: el,
+        dist: dist,
+        primary: isPrimary || isCard,
+        rect: rect
+      });
+    }
+    if (candidates.length === 0) {
+      // 附近没东西啃——随便走走
+      roamRandomly();
+      return;
+    }
+    // 优先选近距离 + primary 类型
+    candidates.sort(function (a, b) {
+      var aPri = a.primary ? 0 : 1;
+      var bPri = b.primary ? 0 : 1;
+      if (aPri !== bPri) return aPri - bPri;
+      return a.dist - b.dist;
+    });
+    // 从前 5 个候选中随机选一个（增加随机性）
+    var pick = candidates[Math.floor(Math.random() * Math.min(5, candidates.length))];
+    // 把猫移动到元素附近
+    targetX = Math.max(20, Math.min(window.innerWidth - 100, pick.rect.left + pick.rect.width / 2 - 40));
+    targetY = Math.max(60, Math.min(window.innerHeight - 80, pick.rect.top + pick.rect.height / 2 - 20));
+    // 等 1 秒后（猫走到目标附近）执行啃食
+    setTimeout(function () {
+      doMunch(pick.el);
+    }, 1200);
+  }
+
+  function doMunch(el) {
+    if (!el || munchedSet.has(el) || !el.parentNode) return;
+    munchedSet.add(el);
+    el.classList.add('lc2-munched');
+    // 飘落碎屑粒子
+    spawnCrumbs(el);
+    // 饱腹值 +10~20
+    munchFullness = Math.min(100, munchFullness + 10 + Math.floor(Math.random() * 11));
+    // 恢复倒计时：30-90 秒
+    var recoverDelay = 30000 + Math.random() * 60000;
+    setTimeout(function () {
+      if (el && el.classList) {
+        el.classList.remove('lc2-munched');
+      }
+    }, recoverDelay);
+  }
+
+  function spawnCrumbs(el) {
+    var rect = el.getBoundingClientRect();
+    var cx = rect.left + rect.width / 2;
+    var cy = rect.top + rect.height / 2;
+    for (var i = 0; i < 6; i++) {
+      var crumb = document.createElement('div');
+      crumb.className = 'lc2-crumb';
+      crumb.style.left = (cx + (Math.random() - 0.5) * rect.width * 0.6) + 'px';
+      crumb.style.top = cy + 'px';
+      crumb.style.setProperty('--dx', ((Math.random() - 0.5) * 60) + 'px');
+      crumb.style.setProperty('--dy', (20 + Math.random() * 40) + 'px');
+      document.body.appendChild(crumb);
+      (function (c) {
+        setTimeout(function () { if (c.parentNode) c.remove(); }, 800);
+      })(crumb);
+    }
+  }
+
+  // 饱腹值自然衰减（每秒 -1）
+  setInterval(function () {
+    if (munchFullness > 0) munchFullness = Math.max(0, munchFullness - 1);
+  }, 1000);
+
+  /* ---------- §14 跨页面穿越 ---------- */
+  // 猫的页面位置和状态持久化到 localStorage，
+  // 当用户导航到另一个页面时，猫会在相对位置重新出现。
+  // 也用 BroadcastChannel 让同一 origin 的多个 tab 之间同步。
+  var PAGE_KEY = 'catapi_livecat_state';
+  var bc = null;
+  try {
+    bc = new BroadcastChannel('catapi_livecat');
+  } catch (e) { /* 不支持就降级为纯 localStorage */ }
+
+  function saveCatState() {
+    try {
+      var state = {
+        x: x / window.innerWidth,      // 归一化（不同页面尺寸不同）
+        y: y / window.innerHeight,
+        state: currentStateName,
+        facing: facing,
+        page: location.pathname,
+        ts: Date.now()
+      };
+      localStorage.setItem(PAGE_KEY, JSON.stringify(state));
+    } catch (e) { /* 无痕模式 */ }
+  }
+
+  function loadCatState() {
+    try {
+      var raw = localStorage.getItem(PAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      // 超过 5 分钟的记录视为过期
+      if (Date.now() - data.ts > 300000) return null;
+      return data;
+    } catch (e) { return null; }
+  }
+
+  // 每 3 秒保存一次状态（跨页面用）
+  setInterval(function () {
+    if (cat) saveCatState();
+  }, 3000);
+  // 页面关闭时保存
+  window.addEventListener('beforeunload', function () {
+    if (cat) saveCatState();
+  });
+
+  // 多 tab 同步：收到其他 tab 的消息时，可选地更新本 tab 猫的状态
+  if (bc) {
+    bc.onmessage = function (ev) {
+      // 仅用作「该猫在另一个 tab」的通知——当前实现不做跨 tab 移动，
+      // 但可以作为「猫正在别处」的提示
+    };
+  }
+
+  var portalHint = null;
+  function showPortalHint(text) {
+    if (!portalHint) {
+      portalHint = document.createElement('div');
+      portalHint.className = 'lc2-portal-hint';
+      document.body.appendChild(portalHint);
+    }
+    portalHint.textContent = text;
+    portalHint.classList.add('show');
+    setTimeout(function () {
+      if (portalHint) portalHint.classList.remove('show');
+    }, 3000);
+  }
+
   /* ---------- 行为函数 ---------- */
   function stayStill() { targetX = x; targetY = y; }
 
@@ -711,6 +894,12 @@
     // 行为准则 12：中央区域停留超 3 秒自动撤离
     maybeFleeCenter();
 
+    // §13 自主啃食：走路 / 巡视时有概率啃一口路过的内容
+    if ((currentStateName === "巡视领地" || currentStateName === "玩耍") &&
+        Math.random() < 0.002 && munchFullness < 70) {
+      transitionTo("MUNCH");
+    }
+
     rafId = requestAnimationFrame(tick);
   }
 
@@ -767,6 +956,13 @@
 
       // 加权随机选下一个状态（真实猫作息分布 + crepuscular）
       var next = pickWeightedState(currentStateName);
+
+      // §13 啃食内容：饱腹值低时增加啃食概率
+      if (munchFullness < 50 && Math.random() < 0.35 &&
+          currentStateName !== "啃食内容" && currentStateName !== "追激光" &&
+          currentStateName !== "疯跑" && currentStateName !== "钻纸箱") {
+        next = 'MUNCH';
+      }
 
       // STRETCH 出口：35% 概率接 YAWN（伸完懒腰打哈欠是真实猫的连锁动作）
       if (currentStateName === "伸懒腰" && Math.random() < 0.35) {
@@ -972,12 +1168,31 @@
 
   function boot() {
     createCat();
-    // 初始位置：屏幕底部偏右
-    x = window.innerWidth - 200;
-    y = window.innerHeight - 110;
-    targetX = x;
-    targetY = y;
-    facing = 1;
+    // §14 跨页面穿越：如果有上一个页面的状态记录，从相对位置重新出现
+    var prev = loadCatState();
+    if (prev && prev.page !== location.pathname) {
+      // 从另一个页面穿越过来
+      x = Math.max(20, Math.min(window.innerWidth - 100, prev.x * window.innerWidth));
+      y = Math.max(60, Math.min(window.innerHeight - 80, prev.y * window.innerHeight));
+      // 从来的方向进入：如果之前在页面右侧，就从左侧进来
+      if (prev.x > 0.5) {
+        x = -100;  // 从屏幕左侧外面进来
+        facing = 1;
+      } else {
+        x = window.innerWidth + 50;  // 从右侧进来
+        facing = -1;
+      }
+      targetX = Math.max(40, Math.min(window.innerWidth - 100, prev.x * window.innerWidth));
+      targetY = Math.max(60, Math.min(window.innerHeight - 80, prev.y * window.innerHeight));
+      showPortalHint('🐾 猫从 ' + (prev.page.split('/').pop() || '首页') + ' 穿越过来');
+    } else {
+      // 初始位置：屏幕底部偏右
+      x = window.innerWidth - 200;
+      y = window.innerHeight - 110;
+      targetX = x;
+      targetY = y;
+      facing = 1;
+    }
     transitionTo("SLEEP");
     rafId = requestAnimationFrame(tick);
     startIdleMotion();   // 启动 idle 微动作循环（自动眨眼 / 耳朵抖动）
@@ -991,8 +1206,11 @@
     getRules: function () { return BEHAVIOR_RULES; },
     transitionTo: transitionTo,        // 暴露给外部触发状态（测试 / 彩蛋）
     triggerBlink: function () { triggerSlowBlink(true); },
+    triggerMunch: function () { transitionTo('MUNCH'); },  // 手动触发啃食
     getQuota: getQuota,
-    setQuota: setQuota
+    setQuota: setQuota,
+    getFullness: function () { return munchFullness; },
+    munchElement: function (el) { doMunch(el); }  // 手动啃指定元素
   };
 
   start();
