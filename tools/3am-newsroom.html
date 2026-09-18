@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>3AM 编辑部 — CAT API</title>
+<meta name="description" content="凌晨三点编辑部游戏：你是一只猫的主编，需要在限时内处理当晚的突发新闻。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .newsroom-hero {
+    margin-top: 28px;
+    background: #1a1a2e;
+    border-radius: 14px;
+    padding: 28px 30px;
+    color: #e0e0e0;
+    position: relative;
+    overflow: hidden;
+  }
+  .newsroom-hero h2 { margin: 0 0 6px; font-size: 20px; color: #fff; }
+  .newsroom-hero p { margin: 0; font-size: 13px; color: #aaa; line-height: 1.6; }
+  .newsroom-hero .clock {
+    position: absolute;
+    top: 18px; right: 24px;
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 28px;
+    font-weight: 700;
+    color: #cb2431;
+    letter-spacing: 0.05em;
+  }
+  .newsroom-hero .clock .blink { animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .game-area {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 20px;
+  }
+  @media (max-width: 760px) { .game-area { grid-template-columns: 1fr; } }
+
+  .incoming {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    min-height: 320px;
+    position: relative;
+  }
+  .incoming-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .incoming-head .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    font-weight: 700;
+  }
+  .breaking-badge {
+    background: #cb2431;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    animation: flash 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes flash {
+    from { opacity: 0.7; }
+    to { opacity: 1; }
+  }
+
+  .story-card {
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 14px;
+  }
+  .story-card .source {
+    font-size: 11px;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .story-card .headline {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+    margin-bottom: 8px;
+  }
+  .story-card .body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .story-card .urgency-bar {
+    height: 4px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .story-card .urgency-fill {
+    height: 100%;
+    background: #cb2431;
+    border-radius: 2px;
+    transition: width .3s;
+  }
+  .story-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .story-btn {
+    padding: 8px 14px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .story-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .story-btn.publish {
+    background: #cb2431;
+    border-color: #cb2431;
+    color: #fff;
+  }
+  .story-btn.publish:hover { opacity: 0.85; color: #fff; }
+  .story-btn.kill {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--faint);
+  }
+
+  .sidebar {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .sidebar h3 { margin: 0 0 14px; font-size: 13px; }
+  .sidebar .metric {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .sidebar .metric:last-child { border-bottom: none; }
+  .sidebar .metric .v { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .published-log {
+    margin-top: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .published-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+  .published-item.approved { background: #dcfce7; color: #166534; }
+  .published-item.killed   { background: #fee2e2; color: #991b1b; }
+  .published-item.missed   { background: #fef3c7; color: #92400e; }
+  .published-item .action { font-weight: 700; text-transform: uppercase; font-size: 10px; }
+
+  .timer-bar {
+    height: 6px;
+    background: rgba(203, 36, 49, 0.15);
+    border-radius: 3px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    background: #cb2431;
+    border-radius: 3px;
+    transition: width 1s linear;
+  }
+
+  .start-screen, .end-screen {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .start-screen .cat-svg, .end-screen .cat-svg {
+    margin: 0 auto 20px;
+    display: block;
+  }
+  .start-btn {
+    padding: 12px 32px;
+    font-size: 15px;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: inherit;
+  }
+  .start-btn:hover { opacity: 0.85; }
+
+  .footnote {
+    margin-top: 40px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">3AM 编辑部</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    凌晨三点，你是值班主编。当事猫负责送稿——你负责决定哪些上头条。
+  </p>
+
+  <div class="newsroom-hero">
+    <div class="clock"><span id="clock-h">03</span><span class="blink">:</span><span id="clock-m">00</span></div>
+    <h2>CAT DAILY · 夜班编辑部</h2>
+    <p>每晚 02:00–05:00 是编辑部最忙的时段。猫记者在前线（窗户/走廊/纸箱）发回突发稿件，主编需要快速判断：哪些值得推送、哪些毙掉、哪些等一等。</p>
+  </div>
+
+  <div id="game-root">
+    <div class="start-screen" id="start-screen">
+      <svg class="cat-svg" width="120" height="120" viewBox="0 0 120 120">
+        <ellipse cx="60" cy="75" rx="30" ry="24" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>
+        <circle cx="60" cy="48" r="22" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>
+        <polygon points="42,34 40,18 54,28" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>
+        <polygon points="78,34 80,18 66,28" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>
+        <circle cx="52" cy="48" r="3" fill="#ffd700"/>
+        <circle cx="68" cy="48" r="3" fill="#ffd700"/>
+        <ellipse cx="60" cy="56" rx="2.5" ry="2" fill="#ff6b6b"/>
+        <path d="M 44 80 Q 30 70 25 85" fill="none" stroke="#1a1a2e" stroke-width="6" stroke-linecap="round"/>
+      </svg>
+      <h2 style="margin:0 0 8px;">值班开始</h2>
+      <p style="color:var(--muted);font-size:14px;max-width:480px;margin:0 auto 24px;line-height:1.7;">
+        你将在 8 轮突发新闻中做决策。每条新闻有 20 秒处理窗口。
+        <br>选择「推送」「毙稿」或「等一等」——主编评分由当事猫决定。
+      </p>
+      <button class="start-btn" id="btn-start">开始值班</button>
+    </div>
+  </div>
+
+  <div class="footnote">
+    <strong>编辑部规矩。</strong>
+    所有稿件来自猫记者的第一线观察。主编评分依据：
+    选题敏锐度（鸟的种类是否罕见）、标题质量（是否配得上头条）、
+    时效性（是否赶在 Staff 醒来前推送）、毙稿合理性（是不是冤枉了好新闻）。
+    连续毙稿 3 次将触发当事猫的「不信任投票」——编辑部重组。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORIES = [
+    { source: "前方记者 · 窗台",     urgency: 95, headline: "麻雀！是麻雀！它停在电线杆上！",       body: "目标物种出现，距离窗户约 4 米。头部转动角度疑似在观察我部。建议立即推送头条。", catPref: 'approve' },
+    { source: "走廊线人",           urgency: 70, headline: "拖鞋被挪动了 3 厘米",                 body: "Staff 上次穿的拖鞋位置与今晨不一致。疑似入侵者迹象，也可能是 Staff 自己踢的。需要主编判断新闻价值。", catPref: 'approve' },
+    { source: "厨房特派员",         urgency: 99, headline: "猫粮袋口处于开启状态——无人值守",      body: "本次值班最大的发现：柜门半开，猫粮袋暴露。窗口约 45 秒内有效，需立即行动。", catPref: 'approve' },
+    { source: "客厅通讯员",         urgency: 40, headline: "沙发底下发现未知物体（疑似瓶盖）",      body: "闪烁反光物体出现，可能是 Staff 掉的金属物，也可能是新玩具。建议派人侦察后再定稿。", catPref: 'wait' },
+    { source: "阳台特派",           urgency: 85, headline: "飞鸟航线变更：今日编队从东飞向西",      body: "本月首次观测到反向航线。是否与季节迁徙相关待专家评论。摄影记者已就位。", catPref: 'approve' },
+    { source: "卧室夜班",           urgency: 25, headline: "Staff 翻了个身，发出咕哝声",            body: " Staff 睡眠深度疑似变浅。如继续发出声音可能彻底醒来——将危及本部夜间行动自由。建议暂不推送。", catPref: 'kill' },
+    { source: "前方记者 · 纸箱",    urgency: 100, headline: "新纸箱！ Staff 刚拆完快递！",          body: "未经任何标记的全新纸箱出现在客厅。本年度第 17 个。建议立即占领并以头部摩擦完成信息素签名。", catPref: 'approve' },
+    { source: "天花板线人",         urgency: 60, headline: "有蚊子。本部领空遭入侵。",             body: "飞行物入侵天花板空域。体型小、速度快、发光。建议派空中编队拦截（自荐）。", catPref: 'approve' },
+    { source: "走廊深处",           urgency: 30, headline: "扫地机器人突然自动启动",               body: "发出噪音并开始移动。本部判定为威胁，已撤退至高处观察。建议跟踪报道其路线。", catPref: 'wait' },
+    { source: "厨房特派员（再）",   urgency: 90, headline: "金枪鱼罐头开罐声被前方截获",             body: "声音源自隔壁厨房，约 3 秒前。多普勒效应分析：Staff 正在开罐。窗口极短。", catPref: 'approve' },
+    { source: "卧室前线",           urgency: 50, headline: "Staff 手机亮了，凌晨 3 点",            body: "Staff 在玩手机。亮度刺眼。这是否构成夜间作息违规需主编判定。", catPref: 'wait' },
+    { source: "浴室特派",           urgency: 20, headline: "水龙头滴水。每 4 秒一滴。",            body: "节奏稳定但无法忽略。本部建议派人蹲守水滴源头确认是否存在小鱼的可能性。", catPref: 'kill' }
+  ];
+
+  var gameRoot = document.getElementById('game-root');
+  var state = null;
+
+  function shuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length-1; i>0; i--) {
+      var j = Math.floor(Math.random()*(i+1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function startGame() {
+    var stories = shuffle(STORIES).slice(0, 8);
+    state = {
+      round: 0,
+      total: stories.length,
+      stories: stories,
+      approved: 0,
+      killed: 0,
+      missed: 0,
+      catScore: 0,
+      log: [],
+      timer: null,
+      timeLeft: 20,
+      current: null
+    };
+    nextRound();
+  }
+
+  function nextRound() {
+    if (state.round >= state.total) { endGame(); return; }
+    state.current = state.stories[state.round];
+    state.timeLeft = 20;
+    renderGame();
+    startTimer();
+  }
+
+  function startTimer() {
+    clearInterval(state.timer);
+    state.timer = setInterval(function(){
+      state.timeLeft--;
+      updateTimer();
+      if (state.timeLeft <= 0) {
+        clearInterval(state.timer);
+        handleChoice('miss');
+      }
+    }, 1000);
+  }
+
+  function updateTimer() {
+    var tf = document.getElementById('timer-fill');
+    var tl = document.getElementById('timer-label');
+    if (tf) {
+      tf.style.width = (state.timeLeft / 20 * 100) + '%';
+      tl.textContent = state.timeLeft + 's';
+    }
+  }
+
+  function handleChoice(action) {
+    clearInterval(state.timer);
+    var story = state.current;
+    var correct = story.catPref;
+    var scoreDelta = 0;
+    var label = '';
+
+    if (action === 'approve') {
+      state.approved++;
+      label = '已推送';
+      if (correct === 'approve') { scoreDelta = +15; }
+      else if (correct === 'wait') { scoreDelta = -5; label += '（猫认为应再核实）'; }
+      else { scoreDelta = -20; label += '（猫认为这是噪音——Staff 被吵醒了）'; }
+    } else if (action === 'kill') {
+      state.killed++;
+      label = '已毙稿';
+      if (correct === 'kill') { scoreDelta = +10; }
+      else if (correct === 'wait') { scoreDelta = +5; }
+      else { scoreDelta = -15; label += '（你毙了猫的独家新闻）'; }
+    } else if (action === 'miss') {
+      state.missed++;
+      label = '超时未处理';
+      scoreDelta = -8;
+    }
+
+    state.catScore += scoreDelta;
+    state.log.push({
+      headline: story.headline,
+      action: label,
+      delta: scoreDelta,
+      correct: correct
+    });
+
+    state.round++;
+    setTimeout(nextRound, 400);
+  }
+
+  function renderGame() {
+    var s = state.current;
+    var urgencyColor = s.urgency > 80 ? '#cb2431' : s.urgency > 50 ? '#d69e2e' : '#6b7280';
+
+    gameRoot.innerHTML = '<div class="game-area">' +
+      '<div class="incoming">' +
+        '<div class="incoming-head">' +
+          '<div><span class="label">第 ' + (state.round+1) + ' / ' + state.total + ' 条</span>' +
+          ' <span style="margin-left:10px;color:var(--faint);font-size:12px;">来源：' + s.source + '</span></div>' +
+          '<span class="breaking-badge">BREAKING</span>' +
+        '</div>' +
+        '<div class="story-card">' +
+          '<div class="source">紧迫度 ' + s.urgency + '%</div>' +
+          '<div class="headline">' + s.headline + '</div>' +
+          '<div class="body">' + s.body + '</div>' +
+          '<div class="urgency-bar"><div class="urgency-fill" style="width:' + s.urgency + '%;background:' + urgencyColor + ';"></div></div>' +
+          '<div class="story-actions">' +
+            '<button class="story-btn publish" data-act="approve">推送头条</button>' +
+            '<button class="story-btn" data-act="wait">等一等</button>' +
+            '<button class="story-btn kill" data-act="kill">毙稿</button>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-top:14px;">' +
+          '<span style="font-size:12px;color:var(--faint);">处理时限</span>' +
+          '<span style="font-size:13px;font-weight:700;color:#cb2431;font-variant-numeric:tabular-nums;" id="timer-label">20s</span>' +
+        '</div>' +
+        '<div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%;"></div></div>' +
+      '</div>' +
+      '<div class="sidebar">' +
+        '<h3>主编评分</h3>' +
+        '<div class="metric"><span>当事猫评分</span><span class="v" style="color:' + (state.catScore >= 0 ? '#2ea043' : '#cb2431') + ';">' + (state.catScore >= 0 ? '+' : '') + state.catScore + '</span></div>' +
+        '<div class="metric"><span>已推送</span><span class="v">' + state.approved + '</span></div>' +
+        '<div class="metric"><span>已毙稿</span><span class="v">' + state.killed + '</span></div>' +
+        '<div class="metric"><span>超时</span><span class="v">' + state.missed + '</span></div>' +
+        '<h3 style="margin-top:18px;">已处理</h3>' +
+        '<div class="published-log">' + renderLog() + '</div>' +
+      '</div>' +
+    '</div>';
+
+    gameRoot.querySelectorAll('.story-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ handleChoice(btn.dataset.act); });
+    });
+  }
+
+  function renderLog() {
+    if (state.log.length === 0) return '<div style="color:var(--faint);font-size:11.5px;padding:4px;">// 暂无</div>';
+    return state.log.slice().reverse().map(function(l){
+      var cls = l.action.indexOf('推送') >= 0 ? 'approved' : l.action.indexOf('毙') >= 0 ? 'killed' : 'missed';
+      return '<div class="published-item ' + cls + '">' +
+        '<span class="action">' + l.action + '</span> ' +
+        '<span style="opacity:0.7;">(' + (l.delta >= 0 ? '+' : '') + l.delta + ')</span><br>' +
+        '<span style="opacity:0.8;">' + l.headline + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function endGame() {
+    var score = state.catScore;
+    var verdict, verdictColor;
+    if (score >= 80) { verdict = '总编级别的判断力。当事猫向你致敬。'; verdictColor = '#2ea043'; }
+    else if (score >= 40) { verdict = '合格的主编。猫允许你继续上夜班。'; verdictColor = '#0891b2'; }
+    else if (score >= 0)  { verdict = '勉强及格。下次值班注意选稿灵敏度。'; verdictColor = '#d69e2e'; }
+    else { verdict = '当事猫已发起不信任投票。编辑部重组中。'; verdictColor = '#cb2431'; }
+
+    gameRoot.innerHTML = '<div class="end-screen">' +
+      '<svg class="cat-svg" width="100" height="100" viewBox="0 0 100 100">' +
+        '<ellipse cx="50" cy="62" ry="20" rx="25" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>' +
+        '<circle cx="50" cy="40" r="18" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>' +
+        '<polygon points="35,28 33,16 44,24" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>' +
+        '<polygon points="65,28 67,16 56,24" fill="#1a1a2e" stroke="#666" stroke-width="1.5"/>' +
+        '<circle cx="43" cy="40" r="2.5" fill="#ffd700"/>' +
+        '<circle cx="57" cy="40" r="2.5" fill="#ffd700"/>' +
+      '</svg>' +
+      '<h2 style="margin:0 0 6px;">值班结束</h2>' +
+      '<div style="font-size:48px;font-weight:800;color:' + verdictColor + ';margin:12px 0;">' + (score >= 0 ? '+' : '') + score + '</div>' +
+      '<div style="font-size:13px;color:var(--faint);margin-bottom:8px;">推送 ' + state.approved + ' · 毙稿 ' + state.killed + ' · 超时 ' + state.missed + '</div>' +
+      '<p style="font-size:15px;color:' + verdictColor + ';font-weight:600;max-width:400px;margin:8px auto 24px;line-height:1.6;">' + verdict + '</p>' +
+      '<button class="start-btn" id="btn-again">再来一班</button>' +
+    '</div>';
+
+    document.getElementById('btn-again').addEventListener('click', startGame);
+  }
+
+  document.getElementById('btn-start').addEventListener('click', startGame);
+
+  // 时钟跳动
+  var baseM = 0;
+  setInterval(function(){
+    baseM = (baseM + 1) % 180; // 3 小时循环
+    var h = Math.floor(baseM / 60) + 2;
+    var m = baseM % 60;
+    var he = document.getElementById('clock-h');
+    var me = document.getElementById('clock-m');
+    if (he) he.textContent = (h < 10 ? '0' : '') + h;
+    if (me) me.textContent = (m < 10 ? '0' : '') + m;
+  }, 700);
+
+})();
+</script>
+</body>
+</html>
