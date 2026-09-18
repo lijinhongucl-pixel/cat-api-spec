@@ -29,7 +29,8 @@
     "11. 收到激光点会无视一切去追。",
     "12. 在被禁止的区域（屏幕中央）停留超过 3 秒会自动撤离。",
     "13. 走过页面内容时会啃食附近的文字与板块——被啃掉的内容过段时间自动恢复。",
-    "14. 跨页面穿越：从页面边缘走出后会在相邻页面重新出现。"
+    "14. 跨页面穿越：从页面边缘走出后会在相邻页面重新出现。",
+    "15. Token 老鼠定期在全站随机出没——会被其吸引并自动进入追捕模式。"
   ];
 
   /* ---------- DOM ---------- */
@@ -158,6 +159,12 @@
       label: "啃食内容", duration: 4000, pose: "munch", face: "HUNGRY",
       lines: ["这段不需要。", "味道还行。", "帮你们删掉了。", "不用谢。", "这个板块多余了。", "404 Content Eaten。"],
       behavior: function () { pickMunchTarget(); }
+    },
+    HUNT_TOKEN: {
+      // §15 Token 老鼠追捕：发现老鼠后全力冲刺
+      label: "追 Token 老鼠", duration: 8000, pose: "run", face: "PLAYFUL",
+      lines: ["是老鼠！", "这次跑不掉。", "锁定中…", "猎杀序列激活。"],
+      behavior: function () { chaseTokenMouse(); }
     }
   };
 
@@ -547,6 +554,282 @@
     '</svg>';
   }
 
+  /* ---------- §15 Token 老鼠系统 ---------- */
+  // 一只金色 token 主题的老鼠会定期在全站随机角落出没。
+  // 猫会被吸引进入 HUNT_TOKEN 状态全力追捕。
+  // 抓到后老鼠消失（掉落金色 token 粒子），猫获得 1 个 Token 收藏品。
+  var mouse = null;           // 老鼠 DOM 节点
+  var mouseX = 0, mouseY = 0; // 老鼠当前位置
+  var mouseTargetX = 0, mouseTargetY = 0; // 老鼠目标位置
+  var mouseActive = false;
+  var mouseEscapeTimer = null;
+  var mouseSpawnTimer = null;
+  var mouseCaught = false;
+  var mouseDir = 1;           // 老鼠朝向
+  var mouseWiggle = 0;        // 跑动时的身体摆动
+  var tokenCount = 0;         // 累计抓到的 Token 数
+
+  function svgMouse() {
+    // 金色 Token 老鼠：圆头 + 大耳朵 + 发光的金币标识
+    return ''
+    + '<svg viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg" class="lc2-mouse-body">'
+    // 尾巴
+    + '<path d="M 68 28 Q 76 20 74 12" fill="none" stroke="#b8860b" stroke-width="2" stroke-linecap="round" class="lc2-mouse-tail"/>'
+    // 身体
+    + '<ellipse cx="42" cy="30" rx="20" ry="12" fill="#d4a017" stroke="#b8860b" stroke-width="1.5"/>'
+    // 头
+    + '<circle cx="24" cy="24" r="13" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
+    // 耳朵（大圆耳）
+    + '<circle cx="17" cy="14" r="6.5" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
+    + '<circle cx="29" cy="13" r="6.5" fill="#e8b923" stroke="#b8860b" stroke-width="1.5"/>'
+    + '<circle cx="17" cy="14" r="3.5" fill="#ffc44d"/>'
+    + '<circle cx="29" cy="13" r="3.5" fill="#ffc44d"/>'
+    // 眼睛
+    + '<circle cx="20" cy="23" r="2.2" fill="#1a1a1a"/>'
+    + '<circle cx="29" cy="23" r="2.2" fill="#1a1a1a"/>'
+    + '<circle cx="20.5" cy="22.5" r="0.7" fill="#fff"/>'
+    + '<circle cx="29.5" cy="22.5" r="0.7" fill="#fff"/>'
+    // 鼻子
+    + '<circle cx="15" cy="26" r="1.8" fill="#ff6b6b"/>'
+    // 胡须
+    + '<line x1="13" y1="26" x2="5" y2="24" stroke="#b8860b" stroke-width="0.6"/>'
+    + '<line x1="13" y1="28" x2="5" y2="29" stroke="#b8860b" stroke-width="0.6"/>'
+    + '<line x1="13" y1="27" x2="4" y2="34" stroke="#b8860b" stroke-width="0.6"/>'
+    // Token 金币标识（身体上的发光标记）
+    + '<circle cx="44" cy="30" r="6" fill="#ffd700" stroke="#b8860b" stroke-width="1" opacity="0.9"/>'
+    + '<text x="44" y="33.5" text-anchor="middle" font-size="7" font-weight="bold" fill="#b8860b" font-family="monospace">T</text>'
+    // 腿（简化为小圆点，跑动时不可见）
+    + '<circle cx="32" cy="40" r="3" fill="#b8860b"/>'
+    + '<circle cx="54" cy="40" r="3" fill="#b8860b"/>'
+    // 发光晕
+    + '<circle cx="42" cy="30" r="24" fill="none" stroke="#ffd700" stroke-width="1" opacity="0.3" class="lc2-mouse-glow"/>'
+    + '</svg>';
+  }
+
+  function createMouse() {
+    if (mouse) return;
+    mouse = document.createElement('div');
+    mouse.className = 'lc2-mouse';
+    mouse.setAttribute('aria-hidden', 'true');
+    mouse.innerHTML = svgMouse();
+    document.body.appendChild(mouse);
+  }
+
+  function spawnMouse() {
+    if (mouseActive) return;
+    // 猫正在睡觉或钻纸箱时不打扰
+    if (currentStateName === "睡觉" && Math.random() < 0.5) return;
+    if (currentStateName === "钻纸箱") return;
+
+    createMouse();
+    mouseActive = true;
+    mouseCaught = false;
+
+    // 随机出没位置：避开屏幕边缘
+    var w = window.innerWidth, h = window.innerHeight;
+    var side = Math.random();
+    if (side < 0.25) {
+      // 左边进
+      mouseX = -80; mouseY = 80 + Math.random() * (h - 200);
+      mouseDir = 1;
+    } else if (side < 0.5) {
+      // 右边进
+      mouseX = w + 80; mouseY = 80 + Math.random() * (h - 200);
+      mouseDir = -1;
+    } else {
+      // 屏幕中间随机出现
+      mouseX = 80 + Math.random() * (w - 160);
+      mouseY = 80 + Math.random() * (h - 200);
+      mouseDir = Math.random() < 0.5 ? 1 : -1;
+    }
+    mouseTargetX = mouseX;
+    mouseTargetY = mouseY;
+
+    mouse.style.left = mouseX + 'px';
+    mouse.style.top = mouseY + 'px';
+    mouse.style.opacity = '0';
+    mouse.style.transform = 'translate(0,0)';
+    // 渐入
+    setTimeout(function () {
+      if (mouse) mouse.style.opacity = '1';
+    }, 50);
+
+    // 猫被吸引——切换到追老鼠状态
+    if (currentStateName !== "追激光" && currentStateName !== "清理缓存" &&
+        currentStateName !== "钻纸箱" && currentStateName !== "踩奶") {
+      transitionTo("HUNT_TOKEN");
+      speak(["有老鼠！", "Token Mouse 出现！", "这次它跑不掉了。"]);
+    }
+
+    // 老鼠自动逃跑倒计时（8-15 秒后如果没被抓到就逃跑）
+    var escapeDelay = 8000 + Math.random() * 7000;
+    clearTimeout(mouseEscapeTimer);
+    mouseEscapeTimer = setTimeout(function () {
+      if (mouseActive && !mouseCaught) {
+        escapeMouse();
+      }
+    }, escapeDelay);
+  }
+
+  function escapeMouse() {
+    if (!mouse) return;
+    mouseCaught = false;
+    mouseActive = false;
+    // 老鼠向最近的边缘逃跑
+    var w = window.innerWidth, h = window.innerHeight;
+    if (mouseX < w / 2) mouseTargetX = -100;
+    else mouseTargetX = w + 100;
+    mouseTargetY = mouseY;
+    // 渐隐
+    setTimeout(function () {
+      if (mouse) {
+        mouse.style.opacity = '0';
+        setTimeout(function () {
+          if (mouse) { mouse.remove(); mouse = null; }
+        }, 600);
+      }
+    }, 800);
+
+    // 猫从追捕状态恢复
+    if (currentStateName === "追 Token 老鼠") {
+      speak(["跑了。", "下次。", "404 Mouse Not Found。", "它比我快。这次。"]);
+      setTimeout(function () {
+        if (currentStateName === "追 Token 老鼠") {
+          transitionTo(pickWeightedState("HUNT_TOKEN"));
+        }
+      }, 1500);
+    }
+    scheduleNextMouse();
+  }
+
+  function catchMouse() {
+    if (!mouse || mouseCaught) return;
+    mouseCaught = true;
+    mouseActive = false;
+    tokenCount++;
+    // 存入 localStorage
+    try {
+      localStorage.setItem('catapi_tokens_caught', String(tokenCount));
+    } catch(e) {}
+
+    // 掉落金色 token 粒子
+    spawnTokenParticles(mouseX + 30, mouseY + 20);
+
+    // 老鼠消失动画
+    if (mouse) {
+      mouse.style.transition = 'opacity .4s ease, transform .4s ease';
+      mouse.style.opacity = '0';
+      mouse.style.transform = 'scale(0.3) rotate(180deg)';
+      setTimeout(function () {
+        if (mouse) { mouse.remove(); mouse = null; }
+      }, 400);
+    }
+
+    // 猫的胜利台词
+    speak(["抓住了！", "Token +1。", "猎杀序列闭合。", "这才是真正的食物。", "200 OK。"]);
+    // 切回正常状态
+    clearTimeout(mouseEscapeTimer);
+    setTimeout(function () {
+      if (currentStateName === "追 Token 老鼠") {
+        transitionTo("EAT");  // 抓到后进入吃东西状态
+      }
+    }, 2000);
+    scheduleNextMouse();
+  }
+
+  function spawnTokenParticles(cx, cy) {
+    for (var i = 0; i < 8; i++) {
+      var p = document.createElement('div');
+      p.className = 'lc2-token-particle';
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.setProperty('--dx', ((Math.random() - 0.5) * 120) + 'px');
+      p.style.setProperty('--dy', (-30 - Math.random() * 80) + 'px');
+      p.style.setProperty('--rot', (360 + Math.random() * 360) + 'deg');
+      document.body.appendChild(p);
+      (function (el) {
+        setTimeout(function () { if (el.parentNode) el.remove(); }, 1200);
+      })(p);
+    }
+  }
+
+  // 老鼠自己的移动逻辑：在屏幕里随机跑动，避开猫
+  function mouseTick() {
+    if (!mouse || !mouseActive) return;
+    // 计算与猫的距离
+    var dx = mouseX - x;
+    var dy = mouseY - y;
+    var distCat = Math.hypot(dx, dy);
+
+    // 检查是否被抓到
+    if (distCat < 40) {
+      catchMouse();
+      return;
+    }
+
+    // 老鼠的 AI：远离猫 + 随机游走
+    if (distCat < 200) {
+      // 猫靠近了——逃跑方向远离猫
+      mouseTargetX = mouseX + (dx / distCat) * 150 + (Math.random() - 0.5) * 60;
+      mouseTargetY = mouseY + (dy / distCat) * 100 + (Math.random() - 0.5) * 60;
+      // 限制在屏幕内
+      mouseTargetX = Math.max(20, Math.min(window.innerWidth - 80, mouseTargetX));
+      mouseTargetY = Math.max(60, Math.min(window.innerHeight - 80, mouseTargetY));
+    } else if (Math.random() < 0.02) {
+      // 远离猫时偶尔随机游走
+      mouseTargetX = 60 + Math.random() * (window.innerWidth - 160);
+      mouseTargetY = 80 + Math.random() * (window.innerHeight - 200);
+    }
+
+    // 朝目标移动（老鼠比猫快一点——增加难度）
+    var mdx = mouseTargetX - mouseX;
+    var mdy = mouseTargetY - mouseY;
+    var mdist = Math.hypot(mdx, mdy);
+    var mSpeed = distCat < 200 ? 3.5 : 1.8;  // 逃跑时更快
+    if (mdist > mSpeed) {
+      mouseX += (mdx / mdist) * mSpeed;
+      mouseY += (mdy / mdist) * mSpeed;
+    }
+    // 朝向
+    if (Math.abs(mdx) > 3) mouseDir = mdx > 0 ? 1 : -1;
+    // 摆动
+    mouseWiggle += 0.3;
+
+    mouse.style.left = mouseX + 'px';
+    mouse.style.top = mouseY + 'px';
+    mouse.style.transform = 'scaleX(' + mouseDir + ') translateY(' + Math.sin(mouseWiggle) * 2 + 'px)';
+  }
+
+  // 猫追老鼠：目标跟随老鼠位置
+  function chaseTokenMouse() {
+    targetX = Math.max(20, Math.min(window.innerWidth - 80, mouseX - 20));
+    targetY = Math.max(60, Math.min(window.innerHeight - 80, mouseY - 20));
+  }
+
+  // 下次出没时间：30-90 秒
+  function scheduleNextMouse() {
+    clearTimeout(mouseSpawnTimer);
+    var delay = 30000 + Math.random() * 60000;  // 30-90s
+    mouseSpawnTimer = setTimeout(spawnMouse, delay);
+  }
+
+  // 启动老鼠系统
+  scheduleNextMouse();
+
+  // 老鼠 tick——挂到主 tick 之后
+  var mouseRafId = null;
+  function mouseTickLoop() {
+    mouseTick();
+    mouseRafId = requestAnimationFrame(mouseTickLoop);
+  }
+  mouseRafId = requestAnimationFrame(mouseTickLoop);
+
+  // 读取已抓到的 Token 数
+  try {
+    var saved = localStorage.getItem('catapi_tokens_caught');
+    if (saved) tokenCount = parseInt(saved) || 0;
+  } catch(e) {}
+
   /* ---------- §13 啃食内容系统 ---------- */
   // 猫走到文字 / 板块上方时会「啃食」它们——被啃的元素变灰 + 显示标签，
   // 一段时间后（30-90 秒）自动恢复。
@@ -824,6 +1107,11 @@
       targetX = Math.max(20, Math.min(window.innerWidth - 80, laserX - 20));
       targetY = Math.max(60, Math.min(window.innerHeight - 80, laserY - 20));
     }
+    // §15 追 Token 老鼠：每帧更新目标到老鼠位置
+    if (currentStateName === "追 Token 老鼠" && mouseActive) {
+      targetX = Math.max(20, Math.min(window.innerWidth - 80, mouseX - 20));
+      targetY = Math.max(60, Math.min(window.innerHeight - 80, mouseY - 20));
+    }
 
     var dx = targetX - x;
     var dy = targetY - y;
@@ -836,6 +1124,7 @@
     var speed = currentStateName === "疯跑" ? 4 :
                 currentStateName === "追激光" ? 4.5 :   // 追激光最快（spec §6.2 POUNCE）
                 currentStateName === "追鼠标" ? 3 :
+                currentStateName === "追 Token 老鼠" ? 4.2 :   // 追老鼠很快（接近 ZOOMIES 速度）
                 currentStateName === "巡视领地" ? 1.8 :
                 currentStateName === "玩耍" ? 2.5 : 1.2;
 
@@ -1210,7 +1499,9 @@
     getQuota: getQuota,
     setQuota: setQuota,
     getFullness: function () { return munchFullness; },
-    munchElement: function (el) { doMunch(el); }  // 手动啃指定元素
+    munchElement: function (el) { doMunch(el); },  // 手动啃指定元素
+    spawnMouse: function () { spawnMouse(); },     // 手动生成 Token 老鼠
+    getTokenCount: function () { return tokenCount; }
   };
 
   start();
