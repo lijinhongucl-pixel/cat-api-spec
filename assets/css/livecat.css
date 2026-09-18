@@ -604,6 +604,50 @@
 }
 .lc2-portal-hint.show { opacity: 1; }
 
+/* ---------- §15 Token 老鼠 ---------- */
+.lc2-mouse {
+  position: fixed;
+  width: 70px;
+  height: 44px;
+  pointer-events: none;
+  z-index: 9998;
+  transition: opacity .4s ease;
+  filter: drop-shadow(0 3px 8px rgba(212, 160, 23, 0.4));
+  animation: lc2-mouse-bounce 0.3s ease-in-out infinite;
+}
+@keyframes lc2-mouse-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.lc2-mouse-body { width: 100%; height: 100%; display: block; }
+.lc2-mouse-tail { animation: lc2-mouse-tail-wag 0.4s ease-in-out infinite; transform-origin: 68px 28px; }
+@keyframes lc2-mouse-tail-wag {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(15deg); }
+}
+.lc2-mouse-glow { animation: lc2-mouse-glow-pulse 1.5s ease-in-out infinite; }
+@keyframes lc2-mouse-glow-pulse {
+  0%, 100% { opacity: 0.2; }
+  50%      { opacity: 0.5; }
+}
+
+/* Token 掉落粒子（金色金币） */
+.lc2-token-particle {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle, #ffd700 0%, #d4a017 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 0 6px #ffd700, 0 0 12px rgba(255,215,0,0.5);
+  animation: lc2-token-fly 1.2s ease-out forwards;
+}
+@keyframes lc2-token-fly {
+  0%   { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx, 0), var(--dy, 0)) scale(0.3) rotate(var(--rot, 360deg)); }
+}
+
 /* ---------- 移动端适配 ---------- */
 @media (max-width: 600px) {
   .lc2-cat { width: 80px; height: 56px; }
