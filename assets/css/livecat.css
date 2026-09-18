@@ -517,6 +517,93 @@
 .lc2-btn:hover { transform: scale(1.15); background: #f9fafb; }
 .lc2-btn:active { transform: scale(0.9); }
 
+/* ---------- 啃食内容 MUNCH ---------- */
+/* 被猫啃掉的元素：灰度 + 半透明 + 上方挂一个啃咬痕迹标签 */
+.lc2-munched {
+  color: var(--faint, #9ca3af) !important;
+  background: rgba(0,0,0,0.03) !important;
+  filter: grayscale(1) opacity(0.5);
+  position: relative;
+  transition: filter .4s ease, opacity .4s ease, color .4s ease;
+  pointer-events: none;
+  user-select: none;
+}
+.lc2-munched img,
+.lc2-munched svg {
+  filter: grayscale(1) opacity(0.4) !important;
+}
+.lc2-munched::after {
+  content: '🐾 已被猫啃食 · 恢复中…';
+  position: absolute;
+  top: -1.4em;
+  left: 0;
+  font-size: 10px;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 1px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 9;
+  font-family: -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  animation: lc2-munch-label-pop .3s ease;
+}
+@keyframes lc2-munch-label-pop {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* 啃食动作：猫趴在文字上啃 —— 身体压低前倾 + 嘴动 */
+.state-munch .lc2-body {
+  transform: translateY(6px) scaleY(0.88) rotate(-5deg);
+  transform-origin: 50% 80%;
+  animation: lc2-munch-chew 0.35s ease-in-out infinite;
+}
+@keyframes lc2-munch-chew {
+  0%, 100% { transform: translateY(6px) scaleY(0.88) rotate(-5deg); }
+  50%      { transform: translateY(4px) scaleY(0.82) rotate(-3deg); }
+}
+.state-munch .lc2-tail {
+  transform-origin: 71.9px 33.6px;
+  animation: lc2-tail-swish 0.6s ease-in-out infinite;
+}
+
+/* 飘落的「啃咬碎屑」粒子 */
+.lc2-crumb {
+  position: fixed;
+  width: 4px; height: 4px;
+  background: #92400e;
+  border-radius: 1px;
+  pointer-events: none;
+  z-index: 9998;
+  animation: lc2-crumb-fall 0.8s ease-out forwards;
+}
+@keyframes lc2-crumb-fall {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx, 20px), var(--dy, 40px)) rotate(180deg); }
+}
+
+/* ---------- 跨页面穿越指示器 ---------- */
+.lc2-portal-hint {
+  position: fixed;
+  bottom: 10px;
+  right: 12px;
+  font-size: 10.5px;
+  color: var(--faint, #9ca3af);
+  background: rgba(255,255,255,0.85);
+  padding: 3px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line, #e5e7eb);
+  pointer-events: none;
+  z-index: 9998;
+  font-family: 'SF Mono', Consolas, monospace;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+.lc2-portal-hint.show { opacity: 1; }
+
 /* ---------- 移动端适配 ---------- */
 @media (max-width: 600px) {
   .lc2-cat { width: 80px; height: 56px; }
@@ -552,6 +639,7 @@
   .state-stretch .lc2-body, .state-stretch .lc2-tail, .state-stretch .lc2-mouth,
   .state-yawn .lc2-mouth, .state-yawn .lc2-eyes, .state-yawn .lc2-tail,
   .state-stalk .lc2-body, .state-stalk .lc2-pupil-l, .state-stalk .lc2-tail,
+  .state-munch .lc2-body, .state-munch .lc2-tail,
   .lc2-idle-blink .lc2-eye-l, .lc2-idle-blink .lc2-eye-r,
   .lc2-idle-blink .lc2-pupil-l, .lc2-idle-blink .lc2-pupil-r,
   .lc2-idle-ear .lc2-ear-l, .lc2-idle-ear .lc2-ear-r,
