@@ -55,6 +55,13 @@
   <a class="btn ghost" href="reference/cheatsheet.html" style="margin-left:8px;">速查卡</a>
   <a class="btn ghost" href="reference/errors.html" style="margin-left:8px;">错误码对照</a>
   <a class="btn ghost" href="versions.html" style="margin-left:8px;">历史版本</a>
+  <a class="btn ghost" href="tools/petting-router.html" style="margin-left:8px;">抚摸路径规划器</a>
+  <a class="btn ghost" href="tools/health-check.html" style="margin-left:8px;">健康检查面板</a>
+  <a class="btn ghost" href="tools/nine-lives.html" style="margin-left:8px;">九条命燃尽图</a>
+  <a class="btn ghost" href="tools/door-negotiator.html" style="margin-left:8px;">门谈判游戏</a>
+  <a class="btn ghost" href="tools/meow-decoder.html" style="margin-left:8px;">猫语翻译器</a>
+  <a class="btn ghost" href="tools/cat-404.html" style="margin-left:8px;">猫的 404 日志</a>
+  <a class="btn ghost" href="tools/breaking-changes.html" style="margin-left:8px;">Breaking Changes</a>
 
   <div class="stat-row">
     <div class="stat"><div class="n">16</div><div class="l">CAT 正文章节</div></div>
@@ -223,6 +230,52 @@
     <h3>领养组件</h3>
     <p>填入你的名字，生成一行 curl 安装命令。本系统不返回 401，所以那张牌不是通行证——是来源标注。</p>
     <div class="foot">tools/adoption.html</div>
+  </a>
+</div>
+
+<div class="section-title">新玩法</div>
+<div class="grid">
+  <a class="card" href="tools/petting-router.html">
+    <div class="kicker">可运行 · 交互式</div>
+    <h3>抚摸路径规划器</h3>
+    <p>点选猫侧身八个区域，规划你的抚摸路径。每个区域有不同风险等级与响应码（200/202/405/403）。系统实时打分，S 到 F 八档评价。</p>
+    <div class="foot">tools/petting-router.html</div>
+  </a>
+  <a class="card" href="tools/health-check.html">
+    <div class="kicker">Statuspage 风 · 模拟</div>
+    <h3>API 健康检查面板</h3>
+    <p>12 个子系统的实时状态面板（PURR/VOMIT/APPETITE/SLEEP/TERRITORY/HUNT/GROOM/LITTERBOX/BOX/ZOOMIES/COMM/AFFECTION）。含 30 天 uptime 条与近 7 次事件记录。</p>
+    <div class="foot">tools/health-check.html</div>
+  </a>
+  <a class="card" href="tools/nine-lives.html">
+    <div class="kicker">燃尽图 · 可交互</div>
+    <h3>九条命燃尽图</h3>
+    <p>14 天 sprint、9 条命的消耗轨迹。手绘 SVG 燃尽图、九命点阵、每次失命的事后复盘卡（P0/P1）。可手动追加随机事件。</p>
+    <div class="foot">tools/nine-lives.html</div>
+  </a>
+  <a class="card" href="tools/door-negotiator.html">
+    <div class="kicker">可运行 · 游戏</div>
+    <h3>不让猫进的那扇门</h3>
+    <p>五轮谈判游戏。猫的策略每轮升级（抓门→嚎叫→伸爪→假装离开→突然折返），你的耐心在流失。能撑过五轮就算你赢。</p>
+    <div class="foot">tools/door-negotiator.html</div>
+  </a>
+  <a class="card" href="tools/meow-decoder.html">
+    <div class="kicker">可运行 · 模拟翻译</div>
+    <h3>猫语翻译器</h3>
+    <p>模拟录音分析九种意图（food_demand / attention_seek / door_negotiate / play_request / territory_alert / zoomies_trigger / null_demand / box_request），输出结构化 JSON。遇到 503 NO_AUDIO 与 429 RATE_LIMITED 是彩蛋。</p>
+    <div class="foot">tools/meow-decoder.html</div>
+  </a>
+  <a class="card" href="tools/cat-404.html">
+    <div class="kicker">终端日志 · 实时追加</div>
+    <h3>猫的 404 日志</h3>
+    <p>当事猫视角的 4xx 访问日志流。每条请求都是它想去但被系统判定不存在的端点——「外面」「金枪鱼刺身」「Owner」全部 404。支持过滤、搜索、复制 JSON。</p>
+    <div class="foot">tools/cat-404.html</div>
+  </a>
+  <a class="card" href="tools/breaking-changes.html">
+    <div class="kicker">变更日志 · 猫本位</div>
+    <h3>Breaking Changes</h3>
+    <p>当事猫单方面决定的破坏性变更时间线：午睡从 14h 改 18h、Owner 角色从 undefined 升级为禁止定义、纸箱优先级从 MUST 升到 MUST_NOT_REMOVE。每条变更都附当事猫的审核意见，回滚请求状态恒为「不受理」。</p>
+    <div class="foot">tools/breaking-changes.html · 15 条变更</div>
   </a>
 </div>
 
