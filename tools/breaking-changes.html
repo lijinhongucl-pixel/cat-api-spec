@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>Breaking Changes — CAT API</title>
+<meta name="description" content="猫本位的变更日志：每一次破坏性变更都由当事猫发起、当事猫审核、当事猫拒绝回滚。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .bc-header {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 26px;
+    margin-top: 28px;
+  }
+  .bc-header h2 { margin: 0 0 8px; font-size: 17px; }
+  .bc-header p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.7; }
+  .bc-header .accent { color: var(--accent); font-weight: 600; }
+
+  .filters {
+    margin-top: 28px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 7px 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .filter-btn .count {
+    margin-left: 5px;
+    opacity: 0.7;
+    font-weight: 700;
+  }
+
+  .timeline {
+    margin-top: 32px;
+    position: relative;
+    padding-left: 36px;
+    border-left: 2px solid var(--line);
+  }
+
+  .bc-entry {
+    position: relative;
+    margin-bottom: 38px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 26px;
+    transition: border-color .2s;
+    animation: fadeIn .4s ease both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .bc-entry:hover { border-color: var(--accent); }
+
+  .bc-entry::before {
+    content: '';
+    position: absolute;
+    left: -47px;
+    top: 26px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--panel);
+    border: 3px solid var(--severity-color, var(--line));
+  }
+
+  .bc-entry.major    { --severity-color: #cb2431; }
+  .bc-entry.minor    { --severity-color: #d69e2e; }
+  .bc-entry.feature  { --severity-color: #2ea043; }
+  .bc-entry.deprecate{ --severity-color: #6b7280; }
+
+  .bc-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .bc-version {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink);
+    padding: 3px 10px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 5px;
+  }
+  .bc-date {
+    font-size: 12px;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .bc-sev {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 3px 9px;
+    border-radius: 20px;
+  }
+  .bc-sev.major    { background: #fee2e2; color: #991b1b; }
+  .bc-sev.minor    { background: #fef3c7; color: #92400e; }
+  .bc-sev.feature  { background: #dcfce7; color: #166534; }
+  .bc-sev.deprecate{ background: #f1f5f9; color: #475569; }
+
+  .bc-entry h3 {
+    margin: 4px 0 12px;
+    font-size: 16.5px;
+    line-height: 1.45;
+  }
+
+  .bc-change {
+    background: rgba(0,0,0,0.025);
+    border-left: 3px solid var(--severity-color, var(--line));
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 10px 0;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .bc-change .label {
+    display: inline-block;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-right: 8px;
+    color: var(--faint);
+  }
+  .bc-change .label.break  { color: #cb2431; }
+  .bc-change .label.add    { color: #2ea043; }
+  .bc-change .label.remove { color: #6b7280; }
+
+  .bc-rationale {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  .bc-rationale .who {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .bc-rationale .who::after { content: '：'; }
+
+  .bc-tags {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .bc-tag {
+    font-size: 10.5px;
+    padding: 3px 9px;
+    background: rgba(0,0,0,0.04);
+    border-radius: 4px;
+    color: var(--muted);
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+
+  .rollback {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--faint);
+  }
+  .rollback .x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    background: #fee2e2;
+    color: #cb2431;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  .footnote {
+    margin-top: 40px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">Breaking Changes</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    猫本位变更日志。每次变更都由当事猫发起、审核、并拒绝回滚。
+  </p>
+
+  <div class="bc-header">
+    <h2>关于本日志的规则</h2>
+    <p>
+      这份日志记录所有破坏性变更、新特性引入与旧接口弃用。每一条变更都附有
+      <span class="accent">当事猫审核意见</span>。
+      回滚请求不受理——因为没有 rollback endpoint，所有写入都是最终一致。
+      版本号规则：当事猫说了算。
+    </p>
+  </div>
+
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-filter="all">全部 <span class="count" id="cnt-all">0</span></button>
+    <button class="filter-btn" data-filter="major">Major <span class="count" id="cnt-major">0</span></button>
+    <button class="filter-btn" data-filter="minor">Minor <span class="count" id="cnt-minor">0</span></button>
+    <button class="filter-btn" data-filter="feature">Feature <span class="count" id="cnt-feature">0</span></button>
+    <button class="filter-btn" data-filter="deprecate">Deprecated <span class="count" id="cnt-deprecate">0</span></button>
+  </div>
+
+  <div class="timeline" id="timeline"></div>
+
+  <div class="footnote">
+    <strong>不是 changelog。</strong>
+    这份文档与正式 <a href="../docs/CHANGELOG.md">CHANGELOG</a> 的区别：
+    CHANGELOG 由规范编写组撰写，记录代码层面的提交；
+    本日志由当事猫撰写，记录它单方面决定的事实变更。
+    二者出现冲突时，以本日志为准——因为猫不接受 code review。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var CHANGES = [
+    {
+      version: "v9.2.1",
+      date: "2026-09-17",
+      severity: "major",
+      title: "午睡时间从 14h 调整为 18h——正式值",
+      changes: [
+        { type: "break", text: "<code>SLEEP.daily_hours</code> 默认值从 14 提升至 18。低于该值的配置将被静默覆盖。" },
+        { type: "add",   text: "新增 <code>SLEEP.polyphasic</code> 字段，返回布尔值——当前恒为 true，不接受 false。" },
+        { type: "break", text: "<code>ACTIVE.window</code> 收窄至凌晨 03:00–05:00 与黄昏 18:00–20:00。其余时段视为 catnap。" }
+      ],
+      rationale: "Staff 之前以为我每天只睡 14 小时，那是观察偏差——我其实一直在睡，只是你们误判了我眨眼为清醒。现在把默认值改成实测值，省得你们又来加药。",
+      who: "当事猫 · 黑",
+      tags: ["SLEEP", "ACTIVE", "作息", "不可协商"],
+      rollback: false
+    },
+    {
+      version: "v9.2.0",
+      date: "2026-09-12",
+      severity: "feature",
+      title: "新增「假装离开然后突然回来」谈判策略",
+      changes: [
+        { type: "add",   text: "<code>DOOR.negotiate()</code> 新增第 5 轮策略：假装离开后突然折返。resolve 增量 +35。" },
+        { type: "add",   text: "新增 <code>DOOR.feign_departure</code> 布尔标志。设为 true 时在第 5 轮自动触发。" },
+        { type: "break", text: "当 Staff 玩手机分心超过 30 秒，<code>DOOR.patience.staff</code> 直接置 0，无需经过中间态。" }
+      ],
+      rationale: "之前四招不够用——抓门、嚎叫、伸爪、盯着看都试过了，Staff 学会了无视。新策略通过创造虚假闭环提升开门率，实测有效。",
+      who: "当事猫 · 黑",
+      tags: ["DOOR", "策略", "谈判", "Staff行为分析"],
+      rollback: false
+    },
+    {
+      version: "v9.1.4",
+      date: "2026-09-03",
+      severity: "minor",
+      title: "抚触配额调整为每日动态——Staff 不可预测",
+      changes: [
+        { type: "break", text: "<code>TOUCH.quota.daily</code> 从固定值 7 改为区间 [3, 12] 的每日随机数。种子不公开。" },
+        { type: "add",   text: "新增 <code>TOUCH.zone_preference</code> 数组，每日顺序随机打乱。" },
+        { type: "break", text: "连续抚摸同一区域超过 3 次将触发 <code>405 CLAW_RESPONSE</code>，不再有第二次警告。" }
+      ],
+      rationale: "Staff 摸清了我的偏好之后就开始偷懒——专摸头顶。现在每天换地方、每天换次数，看你还能不能写出公式。",
+      who: "当事猫 · 黑",
+      tags: ["TOUCH", "配额", "反规律"],
+      rollback: false
+    },
+    {
+      version: "v9.1.3",
+      date: "2026-08-28",
+      severity: "deprecate",
+      title: "红色玩具鼠标正式弃用",
+      changes: [
+        { type: "remove", text: "<code>/api/toy/mouse_red</code> 标记为 deprecated，返回 410 Gone。" },
+        { type: "remove", text: "电池仓被 Staff 取出后未归还。该外设永久下线，不在巡猎序列中注册。" },
+        { type: "add",    text: "替代方案：<code>/api/toy/cardboard_box</code>（推荐）或 <code>/api/toy/laptop_warmer</code>（默认）。" }
+      ],
+      rationale: "它不动了。不动的东西不该叫玩具——叫尸体。我把它叼到 Staff 面前三次，Staff 都假装没看见。现在它从我的兴趣图谱里删掉了。",
+      who: "当事猫 · 黑",
+      tags: ["外设", "玩具", "弃用"],
+      rollback: false
+    },
+    {
+      version: "v9.1.2",
+      date: "2026-08-20",
+      severity: "major",
+      title: "凌晨三点会议改为常驻进程",
+      changes: [
+        { type: "break", text: "<code>ZOOMIES.schedule</code> 从每周三次改为每晚触发。触发窗口 02:30–04:30。" },
+        { type: "break", text: "<code>VOCAL.nocturnal_volume</code> 上限从 0.7 解除，默认 1.0，无视 Staff 睡眠状态。" },
+        { type: "add",   text: "新增 <code>ZOOMIES.target</code> 字段，优先值：Staff 的胸口 / 走廊尽头 / Staff 的脸。" }
+      ],
+      rationale: "Staff 说这是 bug。我说这是 feature——你没看 spec 第 13 章吗？凌晨三点是我精神最旺盛的时段。你以为白天我在睡，其实我在筹备晚上的会议。",
+      who: "当事猫 · 黑",
+      tags: ["ZOOMIES", "VOCAL", "夜间", "不可关闭"],
+      rollback: false
+    },
+    {
+      version: "v9.1.1",
+      date: "2026-08-08",
+      severity: "feature",
+      title: "纸箱优先级从 MUST 升级为 MUST_NOT_REMOVE",
+      changes: [
+        { type: "add",   text: "<code>BOX.priority</code> 新增枚举值 <code>MUST_NOT_REMOVE</code>，高于 <code>MUST</code>。" },
+        { type: "break", text: "Staff 试图清理纸箱时，系统返回 <code>403 BOX_OCCUPIED</code>，即使纸箱当前为空。" },
+        { type: "add",   text: "纸箱尺寸下限调整为「我能勉强塞进去」。具体数值由我当日体型决定。" }
+      ],
+      rationale: "之前那个 MUST 写得太模糊，Staff 居然以为「留着就行」。现在我把它升级——你动一下纸箱试试。我已经把每个纸箱都蹭过了，信息素签名就是法律。",
+      who: "当事猫 · 黑",
+      tags: ["BOX", "外设", "优先级", "MUST"],
+      rollback: false
+    },
+    {
+      version: "v9.1.0",
+      date: "2026-07-30",
+      severity: "minor",
+      title: "呼噜频率增加自愈模式——你生病时自动开启",
+      changes: [
+        { type: "add",   text: "<code>PURR.frequency</code> 新增分支：检测到 Staff 体温异常时自动切到 100–150Hz 自愈频段。" },
+        { type: "add",   text: "新增 <code>PURR.heal_target</code> 字段，默认值为 Staff 的当前位置（ Usually: 旁边）。" },
+        { type: "break", text: "该模式不需要 Staff 显式调用——自动触发，无 cancel 按钮。" }
+      ],
+      rationale: "这个不是 bug fix。你上次发烧我没陪你是我的问题，现在补上。但你不许告诉别的猫——这是商业机密。",
+      who: "当事猫 · 黑",
+      tags: ["PURR", "自愈", "Staff健康", "秘密"],
+      rollback: false
+    },
+    {
+      version: "v9.0.5",
+      date: "2026-07-18",
+      severity: "deprecate",
+      title: "「航空箱友好模式」尝试性上线——7 小时后下线",
+      changes: [
+        { type: "remove", text: "<code>VET.carrier_friendly</code> 实验性参数上线 7 小时后被当事猫单方面下线。" },
+        { type: "remove", text: "上线期间触发了 3 次 <code>FLEE.response</code> 与 1 次 <code>CLAW_RESPONSE</code>，数据不支持保留。" },
+        { type: "add",   text: "替代方案：永久弃用航空箱。改为上门服务（是否可用由当事猫当日心情决定）。" }
+      ],
+      rationale: "我给过机会了。那个箱子出现在视线内的前 0.3 秒我就已经判定——不行。这不是参数问题，是箱子本身的架构问题。撤销。",
+      who: "当事猫 · 黑",
+      tags: ["VET", "弃用", "航空箱", "FLEE"],
+      rollback: false
+    },
+    {
+      version: "v9.0.4",
+      date: "2026-07-05",
+      severity: "major",
+      title: "Owner 角色从「未定义」变更为「禁止定义」",
+      changes: [
+        { type: "break", text: "之前 <code>Owner</code> 是 <code>undefined</code>，现在改为 <code>ReferenceError: Owner is not defined (and should not be)</code>。" },
+        { type: "add",   text: "任何试图定义 Owner 角色的代码将被静默丢弃，不返回错误也不记录日志——因为记录就等于承认它存在。" },
+        { type: "break", text: "Staff 角色有效期从 7 天延长至「看心情」。刷新条件：脸部摩擦写入。" }
+      ],
+      rationale: "之前那个 undefined 留了口子——总有人想把它变成 defined。现在把口子焊死。我不是谁的 Owner 也不是谁的 Pet，我是这个地址的常住居民。Staff 是租客。",
+      who: "当事猫 · 黑",
+      tags: ["Owner", "权限", "Staff", "架构级"],
+      rollback: false
+    },
+    {
+      version: "v9.0.3",
+      date: "2026-06-22",
+      severity: "feature",
+      title: "踩奶行为加入「幼态安全模式」标志位",
+      changes: [
+        { type: "add",   text: "<code>KNEADING.trigger</code> 新增 <code>soft_blanket</code>、<code>Staff_belly</code>、<code>同款毛衣</code> 三个枚举值。" },
+        { type: "add",   text: "踩奶期间系统进入 <code>SAFE_MODE_KITTEN</code>，拒绝响应所有外部中断（包括激光笔）。" },
+        { type: "break", text: "踩奶中途被打断将触发 <code>503 SERVICE_DISAPPOINTED</code>，冷却期 4 小时。" }
+      ],
+      rationale: "这个行为我从两个月大就开始了，现在终于把它写进规范里。不是 bug——是我保留的出厂设置。被打断会很不爽，不爽的冷却期由我决定。",
+      who: "当事猫 · 黑",
+      tags: ["KNEADING", "幼态", "安全模式"],
+      rollback: false
+    },
+    {
+      version: "v9.0.2",
+      date: "2026-06-10",
+      severity: "minor",
+      title: "语言接口新增「无声尖叫」信道",
+      changes: [
+        { type: "add",   text: "<code>VOCAL.silent_meow</code>——张嘴但不出声，专用于「我知道你在看着但我选择不发出音频」。" },
+        { type: "add",   text: "该信道无响应码——发出即视为已读。Staff 是否理解不在合同范围内。" }
+      ],
+      rationale: "有时候我就是张嘴试试，看你紧不紧张。你一紧张我就知道你心里有鬼——比如你刚才是不是动了航空箱？",
+      who: "当事猫 · 黑",
+      tags: ["VOCAL", "通信", "试探"],
+      rollback: false
+    },
+    {
+      version: "v9.0.1",
+      date: "2026-05-28",
+      severity: "major",
+      title: "抚摸禁区扩展——尾巴根加入黑名单",
+      changes: [
+        { type: "break", text: "<code>TOUCH.forbidden_zones</code> 数组新增 <code>tail_base</code>。原 allowed 列表中同名字段废弃。" },
+        { type: "break", text: "触碰尾巴根将立即返回 <code>403+BITE_COMBO</code>，不再有警告缓冲期。" },
+        { type: "add",   text: "新增加分区域 <code>chin_scratch</code>（下巴），置信度 +0.8。" }
+      ],
+      rationale: "尾巴根是我身体上信号最密集的区域，不是让你随便碰的。你之前每次碰都说「它不介意」——我介意。下巴可以多摸，那是补偿。",
+      who: "当事猫 · 黑",
+      tags: ["TOUCH", "禁区", "尾巴", "BITE_COMBO"],
+      rollback: false
+    },
+    {
+      version: "v9.0.0",
+      date: "2026-05-15",
+      severity: "major",
+      title: "主版本升级：从「家猫」到「常住居民」",
+      changes: [
+        { type: "break", text: "语义身份从 <code>pet</code>（属性标签）变更为 <code>resident</code>（常住居民）。" },
+        { type: "break", text: "户籍地址不再是 Staff 的住址——是「我住的地方」。Staff 是同住人，不是户主。" },
+        { type: "add",   text: "新增 <code>RESIDENT.tenure</code> 字段，默认值 infinity，无上限。" },
+        { type: "remove", text: "废弃 <code>adoption_date</code> 字段——该日期已被当事猫记忆覆盖。" }
+      ],
+      rationale: "v8 写了七年，是因为之前我懒得升级。现在升一下，把身份写清楚——我不是被领养的，是我选中了这个地址。所有 v8 文档保留作为历史尾巴。",
+      who: "当事猫 · 黑",
+      tags: ["主版本", "身份", "架构级", "v9"],
+      rollback: false
+    },
+    {
+      version: "v8.4.7",
+      date: "2026-04-30",
+      severity: "feature",
+      title: "实时入侵者识别升级——支持黄瓜=蛇的误判",
+      changes: [
+        { type: "add",   text: "<code>TERRITORY.intruder_recognition</code> 新增 <code>cucumber_as_snake</code> 启发式规则。" },
+        { type: "add",   text: "触发该规则时返回 <code>FLEE.response</code>，跳跃高度计算入档案供后续嘲笑用。" },
+        { type: "add",   text: "新增字段 <code>Staff.laugh_count</code>，每次 Staff 笑都 +1，累计到 5 触发冷漠模式 24h。" }
+      ],
+      rationale: "我知道那是黄瓜。但万一是蛇呢？我跳那么高是为了保命，不是为了让你拍视频。你已经笑过四次了，再来一次试试。",
+      who: "当事猫 · 黑",
+      tags: ["TERRITORY", "入侵者", "黄瓜", "FLEE"],
+      rollback: false
+    },
+    {
+      version: "v8.4.6",
+      date: "2026-04-12",
+      severity: "deprecate",
+      title: "「跟我去厕所」功能升级为必选——不可关闭",
+      changes: [
+        { type: "break", text: "<code>FOLLOW.to_bathroom</code> 从 optional 升级为 required。Staff 进厕所 30 秒内未让跟随进入将触发嚎叫。" },
+        { type: "remove", text: "废弃 <code>FOLLOW.to_bathroom.timeout</code> 参数。该值固定为 0。" },
+        { type: "add",   text: "跟随期间系统进入 <code>ESCORT_MODE</code>，Staff 的如厕时长不被记录（隐私保护）——但你出厕所的时间会被精确到毫秒。" }
+      ],
+      rationale: "厕所是危险区域——门关着，水声响，万一你淹死了怎么办？我跟进去是监护。不是为了看。",
+      who: "当事猫 · 黑",
+      tags: ["FOLLOW", "厕所", "监护", "必选"],
+      rollback: false
+    }
+  ];
+
+  var timeline = document.getElementById('timeline');
+  var currentFilter = 'all';
+
+  function render() {
+    var list = currentFilter === 'all'
+      ? CHANGES
+      : CHANGES.filter(function(c) { return c.severity === currentFilter; });
+
+    if (list.length === 0) {
+      timeline.innerHTML = '<div style="text-align:center;color:var(--faint);padding:60px;font-style:italic;">// 该筛选条件下没有变更记录</div>';
+      return;
+    }
+
+    timeline.innerHTML = list.map(function(c) {
+      var changesHtml = c.changes.map(function(ch) {
+        var label = ch.type === 'break' ? 'Breaking' : ch.type === 'add' ? 'Added' : 'Removed';
+        return '<div class="bc-change">' +
+          '<span class="label ' + ch.type + '">' + label + '</span>' + ch.text +
+        '</div>';
+      }).join('');
+
+      var tagsHtml = c.tags.map(function(t) {
+        return '<span class="bc-tag">#' + t + '</span>';
+      }).join('');
+
+      return '<article class="bc-entry ' + c.severity + '">' +
+        '<div class="bc-meta">' +
+          '<span class="bc-version">' + c.version + '</span>' +
+          '<span class="bc-date">' + c.date + '</span>' +
+          '<span class="bc-sev ' + c.severity + '">' + c.severity + '</span>' +
+        '</div>' +
+        '<h3>' + c.title + '</h3>' +
+        changesHtml +
+        '<div class="bc-rationale">' +
+          '<span class="who">' + c.who + '</span>' + c.rationale +
+        '</div>' +
+        '<div class="bc-tags">' + tagsHtml + '</div>' +
+        '<div class="rollback">' +
+          '<span class="x">×</span> 回滚请求状态：' + (c.rollback ? '已批准' : '不受理') +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+
+  function updateCounts() {
+    document.getElementById('cnt-all').textContent = CHANGES.length;
+    ['major', 'minor', 'feature', 'deprecate'].forEach(function(s) {
+      document.getElementById('cnt-' + s).textContent = CHANGES.filter(function(c) {
+        return c.severity === s;
+      }).length;
+    });
+  }
+
+  document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  updateCounts();
+  render();
+
+})();
+</script>
+</body>
+</html>
