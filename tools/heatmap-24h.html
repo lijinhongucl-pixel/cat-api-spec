@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>24h 作息热力图 — CAT API</title>
+<meta name="description" content="一周 × 24 小时的活动强度热力矩阵，基于猫的真实作息规律（晨昏型、多相睡眠）。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .heatmap-card {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 26px;
+  }
+  .heatmap-card h3 { margin: 0 0 6px; font-size: 14px; }
+  .heatmap-card .sub { font-size: 12.5px; color: var(--faint); margin-bottom: 18px; }
+
+  .heatmap-svg-wrap { overflow-x: auto; }
+  .heatmap-svg-wrap svg { width: 100%; min-width: 720px; height: auto; }
+
+  .tooltip {
+    position: fixed;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0;
+    transition: opacity .15s;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .t { font-weight: 700; }
+  .tooltip .d { opacity: 0.7; font-size: 11px; margin-top: 2px; }
+
+  .legend-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .legend-gradient {
+    flex: 1;
+    height: 12px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #f1f5f9 0%, #dbeafe 25%, #93c5fd 50%, #3b82f6 75%, #1e3a8a 100%);
+  }
+  .legend-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 4px;
+    font-size: 10.5px;
+    color: var(--faint);
+  }
+
+  .state-legend {
+    margin-top: 14px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .state-legend .item { display: flex; align-items: center; gap: 6px; }
+  .state-legend .sw { width: 14px; height: 14px; border-radius: 3px; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 24px;
+  }
+  @media (max-width: 720px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+  .stat-cell {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-cell .v { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .stat-cell .l { font-size: 11px; color: var(--faint); margin-top: 4px; }
+
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 7px 16px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+
+  .peak-section { margin-top: 32px; }
+  .peak-section h3 { font-size: 14px; margin: 0 0 14px; }
+  .peak-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .peak-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    border-left: 4px solid var(--peak-color, var(--line));
+  }
+  .peak-card .time { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .peak-card .state { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .peak-card .desc { font-size: 12.5px; color: var(--ink); margin-top: 8px; line-height: 1.6; }
+
+  .footnote {
+    margin-top: 40px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">24h 作息热力图</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    一周 × 24 小时活动强度矩阵。猫是晨昏性动物——最活跃的时段不是你以为的白天。
+  </p>
+
+  <div class="heatmap-card">
+    <h3>活动强度矩阵</h3>
+    <div class="sub">7 天 × 24 小时 · 颜色越深代表活动强度越高（SLEEP → CATNAP → ACTIVE → ZOOMIES）</div>
+    <div class="heatmap-svg-wrap">
+      <svg id="heatmap" viewBox="0 0 820 280"></svg>
+    </div>
+    <div class="legend-bar">
+      <span>低</span>
+      <div style="flex:1;">
+        <div class="legend-gradient"></div>
+        <div class="legend-labels"><span>SLEEP</span><span>CATNAP</span><span>ACTIVE</span><span>PEAK</span><span>ZOOMIES</span></div>
+      </div>
+      <span>高</span>
+    </div>
+    <div class="state-legend">
+      <div class="item"><span class="sw" style="background:#f1f5f9;"></span> 深度睡眠</div>
+      <div class="item"><span class="sw" style="background:#dbeafe;"></span> 浅睡 / 踩奶</div>
+      <div class="item"><span class="sw" style="background:#93c5fd;"></span> 理毛 / 进食</div>
+      <div class="item"><span class="sw" style="background:#3b82f6;"></span> 活跃 / 狩猎</div>
+      <div class="item"><span class="sw" style="background:#1e3a8a;"></span> ZOOMIES</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-cell"><div class="v" id="s-sleep">—</div><div class="l">日均睡眠 (h)</div></div>
+    <div class="stat-cell"><div class="v" id="s-active" style="color:#3b82f6;">—</div><div class="l">日均活跃 (h)</div></div>
+    <div class="stat-cell"><div class="v" id="s-zoomies" style="color:#1e3a8a;">—</div><div class="l">本周 ZOOMIES (次)</div></div>
+    <div class="stat-cell"><div class="v" id="s-peak" style="color:#cb2431;">—</div><div class="l">峰值时段</div></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btn-regen">重新生成一周</button>
+    <button class="btn ghost" id="btn-day">切换：工作日 vs 周末</button>
+  </div>
+
+  <div class="peak-section">
+    <h3>每日规律分析</h3>
+    <div class="peak-list" id="peak-list"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>关于这份热力图。</strong>
+    猫是晨昏性动物（crepuscular），不是夜行性——它的活跃高峰在黎明（05:00–07:00）与黄昏（18:00–20:00）。
+    你以为它白天一直在睡？其实它在多相睡眠（polyphasic）：每次 15–30 分钟，穿插着短暂清醒。
+    ZOOMIES 的触发有其生物学基础：日落前后猫科动物的狩猎本能被激活。
+    Staff 的作息（朝九晚六）恰好与猫的活跃高峰重叠度最低——这是进化设计，不是 bug。
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+</body>
+</html>
+
+<script>
+(function(){
+  "use strict";
+
+  var DAYS = ['周一','周二','周三','周四','周五','周六','周日'];
+  var STATES = [
+    { name: '深度睡眠',   level: 0, color: '#f1f5f9', desc: 'REM 或非 REM 深睡，无外部响应' },
+    { name: '浅睡/踩奶',  level: 1, color: '#dbeafe', desc: '浅睡可被唤醒，偶发踩奶' },
+    { name: '理毛/进食',  level: 2, color: '#93c5fd', desc: '低速活动——grooming 或少量进食' },
+    { name: '活跃/狩猎',  level: 3, color: '#3b82f6', desc: '正常活跃，玩耍或巡视领地' },
+    { name: 'ZOOMIES',   level: 4, color: '#1e3a8a', desc: '全速奔跑，无法预测，不可中断' }
+  ];
+
+  var svg = document.getElementById('heatmap');
+  var tooltip = document.getElementById('tooltip');
+  var mode = 'weekday';
+
+  // 基础作息模式（24 小时数组）
+  var BASE_PATTERN = [
+    // 0   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23
+       4,  4,  3,  4,  4,  3,  3,  2,  1,  1,  1,  2,  1,  1,  1,  1,  2,  2,  3,  4,  4,  3,  3,  4
+  ];
+
+  function generateWeek() {
+    var grid = [];
+    for (var d = 0; d < 7; d++) {
+      var row = [];
+      var isWeekend = d >= 5;
+      for (var h = 0; h < 24; h++) {
+        var base = BASE_PATTERN[h];
+        // 周末凌晨更活跃（Staff 熬夜）
+        if (isWeekend && h >= 0 && h <= 3) base = Math.min(4, base + 1);
+        // 加随机扰动
+        var noise = Math.floor(Math.random() * 3) - 1;
+        var level = Math.max(0, Math.min(4, base + noise));
+        row.push(level);
+      }
+      grid.push(row);
+    }
+    return grid;
+  }
+
+  function render(grid) {
+    var cellW = 30, cellH = 28, gap = 2;
+    var labelW = 40, labelH = 20;
+    var W = labelW + 24 * (cellW + gap);
+    var H = labelH + 7 * (cellH + gap);
+
+    var parts = [];
+
+    // 小时标签
+    for (var h = 0; h < 24; h++) {
+      var x = labelW + h * (cellW + gap) + cellW/2;
+      parts.push('<text x="'+x+'" y="'+(labelH - 6)+'" text-anchor="middle" font-size="10" fill="var(--faint)" font-family="inherit">'+(h < 10 ? '0' : '')+h+'</text>');
+    }
+    // 天标签
+    for (var d = 0; d < 7; d++) {
+      var y = labelH + d * (cellH + gap) + cellH/2 + 3;
+      parts.push('<text x="6" y="'+y+'" font-size="11" fill="var(--muted)" font-family="inherit" font-weight="600">'+DAYS[d]+'</text>');
+    }
+
+    // 单元格
+    for (var day = 0; day < 7; day++) {
+      for (var hr = 0; hr < 24; hr++) {
+        var level = grid[day][hr];
+        var state = STATES[level];
+        var cx = labelW + hr * (cellW + gap);
+        var cy = labelH + day * (cellH + gap);
+        parts.push('<rect x="'+cx+'" y="'+cy+'" width="'+cellW+'" height="'+cellH+'" rx="3" fill="'+state.color+'" stroke="var(--line)" stroke-width="0.5" data-day="'+day+'" data-hour="'+hr+'" data-level="'+level+'" class="hm-cell" style="cursor:pointer;"/>');
+      }
+    }
+
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.innerHTML = parts.join('');
+
+    // 绑定 hover
+    svg.querySelectorAll('.hm-cell').forEach(function(cell) {
+      cell.addEventListener('mouseenter', function(e) {
+        var day = parseInt(cell.dataset.day);
+        var hr  = parseInt(cell.dataset.hour);
+        var lvl = parseInt(cell.dataset.level);
+        var st  = STATES[lvl];
+        var hrStr = (hr < 10 ? '0' : '') + hr + ':00';
+        tooltip.innerHTML = '<div class="t">' + DAYS[day] + ' ' + hrStr + '</div><div class="d">' + st.name + ' · ' + st.desc + '</div>';
+        tooltip.classList.add('show');
+      });
+      cell.addEventListener('mousemove', function(e) {
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top  = (e.clientY - 40) + 'px';
+      });
+      cell.addEventListener('mouseleave', function() {
+        tooltip.classList.remove('show');
+      });
+    });
+
+    updateStats(grid);
+    renderPeaks(grid);
+  }
+
+  function updateStats(grid) {
+    var totalSleep = 0, totalActive = 0, totalZoom = 0;
+    var hourFreq = new Array(24).fill(0);
+
+    grid.forEach(function(row) {
+      row.forEach(function(lvl, h) {
+        if (lvl <= 1) totalSleep += 0.5; // 每 0.5h
+        if (lvl >= 3) totalActive += 0.5;
+        if (lvl === 4) totalZoom++;
+        if (lvl >= 3) hourFreq[h]++;
+      });
+    });
+
+    document.getElementById('s-sleep').textContent  = (totalSleep / 7).toFixed(1) + 'h';
+    document.getElementById('s-active').textContent = (totalActive / 7).toFixed(1) + 'h';
+    document.getElementById('s-zoomies').textContent = totalZoom;
+
+    // 峰值时段
+    var peakH = 0, peakV = 0;
+    hourFreq.forEach(function(v, h) { if (v > peakV) { peakV = v; peakH = h; } });
+    document.getElementById('s-peak').textContent = (peakH < 10 ? '0' : '') + peakH + ':00';
+  }
+
+  function renderPeaks(grid) {
+    var items = [
+      { time: '03:00', range: [2, 5], color: '#1e3a8a', state: 'ZOOMIES 高峰',
+        desc: '本时段系统进入全速模式。Staff 睡眠剥夺指数本周最高。' },
+      { time: '06:00', range: [5, 7], color: '#3b82f6', state: '黎明狩猎窗口',
+        desc: '晨昏性动物的第一个活跃峰值。要求 Staff 投喂——否则启用嚎叫。' },
+      { time: '13:00', range: [12, 14], color: '#93c5fd', state: '午后低速',
+        desc: '一天中最安静的时段。深度睡眠占比最高。' },
+      { time: '19:00', range: [18, 20], color: '#3b82f6', state: '黄昏狩猎窗口',
+        desc: '第二个活跃峰值。狩猎序列闭合成功率最高。' },
+      { time: '22:00', range: [21, 23], color: '#dbeafe', state: '夜间预热',
+        desc: '从低速逐步爬升。Staff 上床之前最后的窗口。' }
+    ];
+
+    document.getElementById('peak-list').innerHTML = items.map(function(p) {
+      return '<div class="peak-card" style="--peak-color:' + p.color + ';">' +
+        '<div class="time">' + p.time + '</div>' +
+        '<div class="state">' + p.state + '</div>' +
+        '<div class="desc">' + p.desc + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  var currentGrid = generateWeek();
+  render(currentGrid);
+
+  document.getElementById('btn-regen').addEventListener('click', function() {
+    currentGrid = generateWeek();
+    render(currentGrid);
+  });
+
+  document.getElementById('btn-day').addEventListener('click', function() {
+    // 切换：周末更活跃 / 工作日更标准
+    mode = mode === 'weekday' ? 'weekend' : 'weekday';
+    currentGrid = generateWeek();
+    render(currentGrid);
+  });
+
+})();
+</script>
+</body>
+</html>
