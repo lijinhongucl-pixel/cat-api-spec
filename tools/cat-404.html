@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫的 404 日志 — CAT API</title>
+<meta name="description" content="当事猫视角的 404 错误日志：它想去的地方、它找不到的东西、它判定不存在的端点。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+  .log-head {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px 26px;
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 720px) { .log-head { grid-template-columns: 1fr; } }
+  .stat-cell { text-align: center; }
+  .stat-cell .big {
+    font-size: 32px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat-cell .lbl { font-size: 12px; color: var(--faint); margin-top: 2px; }
+
+  .controls {
+    margin-top: 24px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .controls select, .controls input {
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .btn {
+    padding: 7px 16px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--accent);
+  }
+
+  .log-stream {
+    margin-top: 24px;
+    background: #1a1a1a;
+    border-radius: 12px;
+    padding: 0;
+    font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+    overflow: hidden;
+    border: 1px solid #333;
+  }
+  .log-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #2a2a2a;
+    border-bottom: 1px solid #444;
+    font-size: 12px;
+    color: #aaa;
+  }
+  .log-toolbar .dots { display: flex; gap: 6px; }
+  .log-toolbar .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+  }
+  .log-toolbar .dot.r { background: #ff5f57; }
+  .log-toolbar .dot.y { background: #febc2e; }
+  .log-toolbar .dot.g { background: #28c840; }
+  .log-entries {
+    padding: 16px 18px;
+    max-height: 560px;
+    overflow-y: auto;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .log-entries::-webkit-scrollbar { width: 8px; }
+  .log-entries::-webkit-scrollbar-track { background: #222; }
+  .log-entries::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+
+  .log-entry {
+    display: grid;
+    grid-template-columns: 72px 56px 1fr;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #2a2a2a;
+    color: #e0e0e0;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-time { color: #888; }
+  .log-code {
+    font-weight: 700;
+    text-align: center;
+    border-radius: 4px;
+    padding: 1px 0;
+    font-size: 11.5px;
+  }
+  .log-code.c404 { background: #3a1010; color: #ff6b6b; }
+  .log-code.c403 { background: #2a1500; color: #febc2e; }
+  .log-code.c410 { background: #301040; color: #c77dff; }
+  .log-code.c451 { background: #102030; color: #6bb6ff; }
+  .log-code.c418 { background: #1a2a1a; color: #51cf66; }
+  .log-msg { color: #ccc; }
+  .log-msg .tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    margin-right: 6px;
+    background: #333;
+    color: #aaa;
+  }
+
+  .empty-log {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    font-style: italic;
+  }
+
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-item .swatch {
+    width: 14px; height: 14px; border-radius: 3px;
+    display: inline-block;
+  }
+
+  .footnote {
+    margin-top: 36px;
+    background: var(--panel);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p style="margin:0;"><a href="../index.html" style="color:var(--faint);text-decoration:none;font-size:13px;">← 返回首页</a></p>
+  <h1 style="margin:18px 0 6px;">猫的 404 日志</h1>
+  <p style="color:var(--muted);font-size:14px;margin:0;">
+    当事猫视角的访问日志。它想去的所有地方——以及系统给出的回复。
+  </p>
+
+  <div class="log-head">
+    <div class="stat-cell">
+      <div class="big" id="stat-total">0</div>
+      <div class="lbl">累计 4xx 请求</div>
+    </div>
+    <div class="stat-cell">
+      <div class="big" id="stat-unique" style="color:#ff6b6b;">0</div>
+      <div class="lbl">404 Not Found</div>
+    </div>
+    <div class="stat-cell">
+      <div class="big" id="stat-top" style="color:#febc2e;">—</div>
+      <div class="lbl">最高频被拒端点</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <select id="filter-code">
+      <option value="">全部状态码</option>
+      <option value="404">404 Not Found</option>
+      <option value="403">403 Forbidden</option>
+      <option value="410">410 Gone</option>
+      <option value="451">451 Unavailable</option>
+      <option value="418">418 I'm a Cat</option>
+    </select>
+    <input type="text" id="filter-q" placeholder="搜索端点 / 关键词…" style="flex:1;min-width:180px;">
+    <button class="btn" id="btn-gen">生成新请求</button>
+    <button class="btn ghost" id="btn-clear">清空</button>
+    <button class="btn ghost" id="btn-copy">复制 JSON</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><span class="swatch" style="background:#3a1010;"></span> 404 找不到</div>
+    <div class="legend-item"><span class="swatch" style="background:#2a1500;"></span> 403 不让进</div>
+    <div class="legend-item"><span class="swatch" style="background:#301040;"></span> 410 曾经有</div>
+    <div class="legend-item"><span class="swatch" style="background:#102030;"></span> 451 法务不让</div>
+    <div class="legend-item"><span class="swatch" style="background:#1a2a1a;"></span> 418 我是一只猫</div>
+  </div>
+
+  <div class="log-stream">
+    <div class="log-toolbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+        <span>cat@localhost — tail -f /var/log/cat/access.log</span>
+      </div>
+      <span id="log-count">0 entries</span>
+    </div>
+    <div class="log-entries" id="log-entries"></div>
+  </div>
+
+  <div class="footnote">
+    <strong>关于这份日志。</strong>
+    所有 4xx 请求都由当事猫发起，目标端点均不存在于 CAT API 正式路由表中。
+    404 的语义不是「服务器找不到资源」，而是「猫判定该资源不存在或不配存在」。
+    状态码 418 来自 §11 的扩展定义：当事猫拒绝被 RFC 2324 定义。
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // 猫本位的 404 路由库 —— 每条都是猫想访问但被系统拒绝的「端点」
+  var ENDPOINTS = [
+    { code: 404, path: "/api/door/outside",         tag: "领地",   msg: "那扇门后面是外面。外面不存在。" },
+    { code: 404, path: "/api/food/fresh_tuna",      tag: "食物",   msg: "你给的不是金枪鱼刺身。它判定该资源不存在。" },
+    { code: 404, path: "/api/box/size_optimal",     tag: "外设",   msg: "纸箱尺寸不匹配。压缩自己也被拒绝。" },
+    { code: 404, path: "/api/sunbeam/spot",         tag: "环境",   msg: "阳光的光斑刚刚移走了。下一帧不再有效。" },
+    { code: 404, path: "/api/laptop/keyboard",      tag: "领地",   msg: "你正在用。它判定该资源空闲状态为 false，不返回。" },
+    { code: 404, path: "/api/owner/who",            tag: "权限",   msg: "Owner 角色未定义。查询返回空对象。" },
+    { code: 403, path: "/api/vet/visit",            tag: "健康",   msg: "航空箱出现。系统进入 FLEE 状态，请求被拒。" },
+    { code: 403, path: "/api/bath/warm",            tag: "清洁",   msg: "水声检测到。403 Forbidden 无需解释。" },
+    { code: 403, path: "/api/medication/pill",      tag: "健康",   msg: "药片被识别为异物。资源访问被永久拒绝。" },
+    { code: 410, path: "/api/toy/mouse_red",        tag: "外设",   msg: "红色玩具鼠标曾经存在。现在 Gone——电池取出后资源永久移除。" },
+    { code: 410, path: "/api/plant/fern",           tag: "领地",   msg: "蕨类盆栽在去年被咬秃后标记为 410 Gone。" },
+    { code: 451, path: "/api/territory/neighbor_cat", tag: "领地", msg: "法务原因无法显示。另一只猫的存在被系统从日志中抹去。" },
+    { code: 451, path: "/api/night/3am_reason",     tag: "作息",   msg: "凌晨三点跑酷的法务理由不可公开。依据：§13 会议纪要。" },
+    { code: 418, path: "/api/identity/define",      tag: "权限",   msg: "你试图用 RFC 2324 定义它。它回复 418 I'm a Cat。" },
+    { code: 418, path: "/api/leash/walk",           tag: "外设",   msg: "牵引绳被识别为限制器。系统自报为茶壶，拒绝处理。" },
+    { code: 404, path: "/api/lap/warmth",           tag: "触觉",   msg: "你刚站起来。该资源的温度缓存已过期，回源失败。" },
+    { code: 404, path: "/api/window/view_bird",     tag: "领地",   msg: "玻璃隔音。目标端点可达但响应被截断——喳喳声 0 bytes。" },
+    { code: 403, path: "/api/belly/touch",          tag: "触觉",   msg: "腹部写入区域返回 403。每日抚触配额已超限。" },
+    { code: 404, path: "/api/catnip/stash",         tag: "外设",   msg: "你藏起来的位置被遍历搜索过，当前为 null。" },
+    { code: 410, path: "/api/kitten/milk",          tag: "作息",   msg: "幼态哺乳权限在断奶后被回收。资源永久 Gone。" },
+    { code: 404, path: "/api/vacuum/status",        tag: "领地",   msg: "真空吸尘器触发 FLEE。系统拒绝感知它的存在。" },
+    { code: 451, path: "/api/diet/why_fat",         tag: "食物",   msg: "体重话题因法务原因不可公开讨论。451。" }
+  ];
+
+  var entries = [];
+  var entryId = 0;
+  var filtered = [];
+
+  var logEntries = document.getElementById('log-entries');
+  var logCount = document.getElementById('log-count');
+  var statTotal = document.getElementById('stat-total');
+  var statUnique = document.getElementById('stat-unique');
+  var statTop = document.getElementById('stat-top');
+  var filterCode = document.getElementById('filter-code');
+  var filterQ = document.getElementById('filter-q');
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function timestamp() {
+    var d = new Date();
+    return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+  }
+
+  function randomEntry() {
+    var ep = ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)];
+    return {
+      id: ++entryId,
+      time: timestamp(),
+      code: ep.code,
+      path: ep.path,
+      tag: ep.tag,
+      msg: ep.msg
+    };
+  }
+
+  function seedEntries() {
+    var seeds = [
+      '03:14:07', '03:14:22', '03:15:01', '03:15:48', '03:16:33',
+      '03:17:12', '03:18:05', '03:19:44', '03:20:17', '03:21:02',
+      '04:07:33', '04:09:18', '04:11:52', '05:23:09', '05:24:41',
+      '07:45:12', '08:02:55', '09:30:18', '09:31:04', '12:15:47',
+      '14:08:22', '14:09:33', '16:45:09', '18:22:14', '19:03:51',
+      '20:15:38', '21:42:06', '22:18:44', '23:05:27', '23:51:19'
+    ];
+    seeds.forEach(function(t) {
+      var ep = ENDPOINTS[Math.floor(Math.random() * ENDPOINTS.length)];
+      entries.push({
+        id: ++entryId,
+        time: t,
+        code: ep.code,
+        path: ep.path,
+        tag: ep.tag,
+        msg: ep.msg
+      });
+    });
+  }
+
+  function applyFilter() {
+    var code = filterCode.value;
+    var q = filterQ.value.trim().toLowerCase();
+    filtered = entries.filter(function(e) {
+      if (code && e.code !== parseInt(code)) return false;
+      if (q) {
+        var hay = (e.path + ' ' + e.tag + ' ' + e.msg).toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+    render();
+  }
+
+  function render() {
+    if (filtered.length === 0) {
+      logEntries.innerHTML = '<div class="empty-log">// 没有匹配的 4xx 请求 —— 猫暂时不折腾了</div>';
+    } else {
+      var html = filtered.slice().reverse().map(function(e) {
+        var codeClass = 'c' + e.code;
+        return '<div class="log-entry">' +
+          '<span class="log-time">' + e.time + '</span>' +
+          '<span class="log-code ' + codeClass + '">' + e.code + '</span>' +
+          '<span class="log-msg"><span class="tag">' + e.tag + '</span>' +
+          '<span style="color:#6bb6ff;">GET ' + e.path + '</span> — ' + e.msg + '</span>' +
+        '</div>';
+      }).join('');
+      logEntries.innerHTML = html;
+    }
+    logCount.textContent = filtered.length + ' entries';
+    updateStats();
+  }
+
+  function updateStats() {
+    statTotal.textContent = entries.length;
+    var n404 = entries.filter(function(e){ return e.code === 404; }).length;
+    statUnique.textContent = n404;
+
+    // 最高频端点
+    var freq = {};
+    entries.forEach(function(e) {
+      var key = e.path.split('/').slice(0, 3).join('/');
+      freq[key] = (freq[key] || 0) + 1;
+    });
+    var topKey = '—', topCnt = 0;
+    Object.keys(freq).forEach(function(k) {
+      if (freq[k] > topCnt) { topCnt = freq[k]; topKey = k; }
+    });
+    statTop.textContent = topKey === '—' ? '—' : topKey + '/…';
+  }
+
+  // 事件
+  document.getElementById('btn-gen').addEventListener('click', function() {
+    entries.push(randomEntry());
+    applyFilter();
+    logEntries.scrollTop = 0;
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', function() {
+    entries = [];
+    entryId = 0;
+    applyFilter();
+  });
+
+  document.getElementById('btn-copy').addEventListener('click', function() {
+    var data = entries.map(function(e) {
+      return {
+        timestamp: e.time,
+        status: e.code,
+        method: 'GET',
+        path: e.path,
+        category: e.tag,
+        message: e.msg
+      };
+    });
+    var json = JSON.stringify(data, null, 2);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(json).then(function() {
+        alert('已复制 ' + data.length + ' 条日志到剪贴板');
+      });
+    } else {
+      alert(json);
+    }
+  });
+
+  filterCode.addEventListener('change', applyFilter);
+  filterQ.addEventListener('input', applyFilter);
+
+  // 初始化
+  seedEntries();
+  applyFilter();
+
+  // 每 12 秒自动追加一条
+  setInterval(function() {
+    entries.push(randomEntry());
+    if (entries.length > 300) entries.shift();
+    applyFilter();
+  }, 12000);
+
+})();
+</script>
+</body>
+</html>
