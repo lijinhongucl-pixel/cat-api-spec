@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>不让猫进的那扇门 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 28px 80px; }
+
+  .stage {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+    min-height: 480px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 门场景插画 */
+  .door-scene {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0 24px;
+  }
+  .door-svg { width: 200px; height: 260px; }
+  .door-svg .knob { transition: transform .4s; transform-origin: 170px 130px; }
+  .door-svg.shaking .door-panel { animation: doorShake .3s ease-in-out infinite; }
+  .door-svg.opening .door-panel { animation: doorOpen .8s ease-out forwards; transform-origin: 20px 30px; }
+  @keyframes doorShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+  }
+  @keyframes doorOpen {
+    0% { transform: rotateY(0); }
+    100% { transform: rotateY(-75deg); }
+  }
+
+  /* 回合状态 */
+  .round-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 18px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .round-pips { display: flex; gap: 6px; }
+  .round-pip {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--line);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .round-pip.done { background: var(--accent); }
+  .round-pip.now { background: #d69e2e; box-shadow: 0 0 0 3px rgba(214,158,46,0.2); }
+
+  /* 猫动作描述 */
+  .cat-action {
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    padding: 14px 18px;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.8;
+    min-height: 28px;
+    transition: opacity .25s;
+  }
+  .cat-action .speaker { font-weight: 700; color: var(--accent); margin-right: 8px; }
+
+  /* 选项按钮 */
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 580px) { .choices { grid-template-columns: 1fr; } }
+  .choice-btn {
+    padding: 14px 18px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13.5px;
+    color: var(--ink);
+    text-align: left;
+    transition: all .15s;
+    line-height: 1.5;
+  }
+  .choice-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .choice-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .choice-btn .icon { margin-right: 6px; }
+  .choice-btn .meta { display: block; font-size: 11.5px; color: var(--faint); margin-top: 3px; }
+
+  /* 谈判状态条 */
+  .resolve-bar {
+    margin: 18px 0;
+    background: var(--line);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .resolve-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #d69e2e, #cb2431);
+    border-radius: 4px;
+    transition: width .4s;
+    width: 0%;
+  }
+  .resolve-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 4px; }
+
+  /* 终局 */
+  .ending {
+    text-align: center;
+    padding: 28px 20px;
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  .ending h2 { font-size: 22px; margin-bottom: 12px; }
+  .ending .verdict { font-weight: 700; font-size: 18px; margin: 10px 0; }
+  .ending .verdict.win  { color: #2ea043; }
+  .ending .verdict.lose { color: #cb2431; }
+  .ending .verdict.draw { color: #d69e2e; }
+  .ending button {
+    margin-top: 18px;
+    padding: 10px 22px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+  }
+
+  /* 猫的进化等级 */
+  .cat-level {
+    display: inline-block;
+    padding: 2px 10px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: 'SF Mono', Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="quantifier.html">量化评估器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <span class="doc-tag">CAT API · 门谈判协议</span>
+  <h1 style="font-size:28px;margin:14px 0 8px;">不让猫进的那扇门</h1>
+  <p style="font-size:14px;color:var(--muted);line-height:1.8;max-width:640px;">
+    你在门的一边，猫在另一边。5 回合谈判，决定是否开门。
+    每回合猫会升级策略（抓门→嚎叫→伸爪→假装离开→突袭）。
+    猫对封闭空间的执念不等于想进去——进去后 50% 概率马上出来（CAP 定理）。
+  </p>
+
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var stage = document.getElementById('stage');
+  var TOTAL_ROUNDS = 5;
+
+  // 猫的策略升级路径
+  var catStrategies = [
+    { name: '抓门',       desc: '猫开始抓门。指甲划过木板的声音，你脑子里。',         resolve: 12 },
+    { name: '嚎叫',       desc: '抓门无效。猫切换到嚎叫频道。这是它专门为你开发的高频接口。', resolve: 18 },
+    { name: '伸出一只爪', desc: '门缝底下伸出毛茸茸的爪子，在你视野里试探。',         resolve: 25 },
+    { name: '假装离开',   desc: '脚步声远去。安静。你觉得它走了。但你没那么幸运。',     resolve: 15 },
+    { name: '突然回来',   desc: '门口响起剧烈的撞击——它冲回来了。它一直没走，只是在蹲守。', resolve: 30 }
+  ];
+
+  // 你的选项
+  var choices = [
+    { icon: '🚪', label: '开门',     meta: '满足请求 · 可能被反复',         resolve: -40, patience: 0 },
+    { icon: '💬', label: '说话',     meta: '无效但你觉得有必要',            resolve: 5,  patience: 2 },
+    { icon: '🙈', label: '忽略',     meta: '猫会升级 · 但你也能冷静',         resolve: 10, patience: 1 },
+    { icon: '🐟', label: '放食物诱饵', meta: '转移注意力 · 可能有效也可能没有', resolve: -8, patience: 3 }
+  ];
+
+  var state;
+
+  function init() {
+    state = {
+      round: 1,
+      resolve: 0,       // 猫的决心值 0-100
+      patience: 10,     // 你的耐心值
+      log: [],
+      opened: false,
+      surrendered: false
+    };
+    render();
+  }
+
+  function render() {
+    if (state.opened || state.surrendered || state.round > TOTAL_ROUNDS) {
+      return renderEnding();
+    }
+    var strategy = catStrategies[state.round - 1];
+    var pips = '';
+    for (var i = 1; i <= TOTAL_ROUNDS; i++) {
+      var cls = i < state.round ? 'done' : (i === state.round ? 'now' : '');
+      pips += '<div class="round-pip ' + cls + '">' + i + '</div>';
+    }
+
+    var html = '';
+
+    // 门场景
+    html += '<div class="door-scene"><svg class="door-svg' + (state.resolve > 60 ? ' shaking' : '') + '" viewBox="0 0 200 260">' +
+      '<!-- 门框 -->' +
+      '<rect x="15" y="20" width="170" height="230" fill="none" stroke="#3a3a38" stroke-width="3" rx="4"/>' +
+      '<!-- 门板 -->' +
+      '<g class="door-panel">' +
+        '<rect x="20" y="25" width="160" height="220" fill="#8b6f4e" stroke="#3a3a38" stroke-width="2" rx="3"/>' +
+        '<rect x="35" y="40" width="130" height="80" fill="#7a6243" stroke="#3a3a38" stroke-width="1" rx="2"/>' +
+        '<rect x="35" y="135" width="130" height="100" fill="#7a6243" stroke="#3a3a38" stroke-width="1" rx="2"/>' +
+        '<circle class="knob" cx="170" cy="130" r="6" fill="#d4a574" stroke="#3a3a38" stroke-width="1.5"/>' +
+      '</g>' +
+      '<!-- 门缝下的猫爪（回合 >= 3）-->' +
+      (state.round >= 3 ? '<g><ellipse cx="100" cy="248" rx="14" ry="5" fill="#3a3a38"/><ellipse cx="92" cy="246" rx="3" ry="3" fill="#3a3a38"/><ellipse cx="108" cy="246" rx="3" ry="3" fill="#3a3a38"/></g>' : '') +
+    '</svg></div>';
+
+    // 回合指示器
+    html += '<div class="round-bar">' +
+      '<span>回合 ' + state.round + ' / ' + TOTAL_ROUNDS + '</span>' +
+      '<div class="round-pips">' + pips + '</div>' +
+      '<span>猫决心 <span class="cat-level">Lv ' + state.round + '</span></span>' +
+    '</div>';
+
+    // 决心进度条
+    html += '<div class="resolve-bar"><div class="resolve-fill" style="width:' + state.resolve + '%"></div></div>';
+    html += '<div class="resolve-labels"><span>冷静</span><span>决心 ' + state.resolve + '%</span><span>必然开门</span></div>';
+
+    // 猫的回合（动作）
+    html += '<div class="cat-action" id="catAction">' +
+      '<span class="speaker">🐱 [' + strategy.name + ']</span>' + strategy.desc +
+    '</div>';
+
+    // 你的选项
+    html += '<div class="choices" id="choices">';
+    choices.forEach(function (c, i) {
+      html += '<button class="choice-btn" data-idx="' + i + '" onclick="makeChoice(' + i + ')">' +
+        '<span class="icon">' + c.icon + '</span><strong>' + c.label + '</strong>' +
+        '<span class="meta">' + c.meta + '</span>' +
+      '</button>';
+    });
+    html += '</div>';
+
+    // 历史
+    if (state.log.length > 0) {
+      html += '<div style="margin-top:18px;padding:12px 0;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);">';
+      html += '<strong>谈判记录：</strong><br>';
+      state.log.forEach(function (l) {
+        html += '<div style="padding:3px 0;">回合 ' + l.round + ' · ' + l.summary + '</div>';
+      });
+      html += '</div>';
+    }
+
+    stage.innerHTML = html;
+  }
+
+  window.makeChoice = function (idx) {
+    var c = choices[idx];
+    var strat = catStrategies[state.round - 1];
+    state.resolve = Math.max(0, Math.min(100, state.resolve + strat.resolve + c.resolve));
+    state.patience = Math.max(0, state.patience - c.patience);
+
+    var summary = '你选「' + c.label + '」 · 猫决心 ' + state.resolve + '%';
+
+    if (state.resolve >= 100) {
+      summary += ' → 你投降了';
+      state.surrendered = true;
+    } else if (c.label === '开门') {
+      state.opened = true;
+      summary = '你开门了。猫进来了。看了一圈。3 秒后出去了。';
+    }
+    state.log.push({ round: state.round, summary: summary });
+    state.round++;
+    render();
+  };
+
+  function renderEnding() {
+    var html = '<div class="ending">';
+    html += '<div class="door-scene"><svg class="door-svg' + (state.opened ? ' opening' : '') + '" viewBox="0 0 200 260">' +
+      '<rect x="15" y="20" width="170" height="230" fill="none" stroke="#3a3a38" stroke-width="3" rx="4"/>' +
+      '<g class="door-panel">' +
+        '<rect x="20" y="25" width="160" height="220" fill="#8b6f4e" stroke="#3a3a38" stroke-width="2" rx="3"/>' +
+        '<rect x="35" y="40" width="130" height="80" fill="#7a6243" stroke="#3a3a38" stroke-width="1" rx="2"/>' +
+        '<rect x="35" y="135" width="130" height="100" fill="#7a6243" stroke="#3a3a38" stroke-width="1" rx="2"/>' +
+        '<circle class="knob" cx="170" cy="130" r="6" fill="#d4a574" stroke="#3a3a38" stroke-width="1.5"/>' +
+      '</g></svg></div>';
+
+    if (state.opened) {
+      html += '<h2>🔒 → 🔓</h2>';
+      html += '<div class="verdict draw">你开了门</div>';
+      html += '<p>猫走进去。巡视一周。<br>3 秒后，它从你腿边走过去，<br>坐在门外的地板上，开始舔爪子。<br><strong>它根本不想进去。</strong></p>';
+      html += '<p style="font-size:13px;color:var(--faint);margin-top:14px;">事件归档：POST /door/negotiate · 200 OK · 持续时间 ' + ((state.round - 1) * 47) + 's · Staff 消耗耐心 ' + (10 - state.patience) + '/10</p>';
+    } else if (state.surrendered) {
+      html += '<h2>🏳️</h2>';
+      html += '<div class="verdict lose">猫赢了</div>';
+      html += '<p>它的决心值冲到 100%。<br>你撑了 ' + (state.round - 1) + ' 个回合，最后还是开了门。<br>猫看了看门里面，转身走了。</p>';
+      html += '<p style="font-size:13px;color:var(--faint);margin-top:14px;">CAT 在 door negotiation 上保持全胜纪录。你的同行：所有 Staff。</p>';
+    } else {
+      html += '<h2>🛡️</h2>';
+      html += '<div class="verdict win">门保住了</div>';
+      html += '<p>5 回合结束，你没开门。<br>猫蹲在门口又看了 30 秒，<br>然后跳上窗台看鸟。<br>它从来就没那么想进去。</p>';
+      html += '<p style="font-size:13px;color:var(--faint);margin-top:14px;">503 Service Survived · 猫的决心峰值 ' + state.resolve + '% · 你的耐心余量 ' + state.patience + '/10</p>';
+    }
+
+    html += '<button onclick="restart()">再来一次</button>';
+    html += '</div>';
+    stage.innerHTML = html;
+  }
+
+  window.restart = init;
+  init();
+})();
+</script>
+
+</body>
+</html>
