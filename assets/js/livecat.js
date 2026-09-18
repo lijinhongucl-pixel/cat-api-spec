@@ -30,7 +30,8 @@
     "12. 在被禁止的区域（屏幕中央）停留超过 3 秒会自动撤离。",
     "13. 走过页面内容时会啃食附近的文字与板块——被啃掉的内容过段时间自动恢复。",
     "14. 跨页面穿越：从页面边缘走出后会在相邻页面重新出现。",
-    "15. Token 老鼠定期在全站随机出没——会被其吸引并自动进入追捕模式。"
+    "15. Token 老鼠定期在全站随机出没——会被其吸引并自动进入追捕模式。",
+    "16. 老鼠可被用户点击抓走（用户比猫更准）。老鼠出没在哪个 tab，全站都能感应到。"
   ];
 
   /* ---------- DOM ---------- */
@@ -708,8 +709,69 @@
     mouse = document.createElement('div');
     mouse.className = 'lc2-mouse';
     mouse.setAttribute('aria-hidden', 'true');
+    mouse.setAttribute('role', 'button');
+    mouse.setAttribute('tabindex', '0');
+    mouse.setAttribute('title', '点我抓走！(鼠标彩蛋)');
     mouse.innerHTML = svgMouse();
     document.body.appendChild(mouse);
+
+    // §15b 用户点击交互彩蛋：用户抓老鼠
+    // 点击 / 触摸 / 回车都能触发——抓到后掉落双倍 Token 粒子 + 庆祝气泡
+    var userCatch = function (ev) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (!mouse || mouseCaught) return;
+      catchMouseByUser();
+    };
+    mouse.addEventListener('click', userCatch);
+    mouse.addEventListener('touchstart', userCatch, { passive: false });
+    mouse.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); userCatch(ev); }
+    });
+  }
+
+  // 用户亲手抓住老鼠：比猫抓奖励更丰厚（双倍粒子 + 猫吃醋台词）
+  function catchMouseByUser() {
+    if (!mouse || mouseCaught) return;
+    mouseCaught = true;
+    mouseActive = false;
+    tokenCount += 2;  // 用户抓得比猫准——奖励翻倍
+    try { localStorage.setItem('catapi_tokens_caught', String(tokenCount)); } catch(e) {}
+
+    // 双倍 Token 粒子爆裂
+    spawnTokenParticles(mouseX + 30, mouseY + 20);
+    spawnTokenParticles(mouseX + 60, mouseY + 10);
+    spawnTokenParticles(mouseX + 10, mouseY + 40);
+
+    // 老鼠「被抓」动画（旋转 + 缩小 + 上飘）
+    mouse.classList.add('lc2-mouse-caught-by-user');
+    setTimeout(function () {
+      if (mouse) { mouse.remove(); mouse = null; }
+    }, 700);
+
+    // 清理计时器
+    clearTimeout(mouseEscapeTimer);
+
+    // 猫的反应（吃醋 / 惊讶 / 认输）
+    var reactions = [
+      "……那是我的。", "你怎么抢我的活？", "行。你厉害。", "工资该给你发。",
+      "Token +2。但我记住了。", "抢食。人类就会抢食。", "你抓得确实快。这次。"
+    ];
+    speak(reactions);
+
+    // 广播给其他 tab：用户在这个 tab 抓住了
+    if (bc) {
+      try { bc.postMessage({ type: 'mouse_caught_by_user', ts: Date.now(), tokens: tokenCount }); } catch (e) {}
+    }
+
+    // 猫从追捕状态恢复
+    setTimeout(function () {
+      if (currentStateName === "追 Token 老鼠") {
+        transitionTo("CONFUSED");  // 吃醋——用困惑态代替（猫的情绪不会精确映射到愤怒）
+      }
+    }, 1800);
+
+    scheduleNextMouse();
   }
 
   function spawnMouse() {
@@ -766,6 +828,17 @@
         escapeMouse();
       }
     }, escapeDelay);
+
+    // §15c 广播给其他 tab：这只老鼠出现在本 tab
+    if (bc) {
+      try {
+        bc.postMessage({
+          type: 'mouse_spawned',
+          page: location.pathname,
+          ts: Date.now()
+        });
+      } catch (e) {}
+    }
   }
 
   function escapeMouse() {
@@ -796,6 +869,10 @@
         }
       }, 1500);
     }
+    // §15c 广播给其他 tab
+    if (bc) {
+      try { bc.postMessage({ type: 'mouse_escaped', ts: Date.now() }); } catch (e) {}
+    }
     scheduleNextMouse();
   }
 
@@ -824,6 +901,10 @@
 
     // 猫的胜利台词
     speak(["抓住了！", "Token +1。", "猎杀序列闭合。", "这才是真正的食物。", "200 OK。"]);
+    // §15c 广播给其他 tab
+    if (bc) {
+      try { bc.postMessage({ type: 'mouse_caught', ts: Date.now(), tokens: tokenCount }); } catch (e) {}
+    }
     // 切回正常状态
     clearTimeout(mouseEscapeTimer);
     setTimeout(function () {
@@ -903,11 +984,50 @@
     targetY = Math.max(60, Math.min(window.innerHeight - 80, mouseY - 20));
   }
 
-  // 下次出没时间：30-90 秒
+  // 下次出没时间：30-90 秒（同步跨 tab —— 所有 tab 共享同一时刻）
+  // 通过 localStorage 协调，避免每个 tab 都各自生成一只老鼠。
+  var MOUSE_SYNC_KEY = 'catapi_next_mouse_ts';
   function scheduleNextMouse() {
     clearTimeout(mouseSpawnTimer);
-    var delay = 30000 + Math.random() * 60000;  // 30-90s
-    mouseSpawnTimer = setTimeout(spawnMouse, delay);
+    // 检查共享的「下次出没时间」；不存在或已过期则生成一个新的
+    var now = Date.now();
+    var nextTs = 0;
+    try {
+      var raw = localStorage.getItem(MOUSE_SYNC_KEY);
+      if (raw) nextTs = parseInt(raw) || 0;
+    } catch(e) {}
+    if (!nextTs || nextTs < now) {
+      // 本 tab 负责生成下一只——但为了避免所有 tab 同时写入，
+      // 加一个小随机延迟（0-1.5 秒），再检查一次（CAS 风格）
+      var delay = 30000 + Math.random() * 60000;  // 30-90s
+      nextTs = now + delay;
+      try { localStorage.setItem(MOUSE_SYNC_KEY, String(nextTs)); } catch(e) {}
+    }
+    var delayMs = Math.max(2000, nextTs - now);
+    mouseSpawnTimer = setTimeout(spawnMouse, delayMs);
+  }
+
+  // §15c 跨 tab 同步：spawn 时广播位置；其他 tab 收到后显示「老鼠正在别处」幽灵提示
+  var ghostHintTimer = null;
+  var ghostHintEl = null;
+  function showGhostMouseHint(otherPath, ttl) {
+    // 在随机位置显示一个半透明的「幽灵老鼠」提示——只在其他 tab 有老鼠出没时显示
+    if (!ghostHintEl) {
+      ghostHintEl = document.createElement('div');
+      ghostHintEl.className = 'lc2-mouse-hint';
+      document.body.appendChild(ghostHintEl);
+    }
+    var pageName = (otherPath || '').split('/').pop() || '另一页面';
+    ghostHintEl.textContent = '🐾 Token 老鼠正在「' + pageName + '」出没';
+    // 随机放置在屏幕边缘
+    var side = Math.random() < 0.5 ? 0 : 1;
+    ghostHintEl.style.left = (side === 0 ? 20 : window.innerWidth - 240) + 'px';
+    ghostHintEl.style.top = (60 + Math.random() * (window.innerHeight - 160)) + 'px';
+    ghostHintEl.classList.add('show');
+    clearTimeout(ghostHintTimer);
+    ghostHintTimer = setTimeout(function () {
+      if (ghostHintEl) ghostHintEl.classList.remove('show');
+    }, ttl || 6000);
   }
 
   // 启动老鼠系统
@@ -1078,11 +1198,37 @@
     if (cat) saveCatState();
   });
 
-  // 多 tab 同步：收到其他 tab 的消息时，可选地更新本 tab 猫的状态
+  // 多 tab 同步：
+  //  - mouse_spawned：其他 tab 出现了老鼠 → 本 tab 显示「幽灵提示」
+  //  - mouse_caught_by_user：其他 tab 的用户抓到了 → 本 tab 的猫也吃醋一下
+  //  - mouse_escaped：其他 tab 的老鼠逃跑了 → 更新共享计时器
   if (bc) {
     bc.onmessage = function (ev) {
-      // 仅用作「该猫在另一个 tab」的通知——当前实现不做跨 tab 移动，
-      // 但可以作为「猫正在别处」的提示
+      var d = ev && ev.data;
+      if (!d || !d.type) return;
+      try {
+        if (d.type === 'mouse_spawned' && d.page && d.page !== location.pathname) {
+          // 其他 tab 出现了老鼠——本 tab 显示幽灵提示
+          // 同时如果本 tab 也即将出没，延后以避免冲突
+          if (!mouseActive && !mouse) {
+            showGhostMouseHint(d.page, 5000);
+            // 把本 tab 的下一次出没时间往后推一点，避免同时出现两只
+            try {
+              var pushed = Date.now() + 45000;  // 45 秒后再试
+              localStorage.setItem(MOUSE_SYNC_KEY, String(pushed));
+            } catch(e) {}
+            clearTimeout(mouseSpawnTimer);
+            mouseSpawnTimer = setTimeout(spawnMouse, 45000);
+          }
+        } else if (d.type === 'mouse_caught_by_user' || d.type === 'mouse_caught') {
+          // 其他 tab 用户或猫抓住了——本 tab 的猫也嘟囔一句
+          if (!mouseActive) {
+            speak(["你又抓了？", "那边也在抓老鼠？", "人类联合行动。"]);
+          }
+        } else if (d.type === 'mouse_escaped') {
+          // 其他 tab 老鼠逃了——不影响本 tab 行为
+        }
+      } catch (e) { /* 静默 */ }
     };
   }
 
