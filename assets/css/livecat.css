@@ -609,12 +609,41 @@
   position: fixed;
   width: 96px;
   height: 64px;
-  pointer-events: none;
+  pointer-events: auto;          /* 可点击交互彩蛋 */
+  cursor: pointer;
   z-index: 9998;
-  transition: opacity .4s ease;
+  transition: opacity .4s ease, transform .18s cubic-bezier(.34,1.56,.64,1);
   filter: drop-shadow(0 4px 10px rgba(212, 160, 23, 0.35));
   animation: lc2-mouse-bounce 0.28s ease-in-out infinite;
 }
+.lc2-mouse:hover {
+  filter: drop-shadow(0 4px 14px rgba(255, 215, 0, 0.7));
+  transform: scale(1.08);
+}
+.lc2-mouse.lc2-mouse-caught-by-user {
+  animation: lc2-mouse-user-catch 0.7s cubic-bezier(.36, .07, .19, .97) forwards;
+  pointer-events: none;
+}
+@keyframes lc2-mouse-user-catch {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  35%  { transform: scale(1.4) rotate(15deg); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 24px #fff8dc); }
+  100% { transform: scale(0.2) rotate(540deg) translateY(-40px); opacity: 0; }
+}
+.lc2-mouse-hint {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9997;
+  padding: 4px 10px;
+  font: 11px/1.4 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #8b6914;
+  background: rgba(255, 248, 220, 0.92);
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.lc2-mouse-hint.show { opacity: 1; }
 @keyframes lc2-mouse-bounce {
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-4px); }
