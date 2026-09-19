@@ -120,6 +120,7 @@
   function renderHUD() {
     if (!hudEl) return;
     var html =
+      '<button class="mp-close-btn mp-hud-close" type="button" aria-label="关闭在线计数" title="关闭（刷新恢复）">×</button>' +
       '<div class="mp-hud-online">' +
         '<span class="mp-dot"></span>' +
         '<span class="mp-count">' + onlineCount + '</span>' +
@@ -131,6 +132,13 @@
         '<span class="mp-badge">访客#' + identity.id + '</span>' +
       '</div>';
     hudEl.innerHTML = html;
+    // 绑定关闭按钮
+    var closeBtn = hudEl.querySelector('.mp-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (hudEl) hudEl.classList.add('mp-hidden');
+      });
+    }
   }
 
   /* =========================================================================
@@ -732,6 +740,7 @@
     bowlWidgetEl = document.createElement('div');
     bowlWidgetEl.className = 'mp-bowl-widget';
     bowlWidgetEl.innerHTML =
+      '<button class="mp-close-btn" type="button" aria-label="关闭猫碗" title="关闭（刷新恢复）">×</button>' +
       '<div class="mp-bowl-header">' +
         '<span class="mp-bowl-icon">🥣</span>' +
         '<span class="mp-bowl-title">今日猫碗</span>' +
@@ -750,6 +759,13 @@
     if (btn) {
       btn.addEventListener('click', function () {
         feedBowl(1 + Math.floor(Math.random() * 3));   // 每次投喂 +1~3
+      });
+    }
+    // 关闭按钮：本会话隐藏，刷新后恢复（不写 localStorage，让用户每次访问都能重新看到）
+    var closeBtn = bowlWidgetEl.querySelector('.mp-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        if (bowlWidgetEl) bowlWidgetEl.classList.add('mp-hidden');
       });
     }
     return bowlWidgetEl;
