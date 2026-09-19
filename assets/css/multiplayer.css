@@ -205,7 +205,7 @@
   z-index: 2147483644;
   pointer-events: auto;
   width: 240px;
-  padding: 10px 12px;
+  padding: 10px 12px 10px 12px;
   font: 12px/1.4 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
   color: #1B3A2E;
   background: rgba(250, 248, 245, 0.94);  /* 暖象牙 */
@@ -312,6 +312,47 @@
 }
 
 /* =========================================================================
+ * §关闭按钮（通用）
+ * ======================================================================= */
+.mp-close-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(60, 60, 60, 0.5);
+  font: 600 16px/1 -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background .15s ease, color .15s ease, transform .12s ease;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.mp-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(60, 60, 60, 0.9);
+  transform: scale(1.1);
+}
+.mp-close-btn:active { transform: scale(0.92); }
+
+/* HUD 关闭按钮位置微调（HUD 整体较小，按钮要更靠边） */
+.mp-hud-close {
+  top: -2px;
+  right: -2px;
+}
+
+/* 隐藏通用类——关闭后用 */
+.mp-hidden {
+  display: none !important;
+}
+
+/* =========================================================================
  * §移动端适配
  * ======================================================================= */
 @media (max-width: 600px) {
@@ -378,4 +419,7 @@
   .mp-bowl-progress-label { color: #FAF8F5; text-shadow: 0 0 2px rgba(0,0,0,0.8); }
   .mp-bowl-stats b { color: #FAF8F5; }
   .mp-bowl-feed-btn { background: #C8A35E; }
+  /* 关闭按钮暗色 */
+  .mp-close-btn { color: rgba(220, 220, 220, 0.5); }
+  .mp-close-btn:hover { background: rgba(255,255,255,0.1); color: rgba(220,220,220,0.9); }
 }
