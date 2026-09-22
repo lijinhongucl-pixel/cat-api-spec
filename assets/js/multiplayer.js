@@ -58,12 +58,14 @@
   // 用 localStorage 让刷新后仍是同一个身份
   var ID_KEY = 'catapi_visitor_id';
   var HUE_KEY = 'catapi_visitor_hue';
+  var NAME_KEY = 'catapi_visitor_name';  // 用户自定义名字（可选，比如 GitHub 用户名）
 
   function loadIdentity() {
-    var id, hue;
+    var id, hue, name;
     try {
       id = localStorage.getItem(ID_KEY);
       hue = parseInt(localStorage.getItem(HUE_KEY));
+      name = localStorage.getItem(NAME_KEY);
     } catch (e) {}
     if (!id) {
       id = generateId();
@@ -74,7 +76,21 @@
       hue = Math.floor(Math.random() * 360);
       try { localStorage.setItem(HUE_KEY, String(hue)); } catch (e) {}
     }
-    return { id: id, hue: hue };
+    return { id: id, hue: hue, name: name || null };
+  }
+
+  function setCustomName(name) {
+    name = (name || '').trim().slice(0, 32);   // 限制 32 字符
+    try {
+      if (name) {
+        localStorage.setItem(NAME_KEY, name);
+        identity.name = name;
+      } else {
+        localStorage.removeItem(NAME_KEY);
+        identity.name = null;
+      }
+    } catch (e) {}
+    renderHUD();
   }
 
   function generateId() {
@@ -126,10 +142,14 @@
         '<span class="mp-count">' + onlineCount + '</span>' +
         '<span class="mp-label">只猫在线</span>' +
       '</div>';
-    // 自己的访客徽章
+    // 自己的访客徽章——可点击编辑名字
+    var displayName = identity.name || ('访客#' + identity.id);
     html +=
       '<div class="mp-hud-self" style="--hue:' + identity.hue + '">' +
-        '<span class="mp-badge">访客#' + identity.id + '</span>' +
+        '<button class="mp-badge mp-badge-editable" type="button" ' +
+                'aria-label="点击修改名字" title="点击修改名字（比如 GitHub 用户名）">' +
+          escapeHtml(displayName) +
+        '</button>' +
       '</div>';
     hudEl.innerHTML = html;
     // 绑定关闭按钮
@@ -139,21 +159,74 @@
         if (hudEl) hudEl.classList.add('mp-hidden');
       });
     }
+    // 绑定徽章点击编辑
+    var badgeBtn = hudEl.querySelector('.mp-badge-editable');
+    if (badgeBtn) {
+      badgeBtn.addEventListener('click', promptForName);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function promptForName() {
+    // 自定义弹窗：不用浏览器 prompt()，做一个轻量浮层
+    var existing = document.getElementById('mp-name-dialog');
+    if (existing) existing.remove();
+
+    var dialog = document.createElement('div');
+    dialog.id = 'mp-name-dialog';
+    dialog.className = 'mp-name-dialog';
+    var current = identity.name || '';
+    dialog.innerHTML =
+      '<div class="mp-name-dialog-card">' +
+        '<div class="mp-name-dialog-title">给自己起个名字</div>' +
+        '<input type="text" class="mp-name-input" maxlength="32" ' +
+               'placeholder="比如 GitHub 用户名" value="' + escapeHtml(current) + '">' +
+        '<div class="mp-name-dialog-hint">最多 32 字符；留空恢复默认「访客#' + identity.id + '」</div>' +
+        '<div class="mp-name-dialog-actions">' +
+          '<button type="button" class="mp-name-cancel">取消</button>' +
+          '<button type="button" class="mp-name-save">保存</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(dialog);
+    var input = dialog.querySelector('.mp-name-input');
+    if (input) { input.focus(); input.select(); }
+    function close() { if (dialog.parentNode) dialog.remove(); }
+    dialog.querySelector('.mp-name-cancel').addEventListener('click', close);
+    dialog.querySelector('.mp-name-save').addEventListener('click', function () {
+      var val = input ? input.value : '';
+      setCustomName(val);
+      close();
+    });
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { setCustomName(input.value); close(); }
+        if (e.key === 'Escape') { close(); }
+      });
+    }
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) close();
+    });
   }
 
   /* =========================================================================
    * §4 UI：远程光标幽灵
    * ======================================================================= */
-  function createCursorEl(visitorId, hue) {
+  function createCursorEl(visitorId, hue, name) {
     var el = document.createElement('div');
     el.className = 'mp-remote-cursor';
     el.style.setProperty('--hue', hue);
+    var label = name || ('访客#' + visitorId);
     el.innerHTML =
       '<svg viewBox="0 0 20 20" width="22" height="22" aria-hidden="true">' +
         '<path d="M2 2 L 16 10 L 10 11 L 13 18 L 11 19 L 8 12 L 2 16 Z" ' +
               'fill="hsl(' + hue + ',80%,55%)" stroke="white" stroke-width="1"/>' +
       '</svg>' +
-      '<span class="mp-remote-label">访客#' + visitorId + '</span>';
+      '<span class="mp-remote-label">' + escapeHtml(label) + '</span>';
     document.body.appendChild(el);
     return el;
   }
@@ -167,14 +240,21 @@
     }
     var existing = remoteCursors[visitorId];
     if (!existing) {
-      var el = createCursorEl(visitorId, payload.hue);
+      var el = createCursorEl(visitorId, payload.hue, payload.name);
       existing = remoteCursors[visitorId] = {
         hue: payload.hue,
+        name: payload.name || null,
         el: el,
         lastSeen: Date.now()
       };
     }
     existing.lastSeen = Date.now();
+    // 如果收到新名字，更新标签
+    if (payload.name && payload.name !== existing.name) {
+      existing.name = payload.name;
+      var labelEl = existing.el.querySelector('.mp-remote-label');
+      if (labelEl) labelEl.textContent = payload.name;
+    }
     // 坐标是归一化的（0-1），转换到本页像素
     var px = (payload.x || 0) * window.innerWidth;
     var py = (payload.y || 0) * window.innerHeight;
@@ -236,6 +316,7 @@
         payload: {
           id: identity.id,
           hue: identity.hue,
+          name: identity.name,
           page: location.pathname,
           x: xNorm,
           y: yNorm
@@ -256,6 +337,7 @@
         payload: {
           id: identity.id,
           hue: identity.hue,
+          name: identity.name,
           page: location.pathname,
           tokens: getLocalTokens()
         }
@@ -282,6 +364,7 @@
         event: 'mouse_caught',
         payload: {
           by: identity.id,
+          name: identity.name,
           hue: identity.hue,
           page: location.pathname,
           tokens: getLocalTokens(),
@@ -441,9 +524,9 @@
             var p = msg && msg.payload;
             if (!p || !p.by) return;
             var pageName = (p.page || '').split('/').pop() || '另一页';
-            var who = '访客#' + p.by;
+            var who = p.name || ('访客#' + p.by);
             var verb = p.byUser ? '亲手抓到' : '抓到';
-            showToast('🏆 ' + who + ' 在「' + pageName + '」' + verb + '了 Token 老鼠（累计 ' + (p.tokens || 0) + '）');
+            showToast('🏆 ' + escapeHtml(who) + ' 在「' + pageName + '」' + verb + '了 Token 老鼠（累计 ' + (p.tokens || 0) + '）');
 
             // 联动 livecat：让本页的猫也嘟囔一句
             if (root.LiveCat && typeof root.LiveCat.transitionTo === 'function') {
@@ -507,11 +590,12 @@
   var lastCatReport = 0;
   var CAT_REPORT_INTERVAL = 500;  // 上报间隔：500ms（不像光标那么频繁，避免带宽爆炸）
 
-  function createRemoteCatEl(visitorId, hue) {
+  function createRemoteCatEl(visitorId, hue, name) {
     var el = document.createElement('div');
     el.className = 'mp-remote-cat';
     el.setAttribute('aria-hidden', 'true');
     el.style.setProperty('--hue', hue);
+    var label = name || ('访客#' + visitorId);
     // 复用本站已加载的 LiveCat SVG——如果没有，用一个简化版
     var svg = '';
     if (root.LiveCat && root.LiveCat.STATES) {
@@ -537,7 +621,7 @@
     }
     el.innerHTML =
       '<div class="mp-remote-cat-body">' + svg + '</div>' +
-      '<span class="mp-remote-cat-label" style="--hue:' + hue + '">访客#' + visitorId + '</span>';
+      '<span class="mp-remote-cat-label" style="--hue:' + hue + '">' + escapeHtml(label) + '</span>';
     document.body.appendChild(el);
     return el;
   }
@@ -547,14 +631,20 @@
     if (visitorId === identity.id) return;
     var existing = remoteCats[visitorId];
     if (!existing) {
-      var el = createRemoteCatEl(visitorId, payload.hue || 200);
+      var el = createRemoteCatEl(visitorId, payload.hue || 200, payload.name);
       existing = remoteCats[visitorId] = {
         el: el,
         hue: payload.hue || 200,
+        name: payload.name || null,
         x: payload.x, y: payload.y,
         state: payload.state,
         lastSeen: Date.now()
       };
+    } else if (payload.name && payload.name !== existing.name) {
+      // 收到新名字——更新远程猫标签
+      existing.name = payload.name;
+      var catLabel = existing.el.querySelector('.mp-remote-cat-label');
+      if (catLabel) catLabel.textContent = payload.name;
     }
     existing.lastSeen = Date.now();
     existing.x = payload.x;
@@ -608,6 +698,7 @@
         event: 'cat_state',
         payload: {
           id: identity.id,
+          name: identity.name,
           hue: identity.hue,
           page: location.pathname,
           state: state,
@@ -684,10 +775,7 @@
     if (typeof payload.delta !== 'number') return;
     bowlState.totalFed += payload.delta;
     setBowlLevel(bowlState.level + payload.delta, true);
-    if (payload.by) {
-      var who = '访客#' + payload.by;
-      // 不弹 toast——避免每次投喂都刷屏；只在进度条上做视觉反馈
-    }
+    // 不弹 toast——避免每次投喂都刷屏；只在进度条上做视觉反馈
   }
 
   function feedBowl(delta) {
@@ -700,7 +788,7 @@
         channel.send({
           type: 'broadcast',
           event: 'bowl_feed',
-          payload: { by: identity.id, delta: delta, ts: Date.now() }
+          payload: { by: identity.id, name: identity.name, delta: delta, ts: Date.now() }
         });
       } catch (e) {}
     }
