@@ -166,6 +166,18 @@
       label: "追 Token 老鼠", duration: 8000, pose: "run", face: "PLAYFUL",
       lines: ["是老鼠！", "这次跑不掉。", "锁定中…", "猎杀序列激活。"],
       behavior: function () { chaseTokenMouse(); }
+    },
+    CROSSPET_DEPART: {
+      // §16 CrossPet 穿越状态：猫走向屏幕边缘，准备穿越到另一个站点
+      label: "穿越出去", duration: 3000, pose: "walk", face: "CURIOUS",
+      lines: ["去看看外面的世界。", "隔壁有味道。", "我出去一趟。", "404 Cat Not Found。"],
+      behavior: function () { pickDeparturePoint(); }
+    },
+    MEET_VISITOR: {
+      // §16 CrossPet 相遇状态：遇到来访宠物时的互动反应
+      label: "遇见访客", duration: 6000, pose: "sit", face: "CURIOUS",
+      lines: ["……", "你谁？", "闻着不像本地。", "保持距离。", "你好。"],
+      behavior: function () { stayStill(); }
     }
   };
 
@@ -1286,6 +1298,16 @@
     targetY = 80 + Math.random() * (h - 200);
   }
 
+  // §CrossPet：让猫走向屏幕边缘，模拟「穿越出去」
+  function pickDeparturePoint() {
+    var w = window.innerWidth, h = window.innerHeight;
+    var side = Math.floor(Math.random() * 4);
+    if (side === 0)      { targetX = -80;             targetY = 80 + Math.random() * (h - 200); facing = -1; }
+    else if (side === 1) { targetX = w + 80;          targetY = 80 + Math.random() * (h - 200); facing = 1;  }
+    else if (side === 2) { targetX = 40 + Math.random() * (w - 200); targetY = -80;             }
+    else                 { targetX = 40 + Math.random() * (w - 200); targetY = h + 80;          }
+  }
+
   function pickBuntSpot() {
     // §4.3 HEADBUNT：走到屏幕底部中央偏鼠标位置附近
     // 用户长时间不动 → 猫过来「重新写入你的标签」
@@ -1728,6 +1750,34 @@
     transitionTo("SLEEP");
     rafId = requestAnimationFrame(tick);
     startIdleMotion();   // 启动 idle 微动作循环（自动眨眼 / 耳朵抖动）
+    initCrossPet();      // §CrossPet：启动跨站宠物串门
+  }
+
+  // §CrossPet：跨站宠物串门协议桥接
+  function initCrossPet() {
+    if (!root.CrossPet || typeof root.CrossPet.init !== 'function') return;
+    try {
+      root.CrossPet.init({
+        petType: 'cat',
+        petName: 'CAT API 猫',
+        petSVG: svgCat(),
+        onPetLeave: function (direction) {
+          // 我们的猫穿越出去了 → 切到 CROSSPET_DEPART 状态（走向屏幕边缘消失）
+          transitionTo('CROSSPET_DEPART');
+        },
+        onPetArrive: function (visitor) {
+          // 别站宠物穿越过来 → 我们的猫进入 MEET_VISITOR 状态
+          transitionTo('MEET_VISITOR');
+        },
+        onPetMeet: function (local, vis, interaction) {
+          // 相遇互动文案
+          speak([interaction || '咦，你谁？']);
+        }
+      });
+      console.log('[LiveCat] CrossPet bridge initialized.');
+    } catch (e) {
+      console.warn('[LiveCat] CrossPet init failed:', e);
+    }
   }
 
   root.LiveCat = {
