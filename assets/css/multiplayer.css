@@ -84,6 +84,105 @@
   font-weight: 600;
 }
 
+/* 可点击编辑的徽章 */
+.mp-badge-editable {
+  cursor: pointer;
+  transition: background .15s ease, transform .12s ease, box-shadow .15s ease;
+  border: 1px dashed hsl(var(--hue, 200), 70%, 60%);  /* 虚线暗示可编辑 */
+}
+.mp-badge-editable:hover {
+  background: hsl(var(--hue, 200), 85%, 90%);
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px hsla(var(--hue, 200), 70%, 50%, 0.25);
+}
+.mp-badge-editable:active { transform: scale(0.96); }
+.mp-badge-editable::after {
+  content: ' ✎';   /* 铅笔符号暗示可编辑 */
+  font-size: 9px;
+  opacity: 0.6;
+}
+
+/* =========================================================================
+ * §改名弹窗
+ * ======================================================================= */
+.mp-name-dialog {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: mp-fade-in .18s ease;
+}
+@keyframes mp-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mp-name-dialog-card {
+  background: #FAF8F5;
+  border: 1px solid #C8A35E;
+  border-radius: 12px;
+  padding: 20px 22px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.mp-name-dialog-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1B3A2E;
+  margin-bottom: 12px;
+}
+.mp-name-input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #C8A35E;
+  border-radius: 6px;
+  background: #fff;
+  color: #2C2C2A;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  box-sizing: border-box;
+}
+.mp-name-input:focus {
+  border-color: #1B3A2E;
+  box-shadow: 0 0 0 3px rgba(27, 58, 46, 0.12);
+}
+.mp-name-dialog-hint {
+  font-size: 11px;
+  color: rgba(60, 60, 60, 0.6);
+  margin-top: 6px;
+}
+.mp-name-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.mp-name-dialog-actions button {
+  padding: 6px 14px;
+  font: 600 12px/1.4 -apple-system, BlinkMacSystemFont, sans-serif;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+.mp-name-cancel {
+  background: transparent;
+  color: rgba(60, 60, 60, 0.6);
+}
+.mp-name-cancel:hover { background: rgba(0,0,0,0.05); color: rgba(60,60,60,0.9); }
+.mp-name-save {
+  background: #1B3A2E;
+  color: #FAF8F5;
+}
+.mp-name-save:hover { background: #2C5345; }
+
 /* =========================================================================
  * §远程光标幽灵
  * ======================================================================= */
