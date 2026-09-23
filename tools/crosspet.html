@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>CrossPet 串门中心 — CAT API</title>
+<meta name="description" content="跨站宠物串门协议的可视化控制台。召唤访客、查看互动记录、了解如何接入 CrossPet Protocol。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<link rel="stylesheet" href="../assets/css/crosspet.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px 80px; }
+
+  /* ===== Header ===== */
+  .cp-header {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: end;
+  }
+  @media (max-width: 640px) { .cp-header { grid-template-columns: 1fr; } }
+  .cp-title h1 { margin: 0; font-size: 26px; }
+  .cp-title .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .cp-title .sub code { font-size: 12px; color: var(--faint); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+
+  .status-badge {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .status-badge .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--warn);
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-badge.connected .dot { background: var(--ok); }
+  .status-badge .label { font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .status-badge .status-text { font-size: 14px; font-weight: 700; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ===== 控制台 ===== */
+  .console {
+    margin-top: 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .console h2 { font-size: 18px; margin-bottom: 16px; }
+  .console p.desc { color: var(--muted); font-size: 14px; margin-bottom: 20px; line-height: 1.7; }
+
+  /* 召唤按钮组 */
+  .summon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+  .summon-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 12px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: border-color .2s, transform .15s, box-shadow .2s;
+    font-family: inherit;
+  }
+  .summon-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .summon-btn:active { transform: translateY(0); }
+  .summon-btn .pet-svg { width: 64px; height: 44px; }
+  .summon-btn .pet-svg svg { width: 100%; height: 100%; }
+  .summon-btn .pet-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .summon-btn .pet-desc { font-size: 11px; color: var(--faint); }
+
+  /* 手动穿越 */
+  .depart-section {
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+    margin-top: 8px;
+  }
+  .depart-section h3 { font-size: 15px; margin-bottom: 12px; }
+  .depart-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+  .depart-btn {
+    padding: 10px 20px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    transition: background .2s, border-color .2s;
+    font-family: inherit;
+  }
+  .depart-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+
+  /* ===== 互动日志 ===== */
+  .log-section {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .log-section h2 { font-size: 18px; margin-bottom: 16px; }
+  .log-list {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+  }
+  .log-empty { padding: 32px; text-align: center; color: var(--faint); font-size: 14px; }
+  .log-entry {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .ts { color: var(--faint); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; }
+  .log-entry .icon { font-size: 18px; }
+  .log-entry .text { color: var(--ink); flex: 1; }
+  .log-entry.arrive { background: rgba(21, 128, 61, 0.04); }
+  .log-entry.meet { background: rgba(180, 83, 9, 0.04); }
+  .log-entry.depart { background: rgba(75, 85, 99, 0.04); }
+
+  /* ===== 接入指南 ===== */
+  .guide-section {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .guide-section h2 { font-size: 18px; margin-bottom: 16px; }
+  .guide-section p { color: var(--muted); font-size: 14px; line-height: 1.8; margin-bottom: 12px; }
+  .guide-section code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; color: var(--code-ink); }
+  .guide-section pre {
+    background: var(--code-bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--code-ink);
+    margin: 12px 0;
+  }
+  .guide-section pre code { background: none; padding: 0; }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 28px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .back-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a href="../index.html" class="brand">CAT API</a>
+    <span class="sep">/</span>
+    <span>CrossPet 串门中心</span>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="cp-header">
+    <div class="cp-title">
+      <h1>CrossPet 串门中心</h1>
+      <div class="sub">跨站宠物串门协议 · <code>CrossPet Protocol v1.0</code></div>
+    </div>
+    <div class="status-badge" id="statusBadge">
+      <div><span class="dot"></span><span class="status-text" id="statusText">演示模式</span></div>
+      <div class="label" id="statusLabel">未接入实时频道</div>
+    </div>
+  </div>
+
+  <!-- 控制台 -->
+  <div class="console">
+    <h2>召唤来访宠物</h2>
+    <p class="desc">
+      这里可以手动召唤一只宠物来串门。正常情况下，别站的宠物会通过 Supabase 实时频道自动穿越过来；在演示模式下，你可以手动邀请它们。
+    </p>
+
+    <!-- 召唤按钮 -->
+    <div class="summon-grid" id="summonGrid">
+      <!-- 由 JS 填充 -->
+    </div>
+
+    <!-- 手动穿越 -->
+    <div class="depart-section">
+      <h3>送自己的猫出去串门</h3>
+      <p class="desc" style="margin-bottom:14px;">
+        让本站的猫从屏幕边缘走出，穿越到别的站点。如果已接入实时频道，别站会收到来访。
+      </p>
+      <div class="depart-btns">
+        <button class="depart-btn" onclick="departCat('left')">← 朝左走</button>
+        <button class="depart-btn" onclick="departCat('right')">朝右走 →</button>
+        <button class="depart-btn" onclick="departCat('top')">↑ 朝上走</button>
+        <button class="depart-btn" onclick="departCat('bottom')">↓ 朝下走</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 互动日志 -->
+  <div class="log-section">
+    <h2>串门日志</h2>
+    <div class="log-list" id="logList">
+      <div class="log-empty">还没有宠物来串过门。点击上面的按钮召唤一只试试。</div>
+    </div>
+  </div>
+
+  <!-- 接入指南 -->
+  <div class="guide-section">
+    <h2>接入 CrossPet Protocol</h2>
+    <p>让你的网站也支持宠物串门。只需加载一个脚本并初始化：</p>
+    <pre><code>&lt;script src="assets/js/crosspet.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  CrossPet.init({
+    petType: 'dog',          // 'cat' | 'dog' | 'hamster' | 自定义
+    petName: '马文的狗',
+    petSVG: '&lt;svg&gt;...&lt;/svg&gt;',  // 你的宠物 SVG
+    onPetLeave: function(dir) {
+      // 你的宠物走出屏幕时触发
+      console.log('我的狗往', dir, '走了');
+    },
+    onPetArrive: function(visitor) {
+      // 收到别站宠物时触发
+      console.log(visitor.petName, '来了');
+    },
+    onPetMeet: function(myPet, visitor, interaction) {
+      // 两只宠物相遇时触发
+      console.log(myPet.name, '和', visitor.name, interaction);
+    }
+  });
+&lt;/script&gt;</code></pre>
+    <p>要启用真正的跨站实时通信，需要配置 Supabase：</p>
+    <pre><code>CrossPet.configure('https://your-project.supabase.co', 'your-anon-key');</code></pre>
+    <p>没有配置 Supabase？没关系，演示模式会每 60-180 秒自动模拟一次随机串门。</p>
+  </div>
+
+  <a href="../index.html" class="back-link">← 返回 CAT API</a>
+</div>
+
+<!-- 先加载外部脚本 -->
+<script src="../assets/js/crosspet.js"></script>
+<script src="../assets/js/livecat.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // 内置可召唤的宠物清单
+  var PETS = {
+    dog: {
+      name: '马文的狗',
+      desc: '友善的金毛',
+      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="40" cy="38" rx="22" ry="14" fill="#d4a574" stroke="#8b5a2b" stroke-width="1.5"/>' +
+        '<circle cx="40" cy="22" r="13" fill="#e0b585" stroke="#8b5a2b" stroke-width="1.5"/>' +
+        '<ellipse cx="29" cy="14" rx="5" ry="8" fill="#c49565" stroke="#8b5a2b" stroke-width="1" transform="rotate(-20 29 14)"/>' +
+        '<ellipse cx="51" cy="14" rx="5" ry="8" fill="#c49565" stroke="#8b5a2b" stroke-width="1" transform="rotate(20 51 14)"/>' +
+        '<circle cx="34" cy="22" r="1.6" fill="#222"/>' +
+        '<circle cx="46" cy="22" r="1.6" fill="#222"/>' +
+        '<ellipse cx="40" cy="28" rx="2.5" ry="1.8" fill="#222"/>' +
+        '<path d="M 37 30 Q 40 33 43 30" fill="none" stroke="#222" stroke-width="0.8"/>' +
+        '<path d="M 62 36 Q 72 32 70 26" fill="none" stroke="#8b5a2b" stroke-width="2"/>' +
+        '</svg>'
+    },
+    cat: {
+      name: '隔壁的橘猫',
+      desc: '高冷的橘色大佬',
+      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="40" cy="38" rx="20" ry="13" fill="#e8943a" stroke="#b06820" stroke-width="1"/>' +
+        '<circle cx="40" cy="22" r="12" fill="#f0a050" stroke="#b06820" stroke-width="1"/>' +
+        '<polygon points="32,14 30,6 36,12" fill="#e8943a" stroke="#b06820" stroke-width="0.8"/>' +
+        '<polygon points="48,14 50,6 44,12" fill="#e8943a" stroke="#b06820" stroke-width="0.8"/>' +
+        '<circle cx="36" cy="22" r="1.4" fill="#222"/>' +
+        '<circle cx="44" cy="22" r="1.4" fill="#222"/>' +
+        '<path d="M 38 26 L 40 28 L 42 26" fill="#222"/>' +
+        '<path d="M 60 36 Q 70 30 68 22" fill="none" stroke="#b06820" stroke-width="2"/>' +
+        '</svg>'
+    },
+    hamster: {
+      name: '奶茶鼠',
+      desc: '圆滚滚的仓鼠',
+      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="40" cy="38" rx="20" ry="16" fill="#e8c39e" stroke="#a07853" stroke-width="1.5"/>' +
+        '<circle cx="29" cy="20" r="4" fill="#d4a574" stroke="#a07853" stroke-width="1"/>' +
+        '<circle cx="51" cy="20" r="4" fill="#d4a574" stroke="#a07853" stroke-width="1"/>' +
+        '<circle cx="33" cy="32" r="1.5" fill="#222"/>' +
+        '<circle cx="47" cy="32" r="1.5" fill="#222"/>' +
+        '<ellipse cx="40" cy="38" rx="2" ry="1.5" fill="#a07853"/>' +
+        '</svg>'
+    },
+    blackcat: {
+      name: '黑猫警长',
+      desc: '正义的黑色身影',
+      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="40" cy="38" rx="20" ry="13" fill="#262422" stroke="#0d0c0b" stroke-width="1"/>' +
+        '<circle cx="40" cy="22" r="12" fill="#332f2c" stroke="#0d0c0b" stroke-width="1"/>' +
+        '<polygon points="32,14 30,6 36,12" fill="#262422" stroke="#0d0c0b" stroke-width="0.8"/>' +
+        '<polygon points="48,14 50,6 44,12" fill="#262422" stroke="#0d0c0b" stroke-width="0.8"/>' +
+        '<circle cx="36" cy="22" r="2" fill="#f5c542"/>' +
+        '<circle cx="44" cy="22" r="2" fill="#f5c542"/>' +
+        '<path d="M 38 26 L 40 28 L 42 26" fill="#ccc"/>' +
+        '<path d="M 60 36 Q 70 30 68 22" fill="none" stroke="#0d0c0b" stroke-width="2"/>' +
+        '</svg>'
+    }
+  };
+
+  // 互动日志
+  var logs = [];
+  var logList = document.getElementById('logList');
+
+  function addLog(type, icon, text) {
+    var now = new Date();
+    var ts = String(now.getHours()).padStart(2, '0') + ':' +
+             String(now.getMinutes()).padStart(2, '0') + ':' +
+             String(now.getSeconds()).padStart(2, '0');
+    logs.unshift({ type: type, icon: icon, text: text, ts: ts });
+    if (logs.length > 50) logs.pop();
+    renderLogs();
+  }
+
+  function renderLogs() {
+    if (logs.length === 0) {
+      logList.innerHTML = '<div class="log-empty">还没有宠物来串过门。点击上面的按钮召唤一只试试。</div>';
+      return;
+    }
+    logList.innerHTML = logs.map(function (l) {
+      return '<div class="log-entry ' + l.type + '">' +
+        '<span class="ts">' + l.ts + '</span>' +
+        '<span class="icon">' + l.icon + '</span>' +
+        '<span class="text">' + l.text + '</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  // 渲染召唤按钮
+  function renderSummonGrid() {
+    var grid = document.getElementById('summonGrid');
+    var html = '';
+    Object.keys(PETS).forEach(function (key) {
+      var pet = PETS[key];
+      html += '<button class="summon-btn" data-pet="' + key + '">' +
+        '<div class="pet-svg">' + pet.svg + '</div>' +
+        '<div class="pet-name">' + pet.name + '</div>' +
+        '<div class="pet-desc">' + pet.desc + '</div>' +
+        '</button>';
+    });
+    grid.innerHTML = html;
+    grid.querySelectorAll('.summon-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-pet');
+        summonPet(key);
+      });
+    });
+  }
+
+  // 召唤一只宠物
+  function summonPet(key) {
+    var pet = PETS[key];
+    if (!pet || !window.CrossPet) return;
+    // 通过 CrossPet 的 handleArrive 逻辑手动触发来访
+    // CrossPet 没有公开 summon，所以我们直接构造一个来访
+    var payload = {
+      petType: key,
+      petName: pet.name,
+      petSVG: pet.svg,
+      fromSite: '手动召唤',
+      fromSiteId: 'manual-' + Date.now(),
+      direction: Math.random() < 0.5 ? 'left' : 'right'
+    };
+    // 利用 CrossPet 的内部机制：先 dismiss 当前的，然后直接创建访客
+    if (CrossPet.getCurrentVisitor()) {
+      CrossPet.dismissVisitor();
+    }
+    // 使用 setTimeout 确保上一个已清理
+    setTimeout(function () {
+      triggerArrive(payload);
+      addLog('arrive', petIcon(key), pet.name + ' 来串门了');
+    }, 300);
+  }
+
+  // 直接触发来访效果（复用 CrossPet 的 DOM 创建逻辑）
+  function triggerArrive(payload) {
+    // CrossPet 内部的 handleArrive 不是公开 API，
+    // 但我们可以触发一个全局事件或者直接操作
+    // 最简单的方式：注入一个临时函数到 CrossPet
+    // 由于 handleArrive 是私有的，我们用一个 hack：
+    // 临时覆盖 broadcast 来截获 depart 事件
+    // 更好的方式：直接创建来访 DOM
+
+    var existing = document.querySelector('.cp-visitor');
+    if (existing) existing.remove();
+
+    var svg = payload.petSVG;
+    var el = document.createElement('div');
+    el.className = 'cp-visitor cp-visitor-' + payload.petType;
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML =
+      '<div class="cp-visitor-body">' + svg + '</div>' +
+      '<div class="cp-visitor-label">' +
+        '<span class="cp-visitor-name">' + escapeHtml(payload.petName) + '</span>' +
+        '<span class="cp-visitor-from">来自 ' + escapeHtml(payload.fromSite) + '</span>' +
+      '</div>';
+    document.body.appendChild(el);
+
+    var w = window.innerWidth, h = window.innerHeight;
+    var side = payload.direction === 'left' ? 'right' : 'left';
+    var startX = side === 'left' ? -100 : w + 100;
+    var startY = h * 0.55 + (Math.random() - 0.5) * h * 0.2;
+    el.style.left = startX + 'px';
+    el.style.top = startY + 'px';
+    el.classList.add('cp-visitor-entering');
+
+    requestAnimationFrame(function () {
+      var targetX = side === 'left' ? 80 : w - 180;
+      el.style.transform = 'translate(' + (targetX - startX) + 'px, 0)';
+      el.classList.remove('cp-visitor-entering');
+      el.classList.add('cp-visitor-settled');
+    });
+
+    // 显示 toast
+    if (window.CrossPet) {
+      // CrossPet 的 showToast 也是私有的，我们自己显示
+    }
+    showToast('🐾 ' + payload.petName + ' 从 ' + payload.fromSite + ' 穿越过来');
+
+    // 30 秒后自动离开
+    setTimeout(function () {
+      if (el && el.parentNode) {
+        var currentLeft = parseFloat(el.style.left) || 0;
+        var dir = currentLeft < w / 2 ? -1 : 1;
+        el.style.transition = 'transform 1.5s ease-in, opacity 1.5s ease';
+        el.style.transform = 'translate(' + (dir * (w + 200)) + 'px, 0)';
+        el.style.opacity = '0';
+        setTimeout(function () {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 1500);
+        addLog('depart', '👋', payload.petName + ' 离开了');
+      }
+    }, 30000);
+
+    // 如果本站有猫（livecat），尝试触发相遇
+    setTimeout(function () {
+      tryMeetLocalCat(payload, el);
+    }, 3000);
+  }
+
+  // 尝试让本站的猫和来访宠物互动
+  function tryMeetLocalCat(visitor, visitorEl) {
+    var cat = document.getElementById('livecat-cat') || document.querySelector('.lc2-cat');
+    if (!cat) return;
+    var catRect = cat.getBoundingClientRect();
+    var visitorRect = visitorEl.getBoundingClientRect();
+    var dx = (visitorRect.left + visitorRect.width / 2) - (catRect.left + catRect.width / 2);
+    var dy = (visitorRect.top + visitorRect.height / 2) - (catRect.top + catRect.height / 2);
+    var dist = Math.hypot(dx, dy);
+
+    if (dist < 200) {
+      var interactions = {
+        'cat-dog': ['互闻了闻', '对峙了 3 秒', '假装没看见', '一起找了个有阳光的地方躺下'],
+        'cat-cat': ['互相蹭了蹭头', '一起理毛 5 秒', '对峙 → 和解', '各自占领一个角落'],
+        'cat-hamster': ['盯着看了很久', '试探性伸出爪子', '保持礼貌距离'],
+        'default': ['擦肩而过', '互相看了一眼', '保持距离']
+      };
+      var key = ['cat', visitor.petType].sort().join('-');
+      var opts = interactions[key] || interactions.default;
+      var interaction = opts[Math.floor(Math.random() * opts.length)];
+
+      showToast('🐾 本站的猫和 ' + visitor.petName + '：' + interaction);
+      addLog('meet', '🤝', '本站的猫和 ' + visitor.petName + ' ' + interaction);
+
+      visitorEl.classList.add('cp-visitor-react');
+      setTimeout(function () { visitorEl.classList.remove('cp-visitor-react'); }, 2500);
+    }
+  }
+
+  // 送猫出去
+  window.departCat = function (dir) {
+    if (window.CrossPet) {
+      CrossPet.depart(dir);
+      addLog('depart', '🐱', '本站的猫往 ' + dir + ' 走了，出去串门了');
+    }
+  };
+
+  // 自带 toast（不依赖 CrossPet 内部的）
+  var myToast = null;
+  var myToastTimer = null;
+  function showToast(text) {
+    if (!myToast) {
+      myToast = document.createElement('div');
+      myToast.className = 'cp-toast';
+      document.body.appendChild(myToast);
+    }
+    myToast.textContent = text;
+    myToast.classList.add('show');
+    clearTimeout(myToastTimer);
+    myToastTimer = setTimeout(function () {
+      myToast.classList.remove('show');
+    }, 4000);
+  }
+
+  function petIcon(type) {
+    var icons = { dog: '🐶', cat: '🐱', hamster: '🐹', blackcat: '🐈‍⬛' };
+    return icons[type] || '🐾';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // 初始化
+  renderSummonGrid();
+
+  // 初始化 CrossPet（演示模式 + 如果配了 Supabase 会自动连）
+  if (window.CrossPet) {
+    CrossPet.init({
+      petType: 'cat',
+      petName: 'CAT API 的猫',
+      onPetArrive: function (visitor) {
+        addLog('arrive', petIcon(visitor.petType), visitor.petName + ' 从 ' + (visitor.fromSite || '远方') + ' 来串门了');
+      },
+      onPetLeave: function (dir) {
+        addLog('depart', '🐱', '本站的猫往 ' + dir + ' 出去了');
+      },
+      onPetMeet: function (local, visitor, interaction) {
+        addLog('meet', '🤝', local.name + ' 和 ' + visitor.name + '：' + interaction);
+      }
+    });
+    addLog('arrive', '✨', 'CrossPet 串门中心已启动（演示模式）');
+  }
+
+  // 检查 CrossPet 是否连上了 Supabase
+  setTimeout(function () {
+    var badge = document.getElementById('statusBadge');
+    var text = document.getElementById('statusText');
+    var label = document.getElementById('statusLabel');
+    // CrossPet 没有 getConnected 方法，我们检查 console 输出间接判断
+    // 简单方案：5 秒后如果没收到实时事件，就保持演示模式
+    // 如果以后配了 Supabase，这里可以更新
+    label.textContent = '每 60-180 秒自动模拟串门';
+  }, 5000);
+
+})();
+</script>
+</body>
+</html>
