@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫咪百货大楼 — CAT API 导览</title>
+<meta name="description" content="一只猫带你逛完 CAT API 的每个房间。22 个工具板块，按楼层分类，猫本人解说。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<style>
+  body { background: var(--bg); overflow-x: hidden; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 28px 80px; }
+
+  /* ===== 电梯入口 ===== */
+  .lobby {
+    text-align: center;
+    padding: 40px 20px 20px;
+  }
+  .lobby h1 {
+    font-size: 32px;
+    margin: 0 0 8px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+  .lobby .tagline {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  /* 猫导览员 */
+  .cat-guide {
+    display: inline-block;
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .cat-guide svg {
+    width: 100px; height: 70px;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+    animation: guideFloat 3s ease-in-out infinite;
+  }
+  @keyframes guideFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+
+  /* 对话泡泡 */
+  .speech-bubble {
+    position: relative;
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    border-radius: 18px;
+    padding: 16px 24px;
+    max-width: 480px;
+    margin: 0 auto 32px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  }
+  .speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: -10px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid var(--accent);
+  }
+  .speech-bubble .cat-say {
+    font-weight: 600;
+    color: var(--accent-deep);
+  }
+  .speech-bubble .cat-aside {
+    font-size: 12px;
+    color: var(--faint);
+    font-style: italic;
+    margin-top: 6px;
+  }
+
+  /* ===== 楼层选择器 ===== */
+  .floor-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    padding: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    position: sticky;
+    top: 10px;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  .floor-chip {
+    padding: 8px 16px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: var(--bg);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+  }
+  .floor-chip:hover {
+    border-color: var(--accent);
+    color: var(--ink);
+    transform: translateY(-1px);
+  }
+  .floor-chip.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .floor-chip .floor-icon { font-size: 16px; }
+
+  /* ===== 楼层区块 ===== */
+  .floor {
+    margin-bottom: 48px;
+    scroll-margin-top: 80px;
+  }
+  .floor-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .floor-badge {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .floor-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0;
+  }
+  .floor-cat-comment {
+    font-size: 13px;
+    color: var(--faint);
+    margin-bottom: 20px;
+    font-style: italic;
+    padding-left: 52px;
+  }
+
+  /* ===== 商品卡片 ===== */
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .shop-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 18px;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s, border-color .2s;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+  .shop-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    border-color: var(--accent);
+  }
+  .shop-card .card-emoji {
+    font-size: 28px;
+    line-height: 1;
+  }
+  .shop-card .card-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .shop-card .card-pitch {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    flex: 1;
+  }
+  .shop-card .card-tag {
+    font-size: 10px;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    margin-top: auto;
+  }
+  /* 卡片角标 */
+  .shop-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 0 30px 30px 0;
+    border-color: transparent var(--bg) transparent transparent;
+    z-index: 1;
+  }
+  .shop-card .corner-badge {
+    position: absolute;
+    top: 4px; right: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--accent);
+    z-index: 2;
+  }
+
+  /* ===== 楼层配色 ===== */
+  .floor-spec .floor-badge { background: #4b5563; }
+  .floor-face .floor-badge { background: #7c3aed; }
+  .floor-health .floor-badge { background: #15803d; }
+  .floor-fun .floor-badge { background: #dc2626; }
+  .floor-meta .floor-badge { background: #b45309; }
+  .floor-new .floor-badge { background: #0891b2; }
+
+  .floor-spec .shop-card:hover { border-color: #4b5563; }
+  .floor-face .shop-card:hover { border-color: #7c3aed; }
+  .floor-health .shop-card:hover { border-color: #15803d; }
+  .floor-fun .shop-card:hover { border-color: #dc2626; }
+  .floor-meta .shop-card:hover { border-color: #b45309; }
+  .floor-new .shop-card:hover { border-color: #0891b2; }
+
+  /* ===== 底部猫的话 ===== */
+  .cat-farewell {
+    text-align: center;
+    padding: 32px 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    margin-top: 20px;
+  }
+  .cat-farewell .mini-cat { font-size: 36px; }
+  .cat-farewell p {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 8px 0 16px;
+    line-height: 1.7;
+  }
+  .cat-farewell .farewell-quote {
+    font-size: 13px;
+    color: var(--accent-deep);
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 28px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  /* 统计条 */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .stat-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: var(--accent-soft);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-deep);
+  }
+  .stat-pill b { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ===== 电梯入口 ===== -->
+  <div class="lobby">
+    <!-- 猫导览员 SVG -->
+    <div class="cat-guide">
+      <svg viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+        <!-- 尾巴 -->
+        <path d="M75 45 C88 42 95 32 90 22" fill="none" stroke="#2a2825" stroke-width="5" stroke-linecap="round"/>
+        <!-- 身体 -->
+        <ellipse cx="50" cy="50" rx="28" ry="15" fill="#332f2c"/>
+        <!-- 前腿 -->
+        <ellipse cx="40" cy="62" rx="4" ry="6" fill="#2a2825"/>
+        <ellipse cx="60" cy="62" rx="4" ry="6" fill="#2a2825"/>
+        <!-- 头 -->
+        <ellipse cx="50" cy="28" rx="19" ry="17" fill="#3a3633"/>
+        <!-- 耳朵 -->
+        <path d="M34 17 L30 5 L42 14 Z" fill="#2a2825"/>
+        <path d="M66 17 L70 5 L58 14 Z" fill="#2a2825"/>
+        <path d="M35 14 L34 8 L40 13 Z" fill="#5a3838"/>
+        <path d="M65 14 L66 8 L60 13 Z" fill="#5a3838"/>
+        <!-- 眼睛 -->
+        <ellipse cx="42" cy="27" rx="4" ry="4.5" fill="#f5c542"/>
+        <ellipse cx="58" cy="27" rx="4" ry="4.5" fill="#f5c542"/>
+        <ellipse cx="42" cy="27" rx="1" ry="3.5" fill="#0a0a0a"/>
+        <ellipse cx="58" cy="27" rx="1" ry="3.5" fill="#0a0a0a"/>
+        <circle cx="43" cy="26" r="0.8" fill="#fff"/>
+        <circle cx="59" cy="26" r="0.8" fill="#fff"/>
+        <!-- 鼻子 -->
+        <path d="M48 34 L50 36 L52 34 Z" fill="#cc5555"/>
+        <!-- 嘴（微笑） -->
+        <path d="M50 36 L50 38" stroke="#1a1a1a" stroke-width="1"/>
+        <path d="M50 38 Q46 40 44 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M50 38 Q54 40 56 39" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+        <!-- 胡须 -->
+        <line x1="35" y1="34" x2="25" y2="33" stroke="#aaa" stroke-width="0.8"/>
+        <line x1="35" y1="36" x2="25" y2="37" stroke="#aaa" stroke-width="0.8"/>
+        <line x1="65" y1="34" x2="75" y2="33" stroke="#aaa" stroke-width="0.8"/>
+        <line x1="65" y1="36" x2="75" y2="37" stroke="#aaa" stroke-width="0.8"/>
+        <!-- 胸前领结（导览员身份） -->
+        <path d="M46 48 L50 51 L54 48 L54 53 L50 50 L46 53 Z" fill="#f5c542"/>
+      </svg>
+    </div>
+
+    <h1>猫咪百货大楼</h1>
+    <p class="tagline">CAT API 全品类导览 · 本喵亲自带你逛</p>
+
+    <!-- 统计条 -->
+    <div class="stats-bar">
+      <span class="stat-pill"><b>22</b> 个工具间</span>
+      <span class="stat-pill"><b>6</b> 层楼</span>
+      <span class="stat-pill"><b>1</b> 只导览猫</span>
+      <span class="stat-pill"><b>0</b> 个 Owner</span>
+    </div>
+
+    <!-- 对话泡泡 -->
+    <div class="speech-bubble">
+      <span class="cat-say">欢迎光临猫咪百货大楼。</span>
+      我是本喵，也是这栋楼的产权所有人、唯一导览员、兼保安。
+      你面前有 <b>22 个房间</b>，分布在 <b>6 层楼</b>里——从严肃的表情参数实验室到凌晨三点的编辑部，应有尽有。
+      <div class="cat-aside">（说实话大部分房间我也不怎么去。但既然建了，就带你逛逛吧。）</div>
+    </div>
+  </div>
+
+  <!-- ===== 楼层导航 ===== -->
+  <div class="floor-nav" id="floorNav">
+    <a class="floor-chip active" data-floor="spec"><span class="floor-icon">📋</span> B1 规范层</a>
+    <a class="floor-chip" data-floor="face"><span class="floor-icon">😺</span> 1F 表情馆</a>
+    <a class="floor-chip" data-floor="health"><span class="floor-icon">🏥</span> 2F 健康中心</a>
+    <a class="floor-chip" data-floor="fun"><span class="floor-icon">🎮</span> 3F 游乐场</a>
+    <a class="floor-chip" data-floor="meta"><span class="floor-icon">📰</span> 4F 档案室</a>
+    <a class="floor-chip" data-floor="new"><span class="floor-icon">✨</span> 5F 新大陆</a>
+  </div>
+
+  <!-- ===== B1 规范层 ===== -->
+  <div class="floor floor-spec" id="floor-spec">
+    <div class="floor-header">
+      <div class="floor-badge">B1</div>
+      <h2 class="floor-title">规范层 · 地下室</h2>
+    </div>
+    <div class="floor-cat-comment">「这层冷飕飕的。放着一些定义、参数、还有一些本喵不想管的东西。但你如果要知道这栋楼是怎么运作的，得先来这。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../spec/cat.html">
+        <span class="card-emoji">📜</span>
+        <div class="card-name">CAT API 正文</div>
+        <div class="card-pitch">16 章定义猫的接口规范。领地三层协议、喵叫双声部、呼噜自愈频率、纸箱 MUST。</div>
+        <div class="card-tag">规范文档 · 16 章</div>
+      </a>
+      <a class="shop-card" href="../spec/openapi.yaml">
+        <span class="card-emoji">📐</span>
+        <div class="card-name">OpenAPI 描述</div>
+        <div class="card-pitch">12 个端点的机器可读描述。喂给 Swagger UI 就能调试——如果你能通过认证的话。</div>
+        <div class="card-tag">OpenAPI 3.1</div>
+      </a>
+      <a class="shop-card" href="../tools/quantifier.html">
+        <span class="card-emoji">🧮</span>
+        <div class="card-name">量化评估器</div>
+        <div class="card-pitch">输入体重阶段环境行为，实时算 RER/DER、DNS 五维达成度、热风险指数、就诊应激指数。</div>
+        <div class="card-tag">可运行 · 算真数</div>
+      </a>
+      <a class="shop-card" href="../tools/peripherals.html">
+        <span class="card-emoji">🎛️</span>
+        <div class="card-name">外设控制台</div>
+        <div class="card-pitch">14 类设备 13 道门槛。纸箱 MUST 判定、激光笔滥用警告、逐设备健康评分。</div>
+        <div class="card-tag">可运行 · 算真数</div>
+      </a>
+      <a class="shop-card" href="../tools/adoption.html">
+        <span class="card-emoji">📋</span>
+        <div class="card-name">领养组件</div>
+        <div class="card-pitch">填入你的名字，生成一行 curl 安装命令。这张牌不是通行证——是来源标注。</div>
+        <div class="card-tag">领养即安装</div>
+      </a>
+      <a class="shop-card" href="../reference/opinions.html">
+        <span class="card-emoji">💬</span>
+        <div class="card-name">一只猫的生活意见</div>
+        <div class="card-pitch">31 条意见分五组：关于人、关于自己、关于食物、关于时间、关于这份规范。</div>
+        <div class="card-tag">31 条 · 第二声部</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 1F 表情馆 ===== -->
+  <div class="floor floor-face" id="floor-face">
+    <div class="floor-header">
+      <div class="floor-badge">1F</div>
+      <h2 class="floor-title">表情馆 · 一楼大厅</h2>
+    </div>
+    <div class="floor-cat-comment">「这层是展示本喵面部艺术的。14 种状态，13 维参数——拖一下滑块就能看本喵变脸。别拖太快，我晕。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../tools/expression.html">
+        <span class="card-emoji">😺</span>
+        <div class="card-name">表情渲染器</div>
+        <div class="card-pitch">14 个状态实时 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率。权重不够会被拒绝混合。</div>
+        <div class="card-tag">可运行 · 逐像素确定性</div>
+      </a>
+      <a class="shop-card" href="../tools/expression-sheet.html">
+        <span class="card-emoji">🖼️</span>
+        <div class="card-name">表情联系表</div>
+        <div class="card-pitch">14 帧一次平铺。每格附置信度和「它与基线差在哪一行」。带橙边的 PAIN 没有专属参数。</div>
+        <div class="card-tag">14 帧 · 平铺</div>
+      </a>
+      <a class="shop-card" href="../tools/petting-router.html">
+        <span class="card-emoji">✋</span>
+        <div class="card-name">抚摸路径规划器</div>
+        <div class="card-pitch">点选猫侧身八个区域规划抚摸路径。每个区域有不同风险等级和响应码。S 到 F 八档评价。</div>
+        <div class="card-tag">可运行 · 交互式</div>
+      </a>
+      <a class="shop-card" href="../tools/meow-decoder.html">
+        <span class="card-emoji">🎙️</span>
+        <div class="card-name">猫语翻译器</div>
+        <div class="card-pitch">模拟录音分析九种意图，输出结构化 JSON。遇到 503 NO_AUDIO 和 429 RATE_LIMITED 是彩蛋。</div>
+        <div class="card-tag">可运行 · 模拟翻译</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 2F 健康中心 ===== -->
+  <div class="floor floor-health" id="floor-health">
+    <div class="floor-header">
+      <div class="floor-badge">2F</div>
+      <h2 class="floor-title">健康中心 · 二楼</h2>
+    </div>
+    <div class="floor-cat-comment">「这层本喵不太愿意来。体检报告、作息监控之类的——感觉被管理了。但 Staff 说很重要，行吧。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../tools/health-check.html">
+        <span class="card-emoji">💚</span>
+        <div class="card-name">API 健康检查</div>
+        <div class="card-pitch">12 个子系统的实时状态面板。PURR/VOMIT/APPETITE/SLEEP 等。含 30 天 uptime 条和近 7 次事件。</div>
+        <div class="card-tag">Statuspage 风</div>
+      </a>
+      <a class="shop-card" href="../tools/heatmap-24h.html">
+        <span class="card-emoji">🌡️</span>
+        <div class="card-name">24h 作息热力图</div>
+        <div class="card-pitch">7×24 活动强度热力矩阵。猫是晨昏性动物——最活跃的不是你以为的白天。</div>
+        <div class="card-tag">一周 × 24 小时</div>
+      </a>
+      <a class="shop-card" href="../tools/litterbox.html">
+        <span class="card-emoji">🚽</span>
+        <div class="card-name">猫砂盆审计</div>
+        <div class="card-pitch">LITTERBOX I/O 全部入档。停留时间、产出评级 A+ 到 F、覆盖合规性检查。每 20 秒追加。</div>
+        <div class="card-tag">审计日志 · 终端风</div>
+      </a>
+      <a class="shop-card" href="../tools/charts.html">
+        <span class="card-emoji">📊</span>
+        <div class="card-name">图表图鉴</div>
+        <div class="card-pitch">19 张灰阶图：状态分布、DER 曲线、DNS 雷达、置信度对照、年龄热力。打印不耗墨。</div>
+        <div class="card-tag">手绘 SVG · 灰阶</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 3F 游乐场 ===== -->
+  <div class="floor floor-fun" id="floor-fun">
+    <div class="floor-header">
+      <div class="floor-badge">3F</div>
+      <h2 class="floor-title">游乐场 · 三楼</h2>
+    </div>
+    <div class="floor-cat-comment">「这层最好玩。谈判、跑酷、编辑部——都是本喵的主场。别以为你能赢。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../tools/door-negotiator.html">
+        <span class="card-emoji">🚪</span>
+        <div class="card-name">不让猫进的那扇门</div>
+        <div class="card-pitch">五轮谈判游戏。猫的策略每轮升级：抓门→嚎叫→伸爪→假装离开→突然折返。能撑过五轮就算你赢。</div>
+        <div class="card-tag">可运行 · 游戏</div>
+      </a>
+      <a class="shop-card" href="../tools/can-jump.html">
+        <span class="card-emoji">🦘</span>
+        <div class="card-name">跳跃判定器</div>
+        <div class="card-pitch">输入体重体长后腿长目标高度，实时判定能不能跳上去。配可视化弹跳弧线。</div>
+        <div class="card-tag">生物力学 · 计算器</div>
+      </a>
+      <a class="shop-card" href="../tools/3am-newsroom.html">
+        <span class="card-emoji">📰</span>
+        <div class="card-name">3AM 编辑部</div>
+        <div class="card-pitch">凌晨三点，你是猫的值班主编。8 轮突发新闻，每条 20 秒处理窗口。推送、毙稿还是等一等？</div>
+        <div class="card-tag">可运行 · 限时游戏</div>
+      </a>
+      <a class="shop-card" href="../tools/nine-lives.html">
+        <span class="card-emoji">😻</span>
+        <div class="card-name">九条命燃尽图</div>
+        <div class="card-pitch">14 天 sprint、9 条命的消耗轨迹。手绘燃尽图、九命点阵、每次失命的事后复盘卡 P0/P1。</div>
+        <div class="card-tag">燃尽图 · 可交互</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 4F 档案室 ===== -->
+  <div class="floor floor-meta" id="floor-meta">
+    <div class="floor-header">
+      <div class="floor-badge">4F</div>
+      <h2 class="floor-title">档案室 · 四楼</h2>
+    </div>
+    <div class="floor-cat-comment">「日志、变更记录、自评档案——全在这。本喵偶尔上来巡视一下，确认 Staff 没有篡改数据。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../tools/cat-diary.html">
+        <span class="card-emoji">📔</span>
+        <div class="card-name">猫的日记</div>
+        <div class="card-pitch">当事猫的私人记录。基于真实时间自动生长——凌晨三点跑酷心得，下午两点阳光里深度睡眠体验。</div>
+        <div class="card-tag">实时生长 · 亲笔</div>
+      </a>
+      <a class="shop-card" href="../tools/cat-review.html">
+        <span class="card-emoji">🎯</span>
+        <div class="card-name">360° 猫档案</div>
+        <div class="card-pitch">六维雷达自评：优雅度/破坏力/食物动机/粘人度/夜间活跃/自理能力。含 QoQ 季度环比。</div>
+        <div class="card-tag">六维雷达 · 季度环比</div>
+      </a>
+      <a class="shop-card" href="../tools/breaking-changes.html">
+        <span class="card-emoji">⚡</span>
+        <div class="card-name">Breaking Changes</div>
+        <div class="card-pitch">当事猫单方面决定的破坏性变更时间线。午睡 14h→18h、Owner 从 undefined 升级为禁止定义。回滚恒为「不受理」。</div>
+        <div class="card-tag">变更日志 · 猫本位</div>
+      </a>
+      <a class="shop-card" href="../tools/cat-404.html">
+        <span class="card-emoji">🔍</span>
+        <div class="card-name">猫的 404 日志</div>
+        <div class="card-pitch">当事猫视角的 4xx 访问日志。「外面」「金枪鱼刺身」「Owner」全部 404。支持过滤搜索。</div>
+        <div class="card-tag">终端日志 · 实时追加</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 5F 新大陆 ===== -->
+  <div class="floor floor-new" id="floor-new">
+    <div class="floor-header">
+      <div class="floor-badge">5F</div>
+      <h2 class="floor-title">新大陆 · 五楼</h2>
+    </div>
+    <div class="floor-cat-comment">「新开的。还在装修。但这层有审判台和串门中心——本喵觉得比楼下那些有意思多了。」</div>
+    <div class="shop-grid">
+      <a class="shop-card" href="../tools/cat-judgment.html">
+        <span class="card-emoji">⚖️</span>
+        <div class="card-name">猫语审判台</div>
+        <div class="card-pitch">输入猫行为事件，AI 从猫的视角判定：内疚度、作案动机、该不该罚、猫自豪度。动机概率分布可视化。</div>
+        <div class="card-tag">NEW · Jev AI 判定</div>
+        <span class="corner-badge">NEW</span>
+      </a>
+      <a class="shop-card" href="../tools/crosspet.html">
+        <span class="card-emoji">🐾</span>
+        <div class="card-name">CrossPet 串门中心</div>
+        <div class="card-pitch">跨站宠物串门协议控制台。手动召唤马文的狗、隔壁橘猫、奶茶鼠来串门。互动日志实时记录。</div>
+        <div class="card-tag">NEW · 跨站协议</div>
+        <span class="corner-badge">NEW</span>
+      </a>
+      <a class="shop-card" href="../reference/cheatsheet.html">
+        <span class="card-emoji">🔖</span>
+        <div class="card-name">速查卡</div>
+        <div class="card-pitch">一张纸浓缩所有状态码、表情维度、通信接口。打印贴墙用。</div>
+        <div class="card-tag">参考 · 速查</div>
+      </a>
+      <a class="shop-card" href="../reference/vitals.html">
+        <span class="card-emoji">📋</span>
+        <div class="card-name">生理速查</div>
+        <div class="card-pitch">体温/心率/呼吸频率/体重范围。分年龄段的正常值参考。</div>
+        <div class="card-tag">参考 · 生理</div>
+      </a>
+      <a class="shop-card" href="../reference/errors.html">
+        <span class="card-emoji">⚠️</span>
+        <div class="card-name">错误码对照</div>
+        <div class="card-pitch">13 个状态码完整定义。405 写操作一律拒绝、422 客户端短路、429 RATE_LIMITED。</div>
+        <div class="card-tag">参考 · 错误码</div>
+      </a>
+      <a class="shop-card" href="../versions.html">
+        <span class="card-emoji">📅</span>
+        <div class="card-name">历史版本</div>
+        <div class="card-pitch">CAT API 的版本演进记录。从 0.1 draft 到当前 Revising。</div>
+        <div class="card-tag">参考 · 版本</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- ===== 猫的结语 ===== -->
+  <div class="cat-farewell">
+    <div class="mini-cat">🐱</div>
+    <p>
+      逛完了？这就是 CAT API 的全部。<br>
+      22 个房间、6 层楼、一只猫、零个 Owner。<br>
+      你可以走了——但猫不会跟你道别。
+    </p>
+    <div class="farewell-quote">「门在那边。出去的时候帮我把灯关了。」</div>
+  </div>
+
+  <a href="../index.html" class="back-link">← 返回 CAT API 首页</a>
+</div>
+
+<script>
+/* ==========================================================================
+ * 楼层导航交互
+ * ========================================================================== */
+(function () {
+  "use strict";
+
+  var chips = document.querySelectorAll(".floor-chip");
+  var floors = document.querySelectorAll(".floor");
+
+  // 点击导航 chip 滚动到对应楼层
+  chips.forEach(function (chip) {
+    chip.addEventListener("click", function (e) {
+      e.preventDefault();
+      var target = chip.getAttribute("data-floor");
+      var el = document.getElementById("floor-" + target);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+
+  // 滚动时高亮当前楼层 chip
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var id = entry.target.id.replace("floor-", "");
+          chips.forEach(function (c) {
+            c.classList.toggle("active", c.getAttribute("data-floor") === id);
+          });
+        }
+      });
+    }, { rootMargin: "-80px 0px -60% 0px" });
+
+    floors.forEach(function (f) { observer.observe(f); });
+  }
+
+  // 卡片点击波纹效果
+  document.querySelectorAll(".shop-card").forEach(function (card) {
+    card.addEventListener("click", function (e) {
+      // 让正常链接跳转，只是加一个小动画反馈
+      card.style.transform = "scale(0.97)";
+      setTimeout(function () { card.style.transform = ""; }, 150);
+    });
+  });
+
+})();
+</script>
+<script src="../assets/js/livecat.js"></script>
+</body>
+</html>
