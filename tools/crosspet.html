@@ -87,8 +87,8 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   }
   .summon-btn:active { transform: translateY(0); }
-  .summon-btn .pet-svg { width: 64px; height: 44px; }
-  .summon-btn .pet-svg svg { width: 100%; height: 100%; }
+  .summon-btn .pet-img { width: 72px; height: 72px; border-radius: 12px; overflow: hidden; }
+  .summon-btn .pet-img img { width: 100%; height: 100%; object-fit: cover; }
   .summon-btn .pet-name { font-size: 14px; font-weight: 700; color: var(--ink); }
   .summon-btn .pet-desc { font-size: 11px; color: var(--faint); }
 
@@ -282,62 +282,27 @@
 (function () {
   "use strict";
 
-  // 内置可召唤的宠物清单
+  // 内置可召唤的宠物清单（AI 生成插画形象）
   var PETS = {
     dog: {
       name: '马文的狗',
       desc: '友善的金毛',
-      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
-        '<ellipse cx="40" cy="38" rx="22" ry="14" fill="#d4a574" stroke="#8b5a2b" stroke-width="1.5"/>' +
-        '<circle cx="40" cy="22" r="13" fill="#e0b585" stroke="#8b5a2b" stroke-width="1.5"/>' +
-        '<ellipse cx="29" cy="14" rx="5" ry="8" fill="#c49565" stroke="#8b5a2b" stroke-width="1" transform="rotate(-20 29 14)"/>' +
-        '<ellipse cx="51" cy="14" rx="5" ry="8" fill="#c49565" stroke="#8b5a2b" stroke-width="1" transform="rotate(20 51 14)"/>' +
-        '<circle cx="34" cy="22" r="1.6" fill="#222"/>' +
-        '<circle cx="46" cy="22" r="1.6" fill="#222"/>' +
-        '<ellipse cx="40" cy="28" rx="2.5" ry="1.8" fill="#222"/>' +
-        '<path d="M 37 30 Q 40 33 43 30" fill="none" stroke="#222" stroke-width="0.8"/>' +
-        '<path d="M 62 36 Q 72 32 70 26" fill="none" stroke="#8b5a2b" stroke-width="2"/>' +
-        '</svg>'
+      img: '../assets/img/pets/dog.png'
     },
     cat: {
       name: '隔壁的橘猫',
       desc: '高冷的橘色大佬',
-      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
-        '<ellipse cx="40" cy="38" rx="20" ry="13" fill="#e8943a" stroke="#b06820" stroke-width="1"/>' +
-        '<circle cx="40" cy="22" r="12" fill="#f0a050" stroke="#b06820" stroke-width="1"/>' +
-        '<polygon points="32,14 30,6 36,12" fill="#e8943a" stroke="#b06820" stroke-width="0.8"/>' +
-        '<polygon points="48,14 50,6 44,12" fill="#e8943a" stroke="#b06820" stroke-width="0.8"/>' +
-        '<circle cx="36" cy="22" r="1.4" fill="#222"/>' +
-        '<circle cx="44" cy="22" r="1.4" fill="#222"/>' +
-        '<path d="M 38 26 L 40 28 L 42 26" fill="#222"/>' +
-        '<path d="M 60 36 Q 70 30 68 22" fill="none" stroke="#b06820" stroke-width="2"/>' +
-        '</svg>'
+      img: '../assets/img/pets/cat-orange.png'
     },
     hamster: {
       name: '奶茶鼠',
       desc: '圆滚滚的仓鼠',
-      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
-        '<ellipse cx="40" cy="38" rx="20" ry="16" fill="#e8c39e" stroke="#a07853" stroke-width="1.5"/>' +
-        '<circle cx="29" cy="20" r="4" fill="#d4a574" stroke="#a07853" stroke-width="1"/>' +
-        '<circle cx="51" cy="20" r="4" fill="#d4a574" stroke="#a07853" stroke-width="1"/>' +
-        '<circle cx="33" cy="32" r="1.5" fill="#222"/>' +
-        '<circle cx="47" cy="32" r="1.5" fill="#222"/>' +
-        '<ellipse cx="40" cy="38" rx="2" ry="1.5" fill="#a07853"/>' +
-        '</svg>'
+      img: '../assets/img/pets/hamster.png'
     },
     blackcat: {
       name: '黑猫警长',
       desc: '正义的黑色身影',
-      svg: '<svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">' +
-        '<ellipse cx="40" cy="38" rx="20" ry="13" fill="#262422" stroke="#0d0c0b" stroke-width="1"/>' +
-        '<circle cx="40" cy="22" r="12" fill="#332f2c" stroke="#0d0c0b" stroke-width="1"/>' +
-        '<polygon points="32,14 30,6 36,12" fill="#262422" stroke="#0d0c0b" stroke-width="0.8"/>' +
-        '<polygon points="48,14 50,6 44,12" fill="#262422" stroke="#0d0c0b" stroke-width="0.8"/>' +
-        '<circle cx="36" cy="22" r="2" fill="#f5c542"/>' +
-        '<circle cx="44" cy="22" r="2" fill="#f5c542"/>' +
-        '<path d="M 38 26 L 40 28 L 42 26" fill="#ccc"/>' +
-        '<path d="M 60 36 Q 70 30 68 22" fill="none" stroke="#0d0c0b" stroke-width="2"/>' +
-        '</svg>'
+      img: '../assets/img/pets/cat-black.png'
     }
   };
 
@@ -376,7 +341,7 @@
     Object.keys(PETS).forEach(function (key) {
       var pet = PETS[key];
       html += '<button class="summon-btn" data-pet="' + key + '">' +
-        '<div class="pet-svg">' + pet.svg + '</div>' +
+        '<div class="pet-img"><img src="' + pet.img + '" alt="' + pet.name + '"></div>' +
         '<div class="pet-name">' + pet.name + '</div>' +
         '<div class="pet-desc">' + pet.desc + '</div>' +
         '</button>';
@@ -399,7 +364,7 @@
     var payload = {
       petType: key,
       petName: pet.name,
-      petSVG: pet.svg,
+      petImg: pet.img,
       fromSite: '手动召唤',
       fromSiteId: 'manual-' + Date.now(),
       direction: Math.random() < 0.5 ? 'left' : 'right'
@@ -427,12 +392,14 @@
     var existing = document.querySelector('.cp-visitor');
     if (existing) existing.remove();
 
-    var svg = payload.petSVG;
+    var mediaHTML = payload.petImg
+      ? '<img src="' + payload.petImg + '" alt="' + escapeHtml(payload.petName) + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;">'
+      : (payload.petSVG || '');
     var el = document.createElement('div');
     el.className = 'cp-visitor cp-visitor-' + payload.petType;
     el.setAttribute('aria-hidden', 'true');
     el.innerHTML =
-      '<div class="cp-visitor-body">' + svg + '</div>' +
+      '<div class="cp-visitor-body">' + mediaHTML + '</div>' +
       '<div class="cp-visitor-label">' +
         '<span class="cp-visitor-name">' + escapeHtml(payload.petName) + '</span>' +
         '<span class="cp-visitor-from">来自 ' + escapeHtml(payload.fromSite) + '</span>' +
