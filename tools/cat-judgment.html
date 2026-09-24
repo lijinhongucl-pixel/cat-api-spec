@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>猫语审判台 — CAT API</title>
+<meta name="description" content="用 AI 判定模型（TypeSafe Jev）从猫的视角审判猫行为事件。输入一个事件，获得内疚度、作案动机、该不该罚、猫自豪度四维判决。">
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px 80px; }
+
+  /* ===== Header ===== */
+  .court-header {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: end;
+  }
+  @media (max-width: 640px) { .court-header { grid-template-columns: 1fr; } }
+  .court-title h1 { margin: 0; font-size: 26px; }
+  .court-title .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .court-title .sub code { font-size: 12px; color: var(--faint); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+
+  .model-badge {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .model-badge .model-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .model-badge .model-desc { font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .model-badge .live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    margin-right: 5px;
+    animation: courtPulse 1.8s ease-in-out infinite;
+  }
+  @keyframes courtPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ===== 输入区 ===== */
+  .input-card {
+    margin-top: 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .input-card h2 { font-size: 18px; margin-bottom: 8px; }
+  .input-card .hint { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+  .input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .input-row textarea {
+    flex: 1;
+    min-width: 260px;
+    min-height: 80px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    background: var(--bg);
+    resize: vertical;
+  }
+  .input-row textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(75, 85, 99, 0.1);
+  }
+
+  .judge-btn {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .judge-btn:hover { background: var(--accent-deep); }
+  .judge-btn:active { transform: scale(.97); }
+  .judge-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* 示例按钮 */
+  .examples {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .example-chip {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--bg);
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color .2s, color .2s;
+    font-family: inherit;
+  }
+  .example-chip:hover { border-color: var(--accent); color: var(--ink); }
+
+  /* API Key 输入 */
+  .apikey-row {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .apikey-row label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .apikey-row input {
+    flex: 1;
+    min-width: 200px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  .apikey-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  /* ===== 结果区 ===== */
+  .verdict-section {
+    margin-top: 28px;
+    display: none;
+  }
+  .verdict-section.show { display: block; }
+
+  .verdict-banner {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px 28px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .verdict-banner .gavel { font-size: 42px; line-height: 1; }
+  .verdict-banner .verdict-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 8px 0 4px;
+    color: var(--ink);
+  }
+  .verdict-banner .verdict-sub {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* 四维判决网格 */
+  .verdict-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 640px) { .verdict-grid { grid-template-columns: 1fr; } }
+
+  .verdict-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict-card .card-label {
+    font-size: 12px;
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .verdict-card .card-value {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 6px 0;
+    color: var(--ink);
+  }
+  .verdict-card .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* 条形图 */
+  .bar-chart {
+    margin-top: 10px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    font-size: 12px;
+  }
+  .bar-row .bar-label { min-width: 72px; color: var(--muted); }
+  .bar-row .bar-track {
+    flex: 1;
+    height: 10px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-row .bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width .8s cubic-bezier(.34,1.56,.64,1);
+    width: 0%;
+  }
+  .bar-row .bar-pct {
+    min-width: 42px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* 加载动画 */
+  .loading-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .loading-state .spinner {
+    display: inline-block;
+    width: 32px; height: 32px;
+    border: 3px solid var(--line);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-state .loading-text {
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  /* 错误状态 */
+  .error-state {
+    background: rgba(153, 27, 27, 0.05);
+    border: 1px solid rgba(153, 27, 27, 0.2);
+    border-radius: 14px;
+    padding: 20px 24px;
+    color: var(--danger);
+    font-size: 13px;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 28px;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .back-link:hover { text-decoration: underline; }
+
+  /* 审判记录 */
+  .history-section {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+    display: none;
+  }
+  .history-section.show { display: block; }
+  .history-section h2 { font-size: 18px; margin-bottom: 16px; }
+  .history-list { display: flex; flex-direction: column; gap: 10px; }
+  .history-item {
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg);
+    font-size: 13px;
+  }
+  .history-item .h-incident { color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+  .history-item .h-meta { color: var(--faint); font-size: 11px; }
+</style>
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a href="../index.html" class="brand">CAT API</a>
+    <span class="sep">/</span>
+    <span>猫语审判台</span>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="court-header">
+    <div class="court-title">
+      <h1>猫语审判台</h1>
+      <div class="sub">用 AI 判定模型从猫的视角审判猫行为 · <code>TypeSafe Jev / bocha-jev-v1</code></div>
+    </div>
+    <div class="model-badge">
+      <div><span class="live-dot"></span><span class="model-name">Jev 已就绪</span></div>
+      <div class="model-desc">猫视角判定引擎</div>
+    </div>
+  </div>
+
+  <!-- 输入区 -->
+  <div class="input-card">
+    <h2>描述一个猫行为事件</h2>
+    <p class="hint">审判台会用猫的视角判定：内疚度、作案动机、该不该罚、猫有多自豪。越具体越有趣。</p>
+
+    <div class="input-row">
+      <textarea id="incidentInput" placeholder="比如：猫把桌上的水杯推到了地上，然后看着碎片走开了，表情毫无波澜。"></textarea>
+      <button class="judge-btn" id="judgeBtn" onclick="runJudgment()">开庭审判</button>
+    </div>
+
+    <!-- 示例 -->
+    <div class="examples">
+      <button class="example-chip" onclick="fillExample(0)">推杯子</button>
+      <button class="example-chip" onclick="fillExample(1)">凌晨三点跑酷</button>
+      <button class="example-chip" onclick="fillExample(2)">啃食键盘</button>
+      <button class="example-chip" onclick="fillExample(3)">猫砂踢满地</button>
+      <button class="example-chip" onclick="fillExample(4)">咬主人脚趾</button>
+      <button class="example-chip" onclick="fillExample(5)">拒绝新猫粮</button>
+    </div>
+
+    <!-- API Key -->
+    <div class="apikey-row">
+      <label for="apiKeyInput">Jev API Key：</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-..." value="sk-deb652bfc628cf283af3c1154ff1bd5117e01fd7f24a0400">
+    </div>
+  </div>
+
+  <!-- 结果区 -->
+  <div class="verdict-section" id="verdictSection">
+    <!-- 加载中 -->
+    <div class="loading-state" id="loadingState" style="display:none;">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loadingText">猫法官正在审议中...</div>
+    </div>
+
+    <!-- 错误 -->
+    <div class="error-state" id="errorState" style="display:none;"></div>
+
+    <!-- 判决结果 -->
+    <div id="verdictResult" style="display:none;">
+      <!-- 横幅 -->
+      <div class="verdict-banner">
+        <div class="gavel" id="verdictGavel">⚖️</div>
+        <div class="verdict-title" id="verdictTitle">--</div>
+        <div class="verdict-sub" id="verdictSub">--</div>
+      </div>
+
+      <!-- 四维判决 -->
+      <div class="verdict-grid">
+        <!-- 内疚度 -->
+        <div class="verdict-card">
+          <div class="card-label">内疚指数</div>
+          <div class="card-value" id="guiltValue">--</div>
+          <div class="card-desc" id="guiltDesc">--</div>
+        </div>
+
+        <!-- 该不该罚 -->
+        <div class="verdict-card">
+          <div class="card-label">该不该罚</div>
+          <div class="card-value" id="punishValue">--</div>
+          <div class="card-desc" id="punishDesc">--</div>
+        </div>
+
+        <!-- 作案动机 -->
+        <div class="verdict-card" style="grid-column: span 2;">
+          <div class="card-label">作案动机分析</div>
+          <div class="card-value" id="motiveValue">--</div>
+          <div class="card-desc" id="motiveDesc">--</div>
+          <div class="bar-chart" id="motiveChart"></div>
+        </div>
+
+        <!-- 猫自豪度 -->
+        <div class="verdict-card" style="grid-column: span 2;">
+          <div class="card-label">猫的自豪程度</div>
+          <div class="card-value" id="prideValue">--</div>
+          <div class="card-desc" id="prideDesc">--</div>
+          <div class="bar-chart" id="prideChart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 审判记录 -->
+  <div class="history-section" id="historySection">
+    <h2>审判记录</h2>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <a href="../index.html" class="back-link">← 返回 CAT API</a>
+</div>
+
+<script>
+/* ==========================================================================
+ * 猫语审判台 — 前端逻辑
+ * ========================================================================== */
+(function () {
+  "use strict";
+
+  // 示例事件
+  var EXAMPLES = [
+    "猫把桌上的水杯推到了地上，然后看着碎片走开了，表情毫无波澜。",
+    "凌晨三点，猫从客厅跑到卧室，在主人脸上踩了一圈，然后开始追逐一只看不见的虫子，撞倒了台灯。",
+    "猫蹲在键盘上，把主人正在写的文档啃了一口，然后趴在上面呼噜呼噜。",
+    "猫上完厕所，把猫砂踢得满地都是，然后高傲地从砂堆上跨过，头也不回。",
+    "主人躺在床上，猫走过来，轻轻咬了一下主人的脚趾，咬完就跑。",
+    "主人买了进口猫粮，猫闻了一下，用爪子把碗推倒，然后坐在空碗旁边，沉默地注视着主人。"
+  ];
+
+  var history = [];
+  var judging = false;
+
+  // 初始化
+  var apiKeyInput = document.getElementById("apiKeyInput");
+  var incidentInput = document.getElementById("incidentInput");
+  var judgeBtn = document.getElementById("judgeBtn");
+
+  // 如果 JevCat 存在，预配置 API Key
+  function syncApiKey() {
+    if (window.JevCat && apiKeyInput.value.trim()) {
+      JevCat.configure({ apiKey: apiKeyInput.value.trim() });
+    }
+  }
+  apiKeyInput.addEventListener("change", syncApiKey);
+  apiKeyInput.addEventListener("input", syncApiKey);
+  syncApiKey();
+
+  // 示例填充
+  window.fillExample = function (idx) {
+    incidentInput.value = EXAMPLES[idx] || "";
+    incidentInput.focus();
+  };
+
+  // 主审判逻辑
+  window.runJudgment = function () {
+    if (judging) return;
+    var incident = incidentInput.value.trim();
+    if (!incident) {
+      incidentInput.focus();
+      return;
+    }
+    syncApiKey();
+    if (!JevCat.getConfig().apiKey) {
+      showError("请先填写 Jev API Key。");
+      return;
+    }
+
+    judging = true;
+    judgeBtn.disabled = true;
+    judgeBtn.textContent = "审判中...";
+
+    // 显示加载
+    var section = document.getElementById("verdictSection");
+    var loading = document.getElementById("loadingState");
+    var error = document.getElementById("errorState");
+    var result = document.getElementById("verdictResult");
+    section.classList.add("show");
+    error.style.display = "none";
+    result.style.display = "none";
+    loading.style.display = "block";
+
+    // 加载文案动画
+    var loadTexts = [
+      "猫法官正在审议中...",
+      "正在读取猫的内心活动...",
+      "动机分析中...",
+      "量刑计算中...",
+      "猫拒绝配合，强制执行中..."
+    ];
+    var loadIdx = 0;
+    var loadTimer = setInterval(function () {
+      loadIdx = (loadIdx + 1) % loadTexts.length;
+      document.getElementById("loadingText").textContent = loadTexts[loadIdx];
+    }, 1500);
+
+    JevCat.judge(incident).then(function (result) {
+      clearInterval(loadTimer);
+      loading.style.display = "none";
+      judging = false;
+      judgeBtn.disabled = false;
+      judgeBtn.textContent = "开庭审判";
+
+      renderVerdict(incident, result);
+      addHistory(incident, result);
+
+    }).catch(function (err) {
+      clearInterval(loadTimer);
+      loading.style.display = "none";
+      judging = false;
+      judgeBtn.disabled = false;
+      judgeBtn.textContent = "开庭审判";
+      showError(err.message || "审判失败，请检查 API Key 和网络连接。");
+    });
+  };
+
+  function showError(msg) {
+    var section = document.getElementById("verdictSection");
+    var error = document.getElementById("errorState");
+    section.classList.add("show");
+    error.textContent = "❌ " + msg;
+    error.style.display = "block";
+  }
+
+  function renderVerdict(incident, result) {
+    document.getElementById("verdictResult").style.display = "block";
+
+    // 根据内疚度和自豪度生成判决标题
+    var guilt = result.guilt || 0;
+    var pride = result.pride || 0;
+    var punish = result.should_punish || 0;
+    var gavel, title, sub;
+
+    if (pride > 0.6 && guilt < 0.3) {
+      gavel = "😼";
+      title = "猫判自己无罪，且要求嘉奖";
+      sub = "内疚度仅 " + JevCat.formatScore(guilt) + "，自豪度高达 " + JevCat.formatScore(pride) + "。猫认为这是一次成功的科学实验。";
+    } else if (guilt > 0.6 && punish > 0.5) {
+      gavel = "😿";
+      title = "猫认罪了，但你能拿它怎样";
+      sub = "内疚度 " + JevCat.formatScore(guilt) + "，该罚指数 " + JevCat.formatScore(punish) + "。但猫法官说：惩罚执行率 3%。";
+    } else if (pride > 0.5) {
+      gavel = "😸";
+      title = "猫对此行为深感满意";
+      sub = "自豪度 " + JevCat.formatScore(pride) + "。猫认为这是本周最佳杰作之一。";
+    } else {
+      gavel = "🐱";
+      title = "猫的态度：既不认错也不道歉";
+      sub = "内疚度 " + JevCat.formatScore(guilt) + "，自豪度 " + JevCat.formatScore(pride) + "。猫的内心：关你什么事。";
+    }
+
+    document.getElementById("verdictGavel").textContent = gavel;
+    document.getElementById("verdictTitle").textContent = title;
+    document.getElementById("verdictSub").textContent = sub;
+
+    // 内疚度
+    document.getElementById("guiltValue").textContent = JevCat.formatScore(guilt);
+    var guiltDesc = guilt < 0.2 ? "猫完全问心无愧。" :
+                    guilt < 0.5 ? "猫假装有一点在意。" :
+                    guilt < 0.8 ? "猫似乎有那么一丝丝愧疚。" :
+                    "猫罕见地表现出了后悔的迹象。";
+    document.getElementById("guiltDesc").textContent = guiltDesc;
+
+    // 该不该罚
+    document.getElementById("punishValue").textContent = JevCat.formatScore(punish);
+    var punishDesc = punish > 0.6 ? "猫法官认为该罚——但执行权不在你手里。" :
+                     punish > 0.3 ? "猫法官态度暧昧，罚不罚看心情。" :
+                     "猫法官认为这完全不值得惩罚。";
+    document.getElementById("punishDesc").textContent = punishDesc;
+
+    // 动机
+    var MOTIVE_MAP = {
+      boredom: { label: "无聊找事", desc: "猫当时确实太闲了。" },
+      curiosity: { label: "科学探索", desc: "猫在做严谨的物理实验。" },
+      territory: { label: "宣示领地", desc: "猫在告诉你：这个家是我的。" },
+      comfort: { label: "通行权", desc: "你的东西挡了猫的路。" },
+      chaos: { label: "熵增", desc: "宇宙走向热寂的必然过程。" }
+    };
+    var motiveInfo = MOTIVE_MAP[result.motive] || { label: result.motive || "--", desc: "" };
+    document.getElementById("motiveValue").textContent = motiveInfo.label;
+    document.getElementById("motiveDesc").textContent = motiveInfo.desc || "猫的真实动机深不可测。";
+
+    // 动机概率条形图
+    var motiveChart = document.getElementById("motiveChart");
+    var probs = result.motive_probs || {};
+    var COLORS = ["var(--accent)", "#b45309", "#15803d", "#7c3aed", "#dc2626"];
+    motiveChart.innerHTML = Object.keys(probs).map(function (key, i) {
+      var pct = Math.round(probs[key] * 100);
+      var info = MOTIVE_MAP[key] || { label: key };
+      return '<div class="bar-row">' +
+        '<span class="bar-label">' + info.label + '</span>' +
+        '<span class="bar-track"><span class="bar-fill" style="background:' + (COLORS[i] || 'var(--accent)') + ';width:0%"></span></span>' +
+        '<span class="bar-pct">' + pct + '%</span>' +
+        '</div>';
+    }).join("");
+
+    // 动画
+    setTimeout(function () {
+      motiveChart.querySelectorAll(".bar-fill").forEach(function (el, i) {
+        var keys = Object.keys(probs);
+        el.style.width = Math.round(probs[keys[i]] * 100) + "%";
+      });
+    }, 100);
+
+    // 自豪度
+    document.getElementById("prideValue").textContent = JevCat.formatScore(pride);
+    var prideDesc = pride > 0.7 ? "猫认为这是本喵职业生涯的巅峰。" :
+                    pride > 0.4 ? "猫对结果表示基本满意。" :
+                    pride > 0.2 ? "猫觉得表现一般，下次努力。" :
+                    "猫甚至不觉得这是个值得自豪的事。";
+    document.getElementById("prideDesc").textContent = prideDesc;
+
+    // 自豪度概率分布
+    var prideChart = document.getElementById("prideChart");
+    var prideProbs = result.pride_probs || {};
+    var prideKeys = Object.keys(prideProbs).sort(function (a, b) { return parseFloat(a) - parseFloat(b); });
+    if (prideKeys.length > 0) {
+      // 取关键点显示（避免太多条）
+      var sampleStep = Math.max(1, Math.floor(prideKeys.length / 10));
+      prideChart.innerHTML = "";
+      for (var i = 0; i < prideKeys.length; i += sampleStep) {
+        var k = prideKeys[i];
+        var pct = Math.round(prideProbs[k] * 100);
+        if (pct === 0) continue;
+        var label = "P=" + (parseFloat(k) * 100).toFixed(0) + "%";
+        var barEl = document.createElement("div");
+        barEl.className = "bar-row";
+        barEl.innerHTML = '<span class="bar-label" style="font-size:10px;">' + label + '</span>' +
+          '<span class="bar-track"><span class="bar-fill" style="background:#15803d;width:0%"></span></span>' +
+          '<span class="bar-pct">' + pct + '%</span>';
+        prideChart.appendChild(barEl);
+        (function (el, w) {
+          setTimeout(function () { el.style.width = w; }, 100 + i * 30);
+        })(barEl.querySelector(".bar-fill"), pct + "%");
+      }
+    } else {
+      prideChart.innerHTML = "";
+    }
+  }
+
+  function addHistory(incident, result) {
+    var now = new Date();
+    var ts = now.getHours().toString().padStart(2, "0") + ":" +
+             now.getMinutes().toString().padStart(2, "0") + ":" +
+             now.getSeconds().toString().padStart(2, "0");
+    history.unshift({
+      incident: incident,
+      guilt: result.guilt,
+      motive: result.motive,
+      punish: result.should_punish,
+      pride: result.pride,
+      ts: ts
+    });
+    if (history.length > 20) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    var section = document.getElementById("historySection");
+    var list = document.getElementById("historyList");
+    if (history.length === 0) {
+      section.classList.remove("show");
+      return;
+    }
+    section.classList.add("show");
+    var MOTIVE_LABELS = {
+      boredom: "无聊找事", curiosity: "科学探索", territory: "宣示领地",
+      comfort: "通行权", chaos: "熵增"
+    };
+    list.innerHTML = history.map(function (h) {
+      return '<div class="history-item">' +
+        '<div class="h-incident">' + escapeHtml(h.incident) + '</div>' +
+        '<div class="h-meta">' + h.ts + ' · 内疚 ' + JevCat.formatScore(h.guilt) +
+        ' · 动机 ' + (MOTIVE_LABELS[h.motive] || h.motive || "--") +
+        ' · 自豪 ' + JevCat.formatScore(h.pride) + '</div>' +
+        '</div>';
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // Enter 快捷键（Shift+Enter 换行）
+  incidentInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      window.runJudgment();
+    }
+  });
+
+})();
+</script>
+<script src="../assets/js/jev.js"></script>
+<script src="../assets/js/livecat.js"></script>
+</body>
+</html>
