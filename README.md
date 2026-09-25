@@ -12,11 +12,11 @@
 
 | | |
 |---|---|
-| ![首页](assets/img/screenshots/home.png) | ![正文·权限模型](assets/img/screenshots/spec-permissions.png) |
+| ![首页](assets/img/screenshots/home.jpg) | ![正文·权限模型](assets/img/screenshots/spec-permissions.jpg) |
 | **首页** —— 项目门面与统计数字 | **正文 §2 权限模型** —— 否认 `Owner` 角色的存在 |
-| ![表情渲染器](assets/img/screenshots/expression.png) | ![外设控制台](assets/img/screenshots/peripherals.png) |
+| ![表情渲染器](assets/img/screenshots/expression.jpg) | ![外设控制台](assets/img/screenshots/peripherals.jpg) |
 | **表情渲染器** —— 选状态实时出猫脸 SVG | **外设控制台** —— 14 类外设 / 13 道门槛 / 接合评分 |
-| ![一只猫的生活意见](assets/img/screenshots/opinions.png) | ![活猫](assets/img/screenshots/livecat.png) |
+| ![一只猫的生活意见](assets/img/screenshots/opinions.jpg) | ![活猫](assets/img/screenshots/livecat.jpg) |
 | **一只猫的生活意见** —— 31 条当事猫官方立场 | **活猫 LIVECAT v3** —— 屏幕上走来走去、啃元素、追 Token 老鼠 |
 
 ---
@@ -33,6 +33,11 @@
 
 风格：工程文体 + 玩梗。不是科普，不是图鉴——是把 RFC 的骨架拿来描述一只猫。
 
+<<<<<<< HEAD
+=======
+**数字**：151 次提交 · 24 个工具页面 · 10 个 JS 引擎 · 5500+ 行 JS · 零依赖零构建
+
+>>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 ---
 
 ## 项目结构
@@ -81,6 +86,7 @@ cat-api-spec/
 │   └── CONTRIBUTING.md         # 贡献指南
 ├── assets/
 │   ├── css/
+<<<<<<< HEAD
 │   │   ├── spec.css            # 主样式
 │   │   ├── livecat.css         # 活猫样式
 │   │   ├── multiplayer.css     # 多人联机浮窗样式
@@ -94,6 +100,23 @@ cat-api-spec/
 │   │   ├── quantify.js         # 量化公式引擎
 │   │   ├── charts.js           # 图表数据
 │   │   └── visitor-counter.js  # 访客计数器
+=======
+│   │   ├── spec.css            # 主样式（浅色文档风）
+│   │   ├── livecat.css         # 活猫样式（22 状态动画）
+│   │   ├── crosspet.css        # CrossPet 串门协议样式
+│   │   └── multiplayer.css     # 多人协作样式
+│   ├── js/
+│   │   ├── livecat.js          # 活猫引擎（1828 行，22 状态状态机）
+│   │   ├── expression.js       # 表情渲染引擎（847 行，14 状态 SVG）
+│   │   ├── crosspet.js         # CrossPet 协议（464 行，跨站宠物串门）
+│   │   ├── multiplayer.js      # 多人协作（1002 行，跨 tab 光标/老鼠）
+│   │   ├── jev.js              # Jev AI 判定封装（score/choice/noul 三题型）
+│   │   ├── jev-brain.js        # Jev Brain 活猫 AI 决策引擎
+│   │   ├── peripherals.js      # 外设评分引擎
+│   │   ├── charts.js           # 图表引擎
+│   │   ├── quantify.js         # 量化计算引擎
+│   │   └── visitor-counter.js  # 访客计数
+>>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 │   └── img/
 │       ├── favicon.svg         # 侧脸猫剪影 favicon
 │       └── screenshots/        # README 截图
@@ -106,6 +129,45 @@ cat-api-spec/
 
 ---
 
+<<<<<<< HEAD
+=======
+## 核心系统
+
+### 🐱 活猫 LIVECAT
+
+每页右下角有一只会自己活动的猫。**22 个行为状态**，由状态机驱动：
+
+- **基础状态**：睡觉 / 巡逻 / 理毛 / 进食 / 玩耍 / 凝视 / 疯跑 / 钻纸箱
+- **微动作**：伸懒腰 / 打哈欠 / 盯鼠标 / 啃食页面内容 / 蹭人腿
+- **特殊事件**：凌晨 3 点强制 ZOOMIES / 呕吐毛球 / 追激光笔 / 踩奶
+- **交互**：戳它触发踩奶、🐟 喂零食、抚摸配额每日 5 次（429）
+- **跨页面**：位置持久化到 localStorage，换页面猫还记得自己在哪
+
+### 🧠 Jev Brain — AI 决策引擎
+
+活猫可以被 AI 驱动。点首页左下角「🧠 AI 模式」按钮，输入 Jev API Key，猫的状态切换不再随机——Jev 根据当前时间、鼠标活跃度、上一状态、饱腹值、页面标题来智能决策。
+
+每次决策时猫头上会冒出「猫在想什么」气泡，显示 AI 的判断理由和置信度。API 挂了自动降级回加权随机，不影响体验。
+
+### ⚖️ 猫语审判台
+
+输入一个猫行为事件，Jev AI 从猫的视角给出四维判决：内疚指数、该不该罚、作案动机分析（概率分布条形图）、猫自豪度。6 个预设示例，支持自由输入。
+
+### 🐾 CrossPet 串门协议
+
+跨站宠物串门。加载 `crosspet.js` 后，任何网站的宠物都可以穿越到你的页面。内置 4 只 AI 插画级串门宠物（金毛/橘猫/仓鼠/黑猫警长），支持手动召唤、互动检测、串门日志。
+
+### 🎭 表情引擎
+
+14 个可观测状态、13 维参数向量、确定性 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，实时看猫变脸。两个状态混合时权重不够会被拒绝。
+
+### 👥 多人协作
+
+跨 tab 光标追踪、在线人数、协作抓老鼠。打开两个标签页就能看到对方的光标在动。
+
+---
+
+>>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 ## 章节地图
 
 | 章节 | 标题 | 在哪 |
