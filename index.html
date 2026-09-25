@@ -393,10 +393,69 @@
 </div>
 
 <script src="assets/js/expression.js"></script>
+<script src="assets/js/jev.js"></script>
+<script src="assets/js/jev-brain.js"></script>
 <script src="assets/js/livecat.js"></script>
 <script src="assets/js/multiplayer.js"></script>
 <script src="assets/js/crosspet.js"></script>
 <script src="assets/js/visitor-counter.js"></script>
+<script>
+// Jev AI 模式开关：URL 加 ?jev=1 自动开启（需 ?key=sk-... 或已配置过）
+(function() {
+  var btn = document.createElement('button');
+  btn.id = 'jev-toggle';
+  btn.textContent = '🧠 AI 模式';
+  btn.title = '切换活猫决策引擎：加权随机 ↔ Jev AI';
+  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #e5e2dd;background:#fff;font-size:12px;font-weight:600;color:#6b6b6b;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .2s;';
+  function updateBtn() {
+    if (window.JevBrain && JevBrain.isEnabled()) {
+      btn.textContent = '🧠 AI 模式 ON';
+      btn.style.background = '#1B3A2E';
+      btn.style.color = '#FAF8F5';
+      btn.style.borderColor = '#1B3A2E';
+    } else {
+      btn.textContent = '🧠 AI 模式';
+      btn.style.background = '#fff';
+      btn.style.color = '#6b6b6b';
+      btn.style.borderColor = '#e5e2dd';
+    }
+  }
+  btn.addEventListener('click', function() {
+    if (!window.JevBrain) return;
+    if (JevBrain.isEnabled()) {
+      JevBrain.disable();
+    } else {
+      var key = prompt('输入 Jev API Key 开启 AI 决策模式：', localStorage.getItem('jev_api_key') || '');
+      if (key) {
+        localStorage.setItem('jev_api_key', key);
+        JevBrain.enable(key);
+      }
+    }
+    updateBtn();
+  });
+  // 页面加载后插入按钮
+  if (document.body) {
+    document.body.appendChild(btn);
+    updateBtn();
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.appendChild(btn);
+      updateBtn();
+    });
+  }
+  // 如果 localStorage 有 key 且 URL 有 ?jev=1，自动开启
+  try {
+    var params = new URLSearchParams(location.search);
+    if (params.get('jev') === '1') {
+      var savedKey = localStorage.getItem('jev_api_key');
+      if (savedKey && window.JevBrain) {
+        JevBrain.enable(savedKey);
+        updateBtn();
+      }
+    }
+  } catch(e) {}
+})();
+</script>
 
 </body>
 </html>

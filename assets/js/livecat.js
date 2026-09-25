@@ -1511,6 +1511,33 @@
       // 加权随机选下一个状态（真实猫作息分布 + crepuscular）
       var next = pickWeightedState(currentStateName);
 
+      // §JEV：如果 JevBrain 已开启，让 AI 基于上下文重新决策
+      // Jev 是异步的——先用加权随机兜底，Jev 返回后如果不同则覆盖
+      if (window.JevBrain && window.JevBrain.isEnabled() && window.JevCat) {
+        var jevCandidates = ["SLEEP","GROOM","PATROL","PLAY","EAT","STARE",
+                             "STARE_MOUSE","STRETCH","YAWN","BOXED","ZOOMIES","MUNCH","HEADBUNT"];
+        // 排除当前状态
+        var filtered = jevCandidates.filter(function(k) {
+          var s = STATES[k];
+          return s && s.label !== currentStateName && k !== currentStateName;
+        });
+        var mouseIdleSec = lastMouseTime > 0 ? (Date.now() - lastMouseTime) / 1000 : 999;
+        window.JevBrain.think({
+          hour: hour,
+          mouseIdleSec: mouseIdleSec,
+          prevState: currentStateName,
+          fullness: munchFullness,
+          pageTitle: document.title
+        }, filtered).then(function(decision) {
+          if (decision && decision.state && STATES[decision.state]) {
+            // Jev 选了不同的状态——如果当前状态还在跑，就切过去
+            if (currentStateName === current.label) {
+              transitionTo(decision.state);
+            }
+          }
+        }).catch(function() { /* Jev 挂了就用加权随机，静默降级 */ });
+      }
+
       // §13 啃食内容：饱腹值低时增加啃食概率
       if (munchFullness < 50 && Math.random() < 0.35 &&
           currentStateName !== "啃食内容" && currentStateName !== "追激光" &&
