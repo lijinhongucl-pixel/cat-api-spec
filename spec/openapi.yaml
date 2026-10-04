@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CAT API — 猫咪接口规范
-  version: 0.5.0
+  version: 0.6.0
   summary: 用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统。
   description: |
     本文件描述的系统不接受参数调优。
@@ -162,6 +162,61 @@ paths:
           description: 一切正常
 
   /bath:
+  /territory/negotiate:
+    post:
+      operationId: negotiateTerritoryWithDog
+      summary: 与狗谈判领地（跨物种）
+      description: |
+        猫特色端点。狗的社交信号对猫不是友好是兴奋——
+        摇尾巴在犬科语言里是「要扑上去」，在猫的解读里是「兴奋」，
+        兴奋会升级成扑击。所以成功率很低，且需要 4–11 天才能建立信任。
+
+        trust_delta 的含义：慢眨 +8（猫能给出的最高正面信号），
+        侧身走开 +1，对峙 0，对方先扑 -5。
+
+        跨站串门不归这个端点管（返回 451），走 CrossPet 协议。
+      responses:
+        '200':
+          description: 谈判完成（成功与否都算完成）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  outcome:
+                    type: string
+                    enum: [standoff, ignore, slow_blink]
+                  detail: { type: string }
+                  trust_delta: { type: integer }
+        '409':
+          description: 冲突——对方先扑了
+        '451':
+          description: 不可用于法律理由（跨站场景不归本端点管）
+  /crosspet/status:
+    get:
+      operationId: getCrosspetStatus
+      summary: 查询跨站串门状态
+      description: |
+        猫特色端点。返回本站在 CrossPet 公共频道里的接入情况。
+        频道是零认证的，进来的造型一律先过三道净化再渲染。
+      responses:
+        '200':
+          description: 当前状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  channel: { type: string, example: crosspet-global }
+                  connected: { type: boolean }
+                  mode: { type: string, enum: [live, demo] }
+                  visitors_today: { type: integer }
+                  pets_seen:
+                    type: array
+                    items: { type: string }
+
+
     post:
       tags: [interaction]
       summary: 洗澡请求

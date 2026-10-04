@@ -264,7 +264,7 @@
 <body>
 
 <div class="hero">
-  <span class="hero-tag">CAT API · v0.5.0 FULL SPEC</span>
+  <span class="hero-tag">CAT API · v0.6.0 FULL SPEC</span>
   <h1>把猫写成系统。
     <span class="alt">把系统写成猫。</span>
   </h1>
@@ -398,14 +398,14 @@
           data-desc="一页查完的速查资料：速查卡 / 生理指标 / 状态码 / 术语 / 版本"
           title="一页查完的速查资料：速查卡 / 生理指标 / 状态码 / 术语 / 版本">参考 <span class="count">5</span></button>
   <button class="tab-btn" data-tab="engine" role="tab"
-          data-desc="开发向：SDK 控制台 / 猫的 404 日志 / Breaking Changes"
-          title="开发向：SDK 控制台 / 猫的 404 日志 / Breaking Changes">引擎 <span class="count">3</span></button>
+          data-desc="开发向：SDK 控制台 / 跨站串门 / 猫的 404 日志 / Breaking Changes"
+          title="开发向：SDK 控制台 / 跨站串门 / 猫的 404 日志 / Breaking Changes">引擎 <span class="count">4</span></button>
   <button class="tab-btn" data-tab="voice" role="tab"
           data-desc="文档的两个说话人：编写组给事实，当事猫给结论"
           title="文档的两个说话人：编写组给事实，当事猫给结论">声部 <span class="count">2</span></button>
 </div>
 <div class="tab-hint">
-  <span class="tab-hint-lead">24 个入口按类别分组</span>
+  <span class="tab-hint-lead">32 个入口按类别分组</span>
   <span class="tab-hint-sep">·</span>
   <span class="tab-hint-desc" id="tab-desc">正典正文 + 两份 OpenAPI 机器可读描述</span>
 </div>
@@ -492,7 +492,7 @@
     <a class="card" href="tools/adoption.html">
       <div class="kicker">领养即安装</div>
       <h3>领养组件</h3>
-      <p>填入你的名字，生成一行 curl 安装命令。本系统不返回 401，所以那张牌不是通行证——是来源标注。</p>
+      <p>领养只有一种形态：装技能。填四元组（领养人/时刻/栖息地/用途），本页当场算出领养 KEY 与领养名，并生成一条 curl 命令——装完算出来的结果与本页逐字节相同。本系统不返回 401，所以那张牌不是通行证，是来源标注。</p>
       <div class="foot">tools/adoption.html</div>
     </a>
     <a class="card" href="tools/cyber-stroll.html">
@@ -578,7 +578,7 @@
       <div class="foot">符号 · 强度 · 约定</div>
     </a>
     <a class="card" href="versions.html">
-      <div class="kicker">v0.1 → v0.5.0</div>
+      <div class="kicker">v0.1 → v0.6.0</div>
       <h3>历史版本</h3>
       <p>从单文件 v0.1 到当前 16 章正典 + 22 个工具页面的完整变更轴。每一版都写了什么、砍了什么、为什么砍。</p>
       <div class="foot">versions.html · 5 个里程碑</div>
@@ -591,7 +591,7 @@
     <a class="card" href="sdk/demo.html">
       <div class="kicker">可运行 · 纯模拟</div>
       <h3>SDK 控制台</h3>
-      <p>点击即可「调用」任一接口，观察返回码与话术。纯模拟，零网络请求，零数据收集。试试连点两次 POST /api/bath。</p>
+      <p>14 个端点可点击调用，纯模拟零网络请求。带进程内状态机——连点 POST /api/bath 看态度从 418 一路恶化到 503。新增跨物种谈判端点：跟狗 negotiate 一次，看信任值怎么变。资源表与命令行 <code>cat-api</code> 同源。</p>
       <div class="foot">sdk/demo.html · 内核 sdk/cat-api-client.js</div>
     </a>
     <a class="card" href="tools/cat-404.html">
@@ -605,6 +605,12 @@
       <h3>Breaking Changes</h3>
       <p>当事猫单方面决定的破坏性变更时间线：午睡从 14h 改 18h、Owner 角色从 undefined 升级为禁止定义、纸箱优先级从 MUST 升到 MUST_NOT_REMOVE。</p>
       <div class="foot">tools/breaking-changes.html · 15 条变更</div>
+    </a>
+    <a class="card" href="tools/crosspet.html">
+      <div class="kicker">跨站协议 · 唯一出网页之一</div>
+      <h3>跨站串门 · 猫狗串门</h3>
+      <p>把本站的猫送出屏幕边缘，它会走去别的站点；别站的宠物也会走进来。宽进严出协议，进来的造型一律先过三道净化。新增<b>猫狗串门</b>：跨物种互动矩阵给出 15 种可能的反应与行为学解释。</p>
+      <div class="foot">tools/crosspet.html · CrossPet Protocol v1.0 · 26 项协议自检</div>
     </a>
   </div>
 </div>
@@ -636,7 +642,7 @@
 
 <div class="end-note" style="max-width:940px;margin:20px auto 80px;padding:0 28px;">
   CAT API · 静态站点，无构建步骤，无外部依赖 · 打开 index.html 即可阅读<br>
-  <span style="color:var(--faint);">v0.5.0 "Full Spec Release"</span>
+  <span style="color:var(--faint);">v0.6.0 "Cross-Species Sync"</span>
   <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
     <a href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener"
        style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);

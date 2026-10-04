@@ -28,44 +28,50 @@
 - 一只会在你屏幕上走来走去的**活猫**（LIVECAT v3，含状态机 / 行为准则 / Token 老鼠）
 - 全站**多人联机**（光标 / 多猫同屏 / 今日猫碗 / 协作围捕）
 - **CrossPet Protocol**——跨站宠物串门协议（猫能穿越到别站去）
-- 19 个交互式**工具页**（表情渲染器 / 抚摸路径规划器 / 猫语翻译器 …）
-- 两份 **OpenAPI 3.1** 描述（12 端点 + 9 量化端点，可直接喂 Swagger UI）
+- 25 个交互式**工具页**（表情渲染器 / 抚摸路径规划器 / 赛博遛猫 / 猫狗串门 …）
+- 两份 **OpenAPI 3.1** 描述（14 端点 + 9 量化端点，可直接喂 Swagger UI）
 
 风格：工程文体 + 玩梗。不是科普，不是图鉴——是把 RFC 的骨架拿来描述一只猫。
 
-<<<<<<< HEAD
-=======
 **数字**：151 次提交 · 24 个工具页面 · 10 个 JS 引擎 · 5500+ 行 JS · 零依赖零构建
 
->>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 ---
 
 ## 项目结构
 
 ```
 cat-api-spec/
-├── index.html                  # 首页 / 项目门面
-├── versions.html               # 历史版本（v0.1 → v0.5.0）
+├── index.html                  # 首页 / 项目门面（32 个入口，6 个 Tab）
+├── versions.html               # 历史版本（v0.1 → v0.6.0）
 ├── 404.html                    # 状态码梗的 404
+├── llms.txt                    # 给 AI 读的索引
+├── AGENTS.md                   # 给 AI 编程工具的施工说明
+├── CLAUDE.md                   # Claude Code 专用
 ├── spec/
 │   ├── cat.html                # 正文 16 章（§0 → §15）
-│   ├── openapi.yaml            # OpenAPI 3.1 完整描述（12 端点）
+│   ├── openapi.yaml            # OpenAPI 3.1 完整描述（14 端点）
 │   └── quantified-api.yaml     # 量化派生指标 OpenAPI（9 端点）
-├── tools/                      # 19 个交互式工具
+├── skill/                      # 命令行 + 安装包
+│   ├── cat-api.js              # 零依赖 CLI，14 个端点
+│   └── install.sh              # 一条 curl 命令的安装包
+├── tools/                      # 25 个交互式工具
 │   ├── expression.html         # 表情渲染器：选状态实时出猫脸 SVG
 │   ├── expression-sheet.html   # 表情联系表：批量查看 14 种表情
-│   ├── peripherals.html        # 外设控制台：逗猫棒 / 纸箱 / 激光点 / 猫薄荷
+│   ├── peripherals.html        # 外设控制台：14 类外设 + 17 道门槛
+│   ├── cyber-stroll.html       # 赛博遛猫：图片 → 网格 → 网格化 SVG
+│   ├── astraflow.html          # 星图接入：AstraFlow 大模型工作台
+│   ├── crosspet.html           # 跨站串门 + 猫狗串门互动矩阵
 │   ├── door-negotiator.html    # 不让猫进的那扇门：门判谈判模拟器
 │   ├── meow-decoder.html       # 猫语翻译器
 │   ├── petting-router.html     # 抚摸路径规划器
 │   ├── cat-review.html         # 360° 猫档案
 │   ├── health-check.html       # 健康检查面板
 │   ├── quantifier.html         # 量化评估器（RER / DER / HRI …）
-│   ├── charts.html             # 图表图鉴（8 张手绘灰阶 SVG）
+│   ├── charts.html             # 图表图鉴（19 张手绘灰阶 SVG）
 │   ├── heatmap-24h.html        # 24h 作息热力图
 │   ├── nine-lives.html         # 九条命燃尽图
 │   ├── litterbox.html          # 猫砂盆审计日志
-│   ├── adoption.html           # 领养（填名字 → 生成 curl 安装命令）
+│   ├── adoption.html           # 领养（四元组 → 领养 KEY 与名字）
 │   ├── cat-diary.html          # 猫的日记
 │   ├── can-jump.html           # 跳跃判定器
 │   ├── breaking-changes.html   # Breaking Changes
@@ -86,21 +92,6 @@ cat-api-spec/
 │   └── CONTRIBUTING.md         # 贡献指南
 ├── assets/
 │   ├── css/
-<<<<<<< HEAD
-│   │   ├── spec.css            # 主样式
-│   │   ├── livecat.css         # 活猫样式
-│   │   ├── multiplayer.css     # 多人联机浮窗样式
-│   │   └── crosspet.css        # 跨站串门来访宠物样式
-│   ├── js/
-│   │   ├── livecat.js          # 活猫 v3：状态机 + 物理 + 行为 + Token 老鼠 + CrossPet 桥接
-│   │   ├── multiplayer.js      # 多人联机：光标 / 多猫同屏 / 猫碗 / 围捕
-│   │   ├── crosspet.js         # CrossPet Protocol：跨站宠物串门
-│   │   ├── expression.js       # 表情渲染引擎（14 状态 SVG，UMD）
-│   │   ├── peripherals.js      # 外设总线数据
-│   │   ├── quantify.js         # 量化公式引擎
-│   │   ├── charts.js           # 图表数据
-│   │   └── visitor-counter.js  # 访客计数器
-=======
 │   │   ├── spec.css            # 主样式（浅色文档风）
 │   │   ├── livecat.css         # 活猫样式（22 状态动画）
 │   │   ├── crosspet.css        # CrossPet 串门协议样式
@@ -116,7 +107,6 @@ cat-api-spec/
 │   │   ├── charts.js           # 图表引擎
 │   │   ├── quantify.js         # 量化计算引擎
 │   │   └── visitor-counter.js  # 访客计数
->>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 │   └── img/
 │       ├── favicon.svg         # 侧脸猫剪影 favicon
 │       └── screenshots/        # README 截图
@@ -129,8 +119,6 @@ cat-api-spec/
 
 ---
 
-<<<<<<< HEAD
-=======
 ## 核心系统
 
 ### 🐱 活猫 LIVECAT
@@ -167,7 +155,6 @@ cat-api-spec/
 
 ---
 
->>>>>>> 7bbff9b (修复 README 截图不显示：PNG → JPEG 压缩)
 ## 章节地图
 
 | 章节 | 标题 | 在哪 |
@@ -242,24 +229,27 @@ cat-api-spec/
 
 ---
 
-## 工具页（19 个）
+## 工具页（25 个）
 
 | 工具 | 做什么 |
 |---|---|
 | [表情渲染器](tools/expression.html) | 选状态 / 参数实时出猫脸 SVG |
 | [表情联系表](tools/expression-sheet.html) | 14 种表情批量速览 |
-| [外设控制台](tools/peripherals.html) | 14 类外设 / 13 道门槛 / 接合评分 |
+| [外设控制台](tools/peripherals.html) | 14 类外设 / 17 道门槛 / 环境抑制判定 |
 | [门判谈判器](tools/door-negotiator.html) | 那扇不让猫进的门，模拟判谈判过程 |
-| [猫语翻译器](tools/meow-decoder.html) | 人话 → 猫话双向翻译 |
+| [猫语翻译器](tools/meow-decoder.html) | 意图识别 → 结构化 JSON |
+| [赛博遛猫](tools/cyber-stroll.html) | 图片降格成网格猫，鼠标当牵引绳 |
+| [星图接入](tools/astraflow.html) | 浏览器直连 AstraFlow，KEY 不落地 |
+| [跨站串门](tools/crosspet.html) | 猫狗串门：跨物种互动矩阵 |
 | [抚摸路径规划器](tools/petting-router.html) | 规划安全抚摸路线（避开禁区） |
 | [360° 猫档案](tools/cat-review.html) | 全方位猫评测报告 |
 | [健康检查面板](tools/health-check.html) | 体温 / 心率 / 呼吸 / 体重判读 |
 | [量化评估器](tools/quantifier.html) | RER / DER / DNS / HRI 实时计算 |
-| [图表图鉴](tools/charts.html) | 8 张手绘灰阶 SVG 数据图 |
+| [图表图鉴](tools/charts.html) | 19 张手绘灰阶 SVG 数据图 |
 | [24h 热力图](tools/heatmap-24h.html) | 猫的一天作息可视化 |
 | [九条命燃尽图](tools/nine-lives.html) | 九条命消耗进度 |
 | [猫砂盆审计](tools/litterbox.html) | 排泄协议日志（含异常告警） |
-| [领养](tools/adoption.html) | 填名字 → 生成 curl 安装命令 |
+| [领养](tools/adoption.html) | 四元组 → 领养 KEY 与名字 + 安装命令 |
 | [猫的日记](tools/cat-diary.html) | 当事猫第一人称日志 |
 | [跳跃判定器](tools/can-jump.html) | 判定这只猫能不能跳这么高 |
 | [Breaking Changes](tools/breaking-changes.html) | 破坏性变更公告 |
@@ -283,16 +273,93 @@ cat-api-spec/
 
 ## SDK
 
+UMD 格式，零依赖，直接 `<script>` 引入即可。演示页：[sdk/demo.html](sdk/demo.html)。
+
 ```html
 <script src="sdk/cat-api-client.js"></script>
 <script>
-  var cat = new CatAPI();
-  cat.getState().then(function(s) { console.log(s); });
-  cat.pet().then(function(r) { console.log('被摸了', r); });
+  var client = CatAPIClient;
+  // 挑一个端点，点一下
+  var ep = client.RESOURCES.filter(function (r) { return r.path === '/api/v1/state'; })[0];
+  client.call(ep, function (err, res) {
+    console.log(res.status, res.body);
+  });
+  // 资源表自检
+  console.log(client.selfCheck());
 </script>
 ```
 
-UMD 格式，零依赖，直接 `<script>` 引入即可。演示页：[sdk/demo.html](sdk/demo.html)。
+Node 环境也可以 `require`：
+
+```js
+const client = require('./sdk/cat-api-client.js');
+```
+
+---
+
+## 命令行（CLI）
+
+14 个端点全部可以从命令行调。零依赖，不装 npm 包，不联网。
+
+```bash
+# 安装（一条命令，领养 + 装 CLI）
+curl -fsSL https://lijinhongucl-pixel.github.io/cat-api-spec/skill/install.sh \
+  | sh -s -- --adopter "你@这台机器"
+
+# 用
+cat-api                    # 列出全部端点
+cat-api state              # 查当前状态
+cat-api pet --json         # 机器可读输出
+cat-api 'DELETE /api/v1/laser'
+cat-api --help             # 完整说明
+cat-api --state            # 看模拟状态
+```
+
+退出码分语义：`0` 成功 / `1` 端点不存在 / `2` 被拒绝 / `3` 系统不可用。
+
+想看 bath 彩蛋的「态度逐级恶化」需要开启持久化：
+
+```bash
+export CAT_API_STATE=/tmp/cat.json
+cat-api bath   # 418  I'm a cat
+cat-api bath   # 406  它已经知道你要干什么了
+cat-api bath   # 503  它走了。你找不到它。
+cat-api --reset
+```
+
+卸载：
+
+```bash
+sh skill/install.sh --uninstall
+```
+
+领养证保留在 `~/.cat-api/adoption.json` —— 卸载不撤销任何东西。
+
+---
+
+## AI 接入
+
+这个仓库同时是给人读的站点和给 AI 用的规范。
+
+| 文件 | 面向 |
+|---|---|
+| [`llms.txt`](llms.txt) | AI 索引。端点表、状态码含义、核心公式、工具清单 |
+| [`AGENTS.md`](AGENTS.md) | AI 编程工具施工说明。硬约束、目录职责、验证命令、已知坑 |
+| [`CLAUDE.md`](CLAUDE.md) | Claude Code 专用，精简版 + 猫的行为学设定 |
+| [`skill/`](skill/) | CLI + 安装包 |
+| [`spec/openapi.yaml`](spec/openapi.yaml) | 14 个端点的 OpenAPI 3.1 描述 |
+| [`spec/quantified-api.yaml`](spec/quantified-api.yaml) | 9 个量化端点 |
+
+让 AI 编程工具读懂这个仓库，只需要让它读 `AGENTS.md`。
+
+**四处实现互相钉住**（改一边必须同步另一边，判据是各自的 selfCheck）：
+
+```
+skill/cat-api.js          ← CLI 资源表
+sdk/cat-api-client.js     ← 浏览器 SDK 资源表     （端点数必须一致）
+skill/install.sh          ← 领养 KEY 计算
+assets/js/adoption-key.js ← 网页端领养 KEY 计算  （§5.3 测试向量必须一致）
+```
 
 ---
 
