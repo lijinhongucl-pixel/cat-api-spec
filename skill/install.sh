@@ -130,7 +130,9 @@ if [ ! -s "$PREFIX/cat-api.js" ]; then
   echo "  ✗ 没能取到 cat-api.js。检查网络，或从仓库 clone 后本地跑。" >&2
   exit 1
 fi
-echo "  ✓ cat-api.js（来源：$SRC）"
+# curl 不会保留执行位，软链过去就 permission denied
+chmod +x "$PREFIX/cat-api.js" 2>/dev/null || true
+echo "  ✓ cat-api.js  来源=$SRC"
 
 # 铺软链；软链失败（Windows / 无权限）就退到 wrapper
 if ln -sf "$PREFIX/cat-api.js" "$BIN_DIR/cat-api" 2>/dev/null; then

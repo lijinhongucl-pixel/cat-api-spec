@@ -265,7 +265,7 @@
     state: state,
     reset: reset,
     selfCheck: selfCheck,
-    version: "0.5.1"
+    version: "0.6.0"
   };
 
   root.CatAPIClient = api;

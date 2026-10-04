@@ -1,5 +1,5 @@
 # CAT API — 给 AI 读的索引
-# 猫咪接口规范 · 16 章正典 · 12 个端点 · 27 个状态
+# 猫咪接口规范 · 16 章正典 · 14 个端点 · 27 个状态
 # 站点：https://lijinhongucl-pixel.github.io/cat-api-spec/
 # 本文件遵循 llms.txt 约定：先给结论，再给细节。
 

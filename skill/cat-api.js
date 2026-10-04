@@ -22,7 +22,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "0.5.1";
+  var VERSION = "0.6.0";
   var SPEC = "https://lijinhongucl-pixel.github.io/cat-api-spec/spec/cat.html";
 
   /* ------------------------------------------------------------------
