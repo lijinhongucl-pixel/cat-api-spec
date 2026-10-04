@@ -1,6 +1,15 @@
 # AI 决策配置（含密钥，不入仓）
 assets/js/jev-config.js
 
+# CLI 领养记录（本机产物，不入仓）
+adoption.json
+.cat-api-state.json
+
 # 系统
 .DS_Store
 Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
