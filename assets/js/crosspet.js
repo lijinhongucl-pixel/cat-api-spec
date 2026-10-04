@@ -42,7 +42,10 @@
   /* =========================================================================
    * §0 配置
    * ======================================================================= */
-  var SUPABASE_URL = '';
+
+  // 频道凭证。anon key 本身就是公开密钥（设计如此），写入静态文件不算泄露。
+  // 想接自己的频道就填自己的；留空则自动读 assets/crosspet-credentials.json。
+  var SUPABASE_URL = 'https://mpkcvkqiimxhrlsvjasr.supabase.co';
   var SUPABASE_KEY = '';
   var CHANNEL_NAME = 'crosspet-global';
   var PROTOCOL_VERSION = '1.0';
@@ -54,6 +57,94 @@
 
   // 来访宠物存活时间
   var VISITOR_TTL = 30000;  // 30 秒后自动离开
+
+  // 全部标 HEURISTIC —— 这些数字没有一条来自公开信源
+  var HEURISTIC = {
+    maxNameLen: 24,          // 名字截断长度
+    maxSvgLen: 20000,        // 外来 SVG 长度上限
+    switchAfter: 2,          // 单条通道试几次后换下一条
+    backoffBase: 1000,       // 退避基数
+    backoffCap: 30000,       // 退避封顶
+    jitter: 500,             // 退避抖动
+    visitorTtl: VISITOR_TTL
+  };
+
+  /* =========================================================================
+   * §0.5 SVG 净化 —— 频道是公共的，进来的造型一律当不可信
+   * ---------------------------------------------------------------------------
+   * 三道防线：
+   *   1. 剥掉所有危险标签（script / foreignObject / iframe / use / animate…）
+   *   2. 剥掉所有 on* 事件属性与 href（含 javascript: 伪协议）
+   *   3. 长度封顶 + 强制外框（缺 viewBox 会撑满舞台）
+   * ======================================================================= */
+  var DANGER_TAGS = 'script|foreignObject|iframe|object|embed|use|animate|animateMotion|animateTransform|set|handler|style';
+
+  function sanitizeSvg(svg) {
+    if (!svg || typeof svg !== 'string') return '';
+    var s = svg.slice(0, HEURISTIC.maxSvgLen);
+
+    // 1. 危险标签整段剥掉（连内容一起）
+    s = s.replace(new RegExp('<\\s*(' + DANGER_TAGS + ')\\b[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>', 'gi'), '');
+    s = s.replace(new RegExp('<\\s*(' + DANGER_TAGS + ')\\b[^>]*\\/?>', 'gi'), '');
+
+    // 2. 事件属性与链接属性
+    s = s.replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, '');
+    s = s.replace(/\son[a-z]+\s*=\s*'[^']*'/gi, '');
+    s = s.replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '');
+    s = s.replace(/\s(xlink:)?href\s*=\s*"[^"]*"/gi, '');
+    s = s.replace(/\s(xlink:)?href\s*=\s*'[^']*'/gi, '');
+    s = s.replace(/javascript\s*:/gi, '');
+
+    return s.trim();
+  }
+
+  // 补外框：没有 viewBox 的 SVG 嵌进舞台会撑满
+  function fitSvg(svg) {
+    if (!svg) return '';
+    if (/viewBox\s*=/.test(svg)) return svg;
+    return svg.replace(/<svg\b([^>]*)>/i, '<svg$1 viewBox="0 0 80 56">');
+  }
+
+  /* =========================================================================
+   * §0.6 来访者检查 —— 宽进严出的「宽进」
+   * ---------------------------------------------------------------------------
+   * 规则只有三条：
+   *   1. 不是自己发的
+   *   2. 带了 petType
+   *   3. 名字与造型过了净化
+   * ======================================================================= */
+  function inspectVisitor(payload, selfId) {
+    if (!payload || typeof payload !== 'object') {
+      return { accept: false, reason: '空帧' };
+    }
+    if (payload.fromSiteId && payload.fromSiteId === selfId) {
+      return { accept: false, reason: '自己发的，回环忽略' };
+    }
+    if (!payload.petType) {
+      return { accept: false, reason: '没有 petType，无法确定是什么' };
+    }
+    var name = String(payload.petName || '').slice(0, HEURISTIC.maxNameLen).trim();
+    if (!name) name = '一只没报名字的' + payload.petType;
+    // 造型：优先用他站送来的（净化后），没有就用本站内置的同类型兜底。
+    // 这一步是「宽进」的最后一环——净化不过就退回内置，绝不放行。
+    var type = String(payload.petType).slice(0, 16);
+    var svg = fitSvg(sanitizeSvg(payload.petSVG || ''));
+    if (!svg) svg = FALLBACK_SVGS[type] || FALLBACK_SVGS.cat;
+
+    return {
+      accept: true,
+      visitor: {
+        petType: type,
+        petName: name,
+        fromSite: String(payload.fromSite || '').slice(0, 80),
+        fromSiteId: payload.fromSiteId || '',
+        ts: Number(payload.ts) || Date.now(),
+        svg: svg,
+        // 标记：造型是他站送的还是内置兜底的
+        svgFallback: !payload.petSVG
+      }
+    };
+  }
 
   // 内置信物 SVG 库（防止没声明 SVG 的站点发来事件时无内容可渲染）
   var FALLBACK_SVGS = {
@@ -115,10 +206,10 @@
 
     console.log('[CrossPet] init as', config.petType, '(' + config.petName + ')');
 
-    // 启动单站演示模式（即使没连上 Supabase 也有效果）
+    // 启动单站演示模式（即使没连上频道也有效果）
     startDemoMode();
-    // 尝试接入实时频道
-    connect();
+    // 取凭证后尝试接入实时频道
+    loadCredentials(connect);
   }
 
   /* =========================================================================
@@ -371,48 +462,112 @@
   }
 
   function connect() {
-    if (!SUPABASE_URL || !SUPABASE_KEY) return;  // 演示模式
-    loadSupabase(function (err) {
-      if (err || !root.supabase) return;
-      try {
-        var client = root.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        channel = client.channel(CHANNEL_NAME);
-
-        channel
-          .on('broadcast', { event: 'pet_depart' }, function (msg) {
-            var p = msg && msg.payload;
-            if (!p || !p.petType) return;
-            if (p.fromSiteId === siteId) return;
-            // 别站的宠物走了——它可能会穿越到本站
-            handleArrive(p);
-          })
-          .on('broadcast', { event: 'pet_meet' }, function (msg) {
-            var p = msg && msg.payload;
-            if (!p) return;
-            // 别站发生了互动——只显示 toast（不做本地动画，因为我们没那只宠物）
-            showToast(' ' + (p.petName || '一只宠物') + ' 和 ' + (p.visitorName || '另一只') + ' 在别处：' + (p.interaction || '相遇了'));
-          })
-          .subscribe(function (status) {
-            if (status === 'SUBSCRIBED') {
-              connected = true;
-              console.log('[CrossPet] 已接入实时频道 #' + CHANNEL_NAME);
-            }
-          });
-      } catch (e) {
-        console.warn('[CrossPet] 接入失败:', e);
-      }
-    });
+    running = true;
+    attempt = 0;
+    if (!SUPABASE_URL || !SUPABASE_KEY) { startDemoMode(); return; }  // 演示模式
+    openSocket();
   }
 
-  function broadcast(event, payload) {
-    if (!connected || !channel) return;
+  /* ---- 原生 WebSocket 直连 Supabase Realtime ----
+   * 不用 CDN 上的 supabase-js：本页只允许自己带的脚本。
+   * 协议是 Phoenix 帧（topic / event / payload / ref），
+   * 我们只用到 join 和 broadcast 两种，见 wsEndpoint 与 frame。
+   */
+  function wsEndpoint(base, key, version) {
+    return String(base).replace(/^http/, 'ws') +
+      '/realtime/v1/websocket?apikey=' + encodeURIComponent(key) +
+      '&vsn=' + encodeURIComponent(version || '1.0.0');
+  }
+
+  function frame(topic, event, payload, ref) {
+    return JSON.stringify({ topic: topic, event: event, payload: payload, ref: ref });
+  }
+
+  var refCounter = 1;
+  function nextRef() { return String(refCounter++); }
+
+  // 把收到的一帧归类：reply / broadcast / system / ignore
+  function routeFrame(raw) {
+    var o;
+    try { o = JSON.parse(raw); } catch (e) { return { kind: 'ignore' }; }
+    if (!o || !o.event) return { kind: 'ignore' };
+    var p = o.payload || {};
+    if (o.event === 'phx_reply') {
+      return { kind: 'heartbeat', ok: p.status === 'ok' };
+    }
+    if (o.event === 'broadcast') {
+      return { kind: 'broadcast', event: p.event, payload: p.payload || {} };
+    }
+    if (o.event === 'phx_error') return { kind: 'system', event: o.event };
+    return { kind: 'ignore' };
+  }
+
+  // 退避 + 抖动，避免一群站点同时重连把频道打爆
+  function backoffDelay(attempt) {
+    var base = Math.min(HEURISTIC.backoffCap,
+                        HEURISTIC.backoffBase * Math.pow(2, Math.max(0, attempt - 1)));
+    return base + Math.floor(Math.random() * HEURISTIC.jitter);
+  }
+
+  var socket = null;
+  var retryTimer = null;
+  var running = false;
+
+  function openSocket() {
+    if (!running) return;
     try {
-      channel.send({
-        type: 'broadcast',
-        event: event,
-        payload: payload
-      });
-    } catch (e) {}
+      socket = new WebSocket(wsEndpoint(SUPABASE_URL, SUPABASE_KEY, '1.0.0'));
+    } catch (e) {
+      scheduleRetry();
+      return;
+    }
+
+    socket.onopen = function () {
+      // self:true 才能收到自己发的，方便回环自检
+      socket.send(frame('realtime:' + CHANNEL_NAME, 'phx_join', {
+        config: { broadcast: { ack: false, self: true } }
+      }, nextRef()));
+    };
+
+    socket.onmessage = function (ev) {
+      var r = routeFrame(ev.data);
+      if (r.kind === 'heartbeat' && r.ok) {
+        connected = true;
+        log('已接入实时频道 #' + CHANNEL_NAME);
+        return;
+      }
+      if (r.kind === 'broadcast' && r.event === 'pet_depart') {
+        var verdict = inspectVisitor(r.payload, siteId);
+        if (verdict.accept) handleArrive(verdict.visitor);
+        else log('略过一条广播：' + verdict.reason);
+        return;
+      }
+      if (r.kind === 'broadcast' && r.event === 'pet_meet') {
+        var p = r.payload || {};
+        if (!p.petName) return;
+        showToast(p.petName + ' 和 ' + (p.visitorName || '另一只') +
+                  ' 在别处：' + (p.interaction || '相遇了'));
+      }
+    };
+
+    socket.onclose = function () { connected = false; scheduleRetry(); };
+    socket.onerror = function () { try { socket.close(); } catch (e) {} };
+  }
+
+  var attempt = 0;
+  function scheduleRetry() {
+    if (!running) return;
+    attempt++;
+    // 先退避，别一路爬到 30 秒一档
+    if (attempt > 6) { running = false; log('连不上频道，进入演示模式'); startDemoMode(); return; }
+    var d = backoffDelay(attempt);
+    log('第 ' + attempt + ' 次重连在 ' + Math.round(d / 1000) + ' 秒后');
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(openSocket, d);
+  }
+
+  function log(text) {
+    try { if (config && config.onLog) config.onLog(text); } catch (e) {}
   }
 
   /* =========================================================================
@@ -445,6 +600,33 @@
     return h.replace(/^https?:\/\//, '').split('/')[0];
   }
 
+  /* ---- 发送广播（WebSocket 帧） ---- */
+  function broadcast(event, payload) {
+    if (!connected || !socket || socket.readyState !== 1) return false;
+    try {
+      socket.send(frame('realtime:' + CHANNEL_NAME, 'broadcast', {
+        type: 'broadcast', event: event, payload: payload
+      }, nextRef()));
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---- 凭证加载：优先 window 配置，其次 assets/crosspet-credentials.json ----
+   * anon key 本身就是公开密钥（Supabase 设计如此），写进静态文件不算泄露。
+   * 想接自己的频道就建一个 credentials 文件覆盖它。
+   */
+  function loadCredentials(done) {
+    if (SUPABASE_KEY) { done(); return; }
+    if (typeof fetch !== 'function') { done(); return; }
+    fetch('../assets/crosspet-credentials.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (j && j.url && j.anonKey) { SUPABASE_URL = j.url; SUPABASE_KEY = j.anonKey; }
+        done();
+      })
+      .catch(function () { done(); });
+  }
+
   /* =========================================================================
    * §9 对外接口
    * ======================================================================= */
@@ -454,11 +636,74 @@
     checkMeet: checkMeet,
     dismissVisitor: dismissVisitor,
     getCurrentVisitor: function () { return currentVisitor; },
+    isConnected: function () { return connected; },
     configure: function (url, key) {
       SUPABASE_URL = url || SUPABASE_URL;
       SUPABASE_KEY = key || SUPABASE_KEY;
       if (started && !connected) connect();
     },
+
+    /* ---- 协议自检：纯函数，断网也能跑 ---- */
+    selfCheck: function () {
+      var out = [], pass = 0, fail = 0;
+      function t(name, ok) {
+        if (ok) { pass++; out.push({ ok: true, name: name }); }
+        else { fail++; out.push({ ok: false, name: name }); }
+      }
+
+      // 净化
+      t('净化去 script', sanitizeSvg('<svg><script>alert(1)</script><circle r="1"/></svg>').indexOf('script') < 0);
+      t('净化去 foreignObject', sanitizeSvg('<svg><foreignObject/><circle r="1"/></svg>').indexOf('foreignObject') < 0);
+      t('净化去事件属性', sanitizeSvg('<svg><circle onload="x=1" r="1"/></svg>').indexOf('onload') < 0);
+      t('净化去 href', sanitizeSvg('<svg><a href="javascript:x">a</a></svg>').indexOf('href') < 0);
+      t('净化去 javascript:', sanitizeSvg('<svg><a href="javascript:x">a</a></svg>').indexOf('javascript') < 0);
+      t('净化保留形状', sanitizeSvg('<svg><circle r="1"/></svg>').indexOf('<circle r="1"/>') > 0);
+      t('净化封顶', sanitizeSvg('<svg>' + new Array(HEURISTIC.maxSvgLen + 100).join('x') + '</svg>').length <= HEURISTIC.maxSvgLen);
+
+      // 补外框
+      t('补 viewBox', fitSvg('<svg><circle r="1"/></svg>').indexOf('viewBox') > 0);
+      t('保留已有 viewBox', fitSvg('<svg viewBox="0 0 10 10"><circle r="1"/></svg>').match(/viewBox/g).length === 1);
+
+      // 来访者检查
+      t('回绝自己发的', inspectVisitor({ petType: 'cat', fromSiteId: 'me' }, 'me').accept === false);
+      t('回绝无 petType', inspectVisitor({ petName: 'x' }, 'me').accept === false);
+      t('回绝空帧', inspectVisitor(null, 'me').accept === false);
+      var ok = inspectVisitor({ petType: 'dog', petName: '阿黄', fromSiteId: 'other' }, 'me');
+      t('接待正常的', ok.accept === true);
+      t('匿名来客有兜底名', inspectVisitor({ petType: 'dog' }, 'me').visitor.petName.length > 0);
+      t('名字截断', inspectVisitor({ petType: 'dog', petName: new Array(60).join('长') }, 'me').visitor.petName.length === HEURISTIC.maxNameLen);
+      t('净化后才进舞台', inspectVisitor({ petType: 'cat', petSVG: '<svg><script>x</script><circle r="1"/></svg>', fromSiteId: 'o' }, 'me').visitor.svg.indexOf('script') < 0);
+
+      // 帧归类
+      t('归类心跳回执', routeFrame('{"event":"phx_reply","payload":{"status":"ok"}}').kind === 'heartbeat');
+      t('归类广播', routeFrame('{"event":"broadcast","payload":{"event":"pet_depart","payload":{}}}').event === 'pet_depart');
+      t('归类系统消息', routeFrame('{"event":"phx_error","payload":{}}').kind === 'system');
+      t('归类垃圾帧', routeFrame('not json').kind === 'ignore');
+      t('归类空帧', routeFrame(null).kind === 'ignore');
+
+      // 端点与退避
+      t('端点把 http 换 ws', wsEndpoint('https://a.co', 'K1', '1.0.0').indexOf('wss://a.co/realtime/v1/websocket') === 0);
+      t('端点带 apikey', wsEndpoint('https://a.co', 'K1', '1.0.0').indexOf('apikey=K1') > 0);
+      t('退避有下限', backoffDelay(1) >= HEURISTIC.backoffBase);
+      t('退避封顶', backoffDelay(99) <= HEURISTIC.backoffCap + HEURISTIC.jitter);
+      t('退避递增', backoffDelay(3) > backoffDelay(1));
+
+      return { pass: pass, fail: fail, total: pass + fail, items: out };
+    },
+
+    // 内部件暴露出来给自检和二次开发
+    _internal: {
+      sanitizeSvg: sanitizeSvg,
+      fitSvg: fitSvg,
+      inspectVisitor: inspectVisitor,
+      routeFrame: routeFrame,
+      backoffDelay: backoffDelay,
+      wsEndpoint: wsEndpoint,
+      frame: frame,
+      HEURISTIC: HEURISTIC,
+      loadCredentials: loadCredentials
+    },
+
     version: PROTOCOL_VERSION
   };
 })(typeof self !== "undefined" ? self : this);

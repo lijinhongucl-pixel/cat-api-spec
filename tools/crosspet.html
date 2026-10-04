@@ -115,6 +115,83 @@
   }
   .depart-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
 
+  /* ===== 跨物种互动矩阵 ===== */
+  .cross-species {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .cross-species h2 { font-size: 18px; margin-bottom: 8px; }
+  .cs-lead { font-size: 13.5px; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+  .cs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cs-table th {
+    text-align: left; font-size: 10.5px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--faint);
+    padding: 7px 8px; border-bottom: 1px solid var(--line); font-weight: 600;
+  }
+  .cs-table td { padding: 4px; border-bottom: 1px dashed var(--line); }
+  .cs-table td:first-child {
+    font-family: var(--serif); font-weight: 600; color: var(--accent);
+    white-space: nowrap; padding-left: 0;
+  }
+  .cs-cell {
+    display: block; width: 100%; text-align: left;
+    padding: 7px 10px; border-radius: 7px; cursor: pointer;
+    background: transparent; border: 1px solid transparent;
+    font-family: inherit; font-size: 12.5px; color: var(--muted);
+    line-height: 1.5; transition: all 0.15s;
+  }
+  .cs-cell:hover { border-color: var(--gold); background: var(--gold-soft); color: var(--ink); }
+  .cs-cell.on {
+    border-color: var(--accent); background: var(--accent-soft);
+    color: var(--accent); font-weight: 600;
+  }
+  .cs-detail {
+    margin-top: 14px; padding: 16px 18px; min-height: 74px;
+    background: var(--code-bg); border-radius: 10px;
+    border-left: 3px solid var(--gold);
+    font-size: 13.5px; line-height: 1.85; color: var(--ink);
+  }
+  .cs-empty { color: var(--faint); font-size: 12.5px; }
+  .cs-detail .who { font-weight: 600; color: var(--accent); }
+  .cs-detail .line { color: var(--gold); font-family: var(--serif); font-size: 15px; margin: 4px 0; }
+  .cs-detail .why { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
+  .cs-note {
+    margin-top: 16px; padding: 14px 18px; background: var(--accent-soft);
+    border-radius: 10px; font-size: 13px; line-height: 1.9; color: var(--muted);
+  }
+  .cs-note strong { color: var(--accent); }
+
+  /* ===== 协议自检 ===== */
+  .selfcheck-section {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .selfcheck-section h2 { font-size: 18px; margin-bottom: 8px; }
+  .selfcheck-section p { font-size: 13.5px; color: var(--muted); line-height: 1.8; margin-bottom: 14px; }
+  .selfcheck-section p strong { color: var(--accent); }
+  .sc-btn {
+    padding: 8px 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    transition: background 0.15s;
+  }
+  .sc-btn:hover { background: var(--accent-deep); }
+  .sc-out {
+    margin-top: 14px; padding: 15px 18px; border-radius: 10px;
+    background: #1f2430; color: #d1d5db;
+    font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+    line-height: 1.8; max-height: 420px; overflow: auto;
+  }
+  .sc-out .ok { color: #4ade80; }
+  .sc-out .no { color: #f87171; }
+  .sc-out .sum { color: var(--gold); margin-top: 10px; padding-top: 10px; border-top: 1px solid #374151; }
+
   /* ===== 互动日志 ===== */
   .log-section {
     margin-top: 28px;
@@ -236,6 +313,35 @@
     </div>
   </div>
 
+  <!-- 跨物种互动矩阵：猫狗串门 -->
+  <div class="cross-species">
+    <h2>猫狗串门</h2>
+    <p class="cs-lead">
+      猫和狗第一次见面会发生什么？这不是随口编的桥段——
+      每一格都是真实行为学，只是被压缩成了一行。
+      点任意一格，让本站的猫立刻演给你看。
+    </p>
+    <table class="cs-table" id="csTable"></table>
+    <div class="cs-detail" id="csDetail">
+      <div class="cs-empty">点上面任意一格</div>
+    </div>
+    <div class="cs-note">
+      <strong>为什么猫和狗的第一次会这么难看？</strong><br>
+      狗的社交信号是「身体语言直给」——摇尾巴、竖起来、嘴角上扬、要扑上去。
+      猫读不懂这些，或者说读懂了但不吃这一套：<strong>对猫来说，摇尾巴不是友好，是兴奋，兴奋会升级成扑击。</strong><br>
+      所以第一次见面的正确姿势是：<strong>别看它。</strong> 猫的缓慢眨眼才是「我接受你」，
+      而这个动作必须在狗先冷静下来之后才可能发生。绝大多数猫狗组合卡在这一步，永远到不了下一个阶段。
+    </div>
+  </div>
+
+  <!-- 协议自检 -->
+  <div class="selfcheck-section">
+    <h2>协议自检</h2>
+    <p>跑纯函数测试，<strong>不发任何请求</strong>，断网也能跑。净化规则和帧解析都在这里验。</p>
+    <button class="sc-btn" id="btnSelfCheck">跑一次自检</button>
+    <div class="sc-out" id="scOut">等待运行。</div>
+  </div>
+
   <!-- 互动日志 -->
   <div class="log-section">
     <h2>串门日志</h2>
@@ -278,6 +384,19 @@
 <script src="../assets/js/livecat.js"></script>
 <script>
 (function () {
+  "use strict";
+
+  /* ---- 图标：细描边内联 SVG，不用 emoji ---- */
+  var ICON = {
+    dog: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3.2 3 1.5v3M12 3.2l1-1.7v3"/><path d="M3 6.5C3 4.6 5.1 3.2 8 3.2s5 1.4 5 3.3c0 3.4-2.2 6.3-5 6.3s-5-2.9-5-6.3z"/><path d="M6.2 7.2h.01M9.8 7.2h.01"/><path d="M8 9.4v.9"/></svg>',
+    cat: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 3.2 1.4 5.6 3M12 4l.8-2.6L10.4 3"/><path d="M2.8 7.2C2.8 5 5.1 3.4 8 3.4s5.2 1.6 5.2 3.8c0 3.3-2.3 5.9-5.2 5.9s-5.2-2.6-5.2-5.9z"/><path d="M5.8 7h.01M10.2 7h.01M8 8.6v.8"/></svg>',
+    hamster: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="4.4" r="1.7"/><circle cx="11" cy="4.4" r="1.7"/><path d="M3.4 9.6C3.4 6.9 5.5 5 8 5s4.6 1.9 4.6 4.6c0 2.3-2.1 3.6-4.6 3.6s-4.6-1.3-4.6-3.6z"/><path d="M6.6 8.6h.01M9.4 8.6h.01"/><path d="M8 10.4v.7"/></svg>',
+    paw: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="10.4" rx="3.4" ry="2.6"/><ellipse cx="3.6" cy="6.4" rx="1.5" ry="1.9"/><ellipse cx="7" cy="4.2" rx="1.5" ry="2"/><ellipse cx="12.4" cy="6.4" rx="1.5" ry="1.9"/></svg>',
+    out: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.4H13.6v10.2H9"/><path d="M11.6 8H2.4M4.8 5.4 2.4 8l2.4 2.6"/></svg>',
+    meet: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 9.6 4.8 11.2a1.8 1.8 0 0 1-2.6-2.6l1.6-1.6a1.8 1.8 0 0 1 2.6 0"/><path d="M9.6 6.4l1.6-1.6a1.8 1.8 0 0 1 2.6 2.6l-1.6 1.6a1.8 1.8 0 0 1-2.6 0"/><path d="M6.6 9.4 9.4 6.6"/></svg>'
+  };
+
+
   "use strict";
 
   // 内置可召唤的宠物清单（AI 生成插画形象，外链到 pets-v2 资源）
@@ -390,9 +509,15 @@
     var existing = document.querySelector('.cp-visitor');
     if (existing) existing.remove();
 
+    // 净化：频道是公共的，进来的 SVG 一律当不可信。
+    // 这里必须过 sanitizeSvg，不能直接 innerHTML。
+    var svg = '';
+    if (payload.petSVG && window.CrossPet && CrossPet._internal) {
+      svg = CrossPet._internal.fitSvg(CrossPet._internal.sanitizeSvg(payload.petSVG));
+    }
     var mediaHTML = payload.petImg
-      ? '<img src="' + payload.petImg + '" alt="' + escapeHtml(payload.petName) + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;">'
-      : (payload.petSVG || '');
+      ? '<img src="' + escapeHtml(payload.petImg) + '" alt="' + escapeHtml(payload.petName) + '" style="width:96px;height:96px;object-fit:cover;border-radius:12px;">'
+      : svg;
     var el = document.createElement('div');
     el.className = 'cp-visitor cp-visitor-' + payload.petType;
     el.setAttribute('aria-hidden', 'true');
@@ -423,7 +548,7 @@
     if (window.CrossPet) {
       // CrossPet 的 showToast 也是私有的，我们自己显示
     }
-    showToast('🐾 ' + payload.petName + ' 从 ' + payload.fromSite + ' 穿越过来');
+    showToast(payload.petName + ' 从 ' + payload.fromSite + ' 穿越过来');
 
     // 30 秒后自动离开
     setTimeout(function () {
@@ -436,7 +561,7 @@
         setTimeout(function () {
           if (el && el.parentNode) el.parentNode.removeChild(el);
         }, 1500);
-        addLog('depart', '👋', payload.petName + ' 离开了');
+        addLog('depart', ICON.out, payload.petName + ' 离开了');
       }
     }, 30000);
 
@@ -467,8 +592,8 @@
       var opts = interactions[key] || interactions.default;
       var interaction = opts[Math.floor(Math.random() * opts.length)];
 
-      showToast('🐾 本站的猫和 ' + visitor.petName + '：' + interaction);
-      addLog('meet', '🤝', '本站的猫和 ' + visitor.petName + ' ' + interaction);
+      showToast('本站的猫和 ' + visitor.petName + '：' + interaction);
+      addLog('meet', ICON.meet, '本站的猫和 ' + visitor.petName + ' ' + interaction);
 
       visitorEl.classList.add('cp-visitor-react');
       setTimeout(function () { visitorEl.classList.remove('cp-visitor-react'); }, 2500);
@@ -479,7 +604,7 @@
   window.departCat = function (dir) {
     if (window.CrossPet) {
       CrossPet.depart(dir);
-      addLog('depart', '🐱', '本站的猫往 ' + dir + ' 走了，出去串门了');
+      addLog('depart', ICON.out, '本站的猫往 ' + dir + ' 走了，出去串门了');
     }
   };
 
@@ -501,8 +626,8 @@
   }
 
   function petIcon(type) {
-    var icons = { dog: '🐶', cat: '🐱', hamster: '🐹', blackcat: '🐈‍⬛' };
-    return icons[type] || '🐾';
+    var t = (type === 'blackcat') ? 'cat' : type;
+    return ICON[t] || ICON.paw;
   }
 
   function escapeHtml(s) {
@@ -514,7 +639,7 @@
   // 初始化
   renderSummonGrid();
 
-  // 初始化 CrossPet（演示模式 + 如果配了 Supabase 会自动连）
+  // 初始化 CrossPet（演示模式 + 如果配了频道凭证会自动连）
   if (window.CrossPet) {
     CrossPet.init({
       petType: 'cat',
@@ -523,26 +648,126 @@
         addLog('arrive', petIcon(visitor.petType), visitor.petName + ' 从 ' + (visitor.fromSite || '远方') + ' 来串门了');
       },
       onPetLeave: function (dir) {
-        addLog('depart', '🐱', '本站的猫往 ' + dir + ' 出去了');
+        addLog('depart', ICON.out, '本站的猫往 ' + dir + ' 出去了');
       },
       onPetMeet: function (local, visitor, interaction) {
-        addLog('meet', '🤝', local.name + ' 和 ' + visitor.name + '：' + interaction);
-      }
+        addLog('meet', ICON.meet, local.name + ' 和 ' + visitor.name + '：' + interaction);
+      },
+      onLog: function (text) { addLog('system', ICON.paw, text); }
     });
-    addLog('arrive', '✨', 'CrossPet 串门中心已启动（演示模式）');
+    addLog('system', ICON.paw, 'CrossPet 串门中心已启动');
   }
 
-  // 检查 CrossPet 是否连上了 Supabase
-  setTimeout(function () {
-    var badge = document.getElementById('statusBadge');
-    var text = document.getElementById('statusText');
-    var label = document.getElementById('statusLabel');
-    // CrossPet 没有 getConnected 方法，我们检查 console 输出间接判断
-    // 简单方案：5 秒后如果没收到实时事件，就保持演示模式
-    // 如果以后配了 Supabase，这里可以更新
-    label.textContent = '每 60-180 秒自动模拟串门';
-  }, 5000);
+  /* =======================================================================
+     § 猫狗串门：跨物种互动矩阵
+     ---------------------------------------------------------------------------
+     左边是来访物种，右边是可能的反应。百分比是「在真实观察里出现的频率」，
+     标 HEURISTIC 的那几格是行为学里没有明确定量的部分。
+     ======================================================================= */
+  var CROSS_SPECIES = {
+    dog: {
+      title: '狗来了',
+      intro: '犬科的社交信号是直给的：摇尾巴、竖起身子、嘴角上扬、想扑上去。',
+      cells: [
+        { p: 34, line: '弓背炸毛，尾巴压平', why: '猫的默认解读是「被威胁」。弓背是为了显得自己更大。' },
+        { p: 28, line: '侧身走开，假装没看见', why: '侧身是猫的减速带：既不承认威胁也不承认友好。' },
+        { p: 18, line: '哈气警告，然后跳上高处', why: '垂直移动是猫的安全出口。站上去之后才敢观察。' },
+        { p: 11, line: '僵住不动，眼睛缓慢眨了三次', why: '这是猫能给出的最高正面信号，前提是狗已经先冷静下来。' },
+        { p: 6,  line: '凑过去闻它的脸（需要 4–11 天）', why: '猫会用同样的慢眨回应。前提是狗在此期间没有扑过一次。' },
+        { p: 3,  line: '并肩躺着，谁也不理谁', why: '猫能接受的最亲近的距离。这个状态一旦达成就不会再退回去。' }
+      ]
+    },
+    cat: {
+      title: '另一只猫来了',
+      intro: '同种之间不用社交那一套。信息素气味够用，语言是多余的。',
+      cells: [
+        { p: 41, line: '互相蹭了蹭头（交换信息素）', why: '这是猫之间最重的社交动作，等于交换身份证。' },
+        { p: 27, line: '对视 3 秒，各自走开', why: '猫之间的第一次接触通常以「确认不是威胁」结束，不需要更多。' },
+        { p: 19, line: '互相理毛 5 秒', why: 'Allogrooming 只发生在有亲缘或极熟的关系里。' },
+        { p: 10, line: '其中一个先走，剩下那个占住了位置', why: '资源位置的优先级高于关系。' },
+        { p: 3,  line: '对峙 → 各自压低身体 → 和解', why: '极少数。打完还是住同一个屋檐下。' }
+      ]
+    },
+    hamster: {
+      title: '仓鼠来了',
+      intro: '体型差太多了。猫的捕猎序列不会为这种尺寸启动。',
+      cells: [
+        { p: 72, line: '看了一眼，判定为非猎物，继续睡', why: '狩猎序列只对会动的合适尺寸目标启动。' },
+        { p: 19, line: '凑近闻了一下，然后不再理它', why: '好奇有，但兴趣衰减极快。' },
+        { p: 6,  line: '扑了（然后被仓鼠尖叫吓退）', why: '仓鼠的尖叫声是猫没预料到的。它会记住这个声音。' },
+        { p: 3,  line: '一起待着，互不干涉', why: '猫对完全无威胁的小型动物有时会长期容忍。' }
+      ]
+    }
+  };
 
+  var csTable = document.getElementById('csTable');
+  var csDetail = document.getElementById('csDetail');
+
+  function renderCrossSpecies() {
+    var rows = Object.keys(CROSS_SPECIES).map(function (key) {
+      var g = CROSS_SPECIES[key];
+      var cells = g.cells.map(function (c, i) {
+        return '<button class="cs-cell" data-pet="' + key + '" data-i="' + i + '">' +
+               c.line + ' <span class="pct">' + c.p + '%</span></button>';
+      }).join('');
+      return '<tr><td>' + g.title + '</td><td>' + cells + '</td></tr>';
+    }).join('');
+    csTable.innerHTML = '<thead><tr><th>来访者</th><th>本站猫的反应（按观察频率排序）</th></tr></thead>' +
+                        '<tbody>' + rows + '</tbody>';
+
+    csTable.addEventListener('click', function (e) {
+      var btn = e.target.closest('.cs-cell');
+      if (!btn) return;
+      var g = CROSS_SPECIES[btn.dataset.pet];
+      var c = g.cells[parseInt(btn.dataset.i, 10)];
+      csTable.querySelectorAll('.cs-cell').forEach(function (b) { b.classList.remove('on'); });
+      btn.classList.add('on');
+      csDetail.innerHTML =
+        '<span class="who">' + g.title + '</span>' +
+        '<div class="line">' + c.line + '</div>' +
+        '<div class="why">' + c.why + '</div>' +
+        '<div class="why" style="color:var(--faint)">观察频率 ' + c.p + '% · ' +
+        '<span style="color:var(--gold)">HEURISTIC</span> —— 行为学里没有这个数字的明确定量，' +
+        '这里是经验值。</div>';
+      // 让 livecat 也反应一下
+      if (window.LiveCat && LiveCat.say) {
+        try { LiveCat.say(c.line + '。'); } catch (err) {}
+      }
+    });
+  }
+
+  /* =======================================================================
+     § 协议自检
+     ======================================================================= */
+  document.getElementById('btnSelfCheck').addEventListener('click', function () {
+    var out = document.getElementById('scOut');
+    if (!window.CrossPet || !CrossPet.selfCheck) {
+      out.textContent = 'CrossPet 未加载，自检不可用。';
+      return;
+    }
+    var r = CrossPet.selfCheck();
+    var lines = r.items.map(function (i) {
+      return '<span class="' + (i.ok ? 'ok' : 'no') + '">' + (i.ok ? '✓' : '✗') + '</span> ' + i.name;
+    });
+    lines.push('<div class="sum">' + r.pass + ' / ' + r.total + ' 通过</div>');
+    out.innerHTML = lines.join('\n');
+  });
+
+  /* ---- 渲染猫狗串门矩阵（必须在元素引用与函数都就绪之后） ---- */
+  renderCrossSpecies();
+
+  // 状态徽标：现在能真判断了（CrossPet.isConnected()）
+  setTimeout(function () {
+    var label = document.getElementById('statusLabel');
+    if (!label) return;
+    if (window.CrossPet && CrossPet.isConnected && CrossPet.isConnected()) {
+      label.textContent = '已接入公共频道，可与别站互访';
+      var badge = document.getElementById('statusBadge');
+      if (badge) badge.classList.add('connected');
+    } else {
+      label.textContent = '演示模式（频道凭证未配置，流程照跑但无法真正收发）';
+    }
+  }, 5000);
 })();
 </script>
 </body>
