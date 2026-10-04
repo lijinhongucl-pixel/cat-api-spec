@@ -148,7 +148,12 @@
       </div>
 
       <div class="panel">
-        <h3>② 环境速记 · Environment</h3>
+        <h3>② 环境 · Environment</h3>
+        <div class="fld"><label>气温（°C）</label><input id="f-temp" type="number" step="0.5" value="24"></div>
+        <div class="fld"><label>相对湿度（%）</label><input id="f-humidity" type="number" step="1" value="55"></div>
+        <div class="fld"><label>近 7 日户外适应（日）</label><input id="f-outdoor" type="number" step="1" value="7"></div>
+        <label class="chk"><input id="f-sun" type="checkbox"><span>今日有日光直射</span></label>
+        <div style="border-top:1px dashed var(--line);margin:14px 0 12px;"></div>
         <div class="fld"><label>室内面积（㎡）</label><input id="f-area" type="number" value="60"></div>
         <div class="fld"><label>垂直空间层数</label><input id="f-vertical" type="number" value="2"></div>
         <div class="fld"><label>地面材质</label>
@@ -159,7 +164,12 @@
           </select>
         </div>
         <label class="chk"><input id="f-indoor" type="checkbox" checked><span>纯室内</span></label>
-        <div class="note" style="margin-top:8px;">地面材质只影响 G11 高处防跌：瓷砖上起跳落地的失败率高得多。</div>
+        <div class="note" style="margin-top:8px;">
+          <strong>气温 / 湿度 / 日光</strong>驱动 G14–G17 四道环境抑制门槛。
+          猫没有汗腺，散热只靠舔毛和喘气——高温高湿是硬停止，不是建议。
+          <br><br>
+          地面材质只影响 G11 高处防跌：瓷砖上起跳落地的失败率高得多。
+        </div>
       </div>
     </div>
 
@@ -339,7 +349,13 @@
   }
 
   function getEnv() {
-    return { floor: $("f-floor").value };
+    return {
+      floor: $("f-floor").value,
+      tempC: parseFloat($("f-temp").value),
+      humidity: parseFloat($("f-humidity").value),
+      outdoorDays: parseFloat($("f-outdoor").value),
+      directSun: $("f-sun").checked
+    };
   }
 
   function recalc() {
@@ -353,6 +369,9 @@
     else if (r.triage === "P1") banners.push('<div class="banner p1"><strong>P1 · 当日处理</strong> —— 存在受伤风险的外设问题。</div>');
 
     if (!r.hasBox) banners.push('<div class="banner box"><strong>纸箱缺失</strong> —— 项目级 MUST 违规。任何尺寸的纸箱优先级高于所有官方外设。实测有效率 97%。</div>');
+    if (r.env && r.env.heatRisk >= 3) banners.push('<div class="banner p0"><strong>环境硬停止 · 热风险 ' + r.env.heatLabel + '</strong> —— 气温 ' + r.env.tempC + '°C，湿度 ' + r.env.humidity + '%' + (r.env.directSun ? '，有日光直射' : '') + '。猫没有汗腺，散热只靠舔毛和喘气，这个组合下逗猎会直接中暑。今天不要逗猫。</div>');
+    else if (r.env && r.env.heatRisk === 2) banners.push('<div class="banner p1"><strong>环境限制 · 热风险 ' + r.env.heatLabel + '</strong> —— 气温 ' + r.env.tempC + '°C，湿度 ' + r.env.humidity + '%' + (r.env.directSun ? '，有日光直射' : '') + '。逗猎时长压到 10 分钟以内，并把逗猫棒移到阴凉时段。</div>');
+    else if (r.env && r.env.heatRisk === 1) banners.push('<div class="banner info"><strong>环境注意 · 热风险 ' + r.env.heatLabel + '</strong> —— 气温 ' + r.env.tempC + '°C 偏高。保证饮水点充足，逗猎后观察是否喘气急促。</div>');
     if (r.seqStuck) banners.push('<div class="banner p1"><strong>狩猎序列卡死</strong> —— 激光笔使用 ' + r.laserMinutes + ' 分钟但无 KILL BITE 对象。长期使用会导致焦虑和过度梳理。<br>推荐做法：在激光追逐最后几秒把光点移到实物上。</div>');
     if (r.waterWarning) banners.push('<div class="banner info">' + r.waterWarning + '</div>');
     if (r.nipWarning) banners.push('<div class="banner info">' + esc(r.nipWarning) + '</div>');
@@ -497,10 +516,11 @@
   }
 
   // 事件
-  ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical"].forEach(function (id) {
+  ["f-weight","f-age","f-activity","f-hunt","f-count","f-area","f-vertical",
+   "f-temp","f-humidity","f-outdoor"].forEach(function (id) {
     $(id).addEventListener("input", recalc);
   });
-  ["f-nip","f-indoor","f-floor"].forEach(function (id) {
+  ["f-nip","f-indoor","f-floor","f-sun"].forEach(function (id) {
     $(id).addEventListener("change", recalc);
   });
 

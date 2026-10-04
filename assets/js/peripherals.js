@@ -38,7 +38,11 @@
     { id: "G10", name: "羽毛件检查",    rule: "羽毛玩具含可吞入的硬质零件",         grade: "A", fail: "feather_ingestion", severity: "P0" },
     { id: "G11", name: "高处防跌",      rule: "猫爬架高度 ≥ 1m 时需稳定底座",       grade: "B", fail: "fall_risk",        severity: "P1" },
     { id: "G12", name: "饮水机清洁",    rule: "滤芯每 2-4 周更换，防止细菌滋生",    grade: "B", fail: "water_contamination",severity: "P1" },
-    { id: "G13", name: "纸箱优先级",    rule: "纸箱 MUST 优先于所有官方外设",       grade: "C", fail: "box_override",     severity: "HEURISTIC" }
+    { id: "G13", name: "纸箱优先级",    rule: "纸箱 MUST 优先于所有官方外设",       grade: "C", fail: "box_override",     severity: "HEURISTIC" },
+    { id: "G14", name: "气温上限",      rule: "环境温度 ≥ 32°C 时禁止逗猎，≥ 28°C 需缩短", grade: "A", fail: "heat_stress",    severity: "P0" },
+    { id: "G15", name: "湿度散热",      rule: "气温 ≥ 25°C 且湿度 ≥ 75% 时禁止逗猎",   grade: "A", fail: "humidity_heat",   severity: "P0" },
+    { id: "G16", name: "日光直射",      rule: "气温 ≥ 28°C 且有直射日光时禁止逗猎",     grade: "B", fail: "direct_sun_heat", severity: "P1" },
+    { id: "G17", name: "户外适应",      rule: "近 7 日户外适应 ≤ 1 天且气温 ≥ 30°C",   grade: "B", fail: "no_outdoor_accl", severity: "P1" }
   ];
 
   /* ---------- 序列阶段 ---------- */
@@ -68,6 +72,14 @@
   function cls(code) {
     for (var i = 0; i < CLASSES.length; i++) if (CLASSES[i].code === code) return CLASSES[i];
     return null;
+  }
+
+  /* ---------- 工具：数值兜底 ---------- */
+  // 页面传空字符串 / undefined / NaN 时全部落到默认值，
+  // 不让 undefined 参与后面的比较（那会让所有门槛静默失效）。
+  function num(v, dflt) {
+    var n = Number(v);
+    return isFinite(n) && n !== 0 ? n : (v === 0 ? 0 : dflt);
   }
 
   /* ---------- 门槛判定器 ---------- */
@@ -335,12 +347,30 @@
     var nipReactive = profile.nipReactive !== false;    // ~60% 默认有反应
     var catCount    = profile.catCount || 1;
 
-    // env 描述「房子本身」，与「外设」分开。
-    // 此前这个参数在函数体里一次都没被读过（页面也就顺手传了 {}），
-    // 于是门槛表里跟环境有关的规则永远不可能触发。G11 现在真的吃 env.floor。
+    // env 描述「房子本身」与「今日天气」，与「外设」分开。
+    // env.floor/surface 决定抓地力（影响猫爬架防跌门槛 G11）。
+    // 下面四个是 DOG API 那套环境抑制维度，猫身上同样成立——
+    // 猫没有汗腺，散热全靠舔毛和喘气，气温高湿度大时会直接中暑。
     env = env || {};
     var envFloor = env.floor || "wood";                  // wood | tile | carpet
     var envGrip  = env.surface == null ? ({ wood: 6, tile: 3, carpet: 8 }[envFloor] || 6) : env.surface;
+
+    var envTemp     = num(env.tempC, 24);        // 气温 °C
+    var envHumidity = num(env.humidity, 55);     // 相对湿度 %
+    var envOutdoor  = num(env.outdoorDays, 7);   // 近 7 日户外适应天数
+    var envSun      = !!env.directSun;           // 日光直射
+
+    // 环境抑制判定（对应 G14 气温 / G15 湿度 / G16 日光）
+    var heatRisk = 0;
+    if (envTemp >= 32) heatRisk = 3;
+    else if (envTemp >= 28) heatRisk = 2;
+    else if (envTemp >= 25) heatRisk = 1;
+    if (envHumidity >= 75 && envTemp >= 25) heatRisk = Math.max(heatRisk, 3);
+    else if (envHumidity >= 60 && envTemp >= 28) heatRisk = Math.max(heatRisk, 2);
+    if (envSun && envTemp >= 28) heatRisk = Math.max(heatRisk, 2);
+    if (envOutdoor <= 1 && envTemp >= 30) heatRisk = Math.max(heatRisk, 3);
+    // 幼猫与老年猫散热更差
+    if ((isKitten || isSenior) && envTemp >= 30) heatRisk = Math.max(heatRisk, 2);
 
     // 跨设备累加器（evaluateDevice 会往里写）
     var ctx = {
@@ -364,6 +394,45 @@
 
     // 全局门槛：纸箱优先级
     var boxWarning = judgeGlobalGates(ctx.gate, ctx);
+
+    /* ---- 环境抑制门槛 G14–G17 ----
+     * 这四道不走逐设备判定，因为它们约束的是「今天能不能玩」，
+     * 不是「某件设备安不安全」。猫没有汗腺，散热只靠舔毛与喘气，
+     * 所以高温高湿是硬停止，不是建议。
+     */
+    var envGate = ctx.gate;
+    if (envTemp >= 28) {
+      envGate.judge("G14", -1, envTemp < 32,
+        envTemp >= 32 ? "hard_stop" : "limited",
+        "P0/P1",
+        envTemp >= 32
+          ? ("气温 " + envTemp + "°C，环境抑制：硬停止逗猎。猫无汗腺，散热只靠舔毛与喘气。")
+          : ("气温 " + envTemp + "°C，建议缩短逗猎时长至 10 分钟以内并增加饮水点。"));
+    } else {
+      envGate.judge("G14", -1, true, "ok", "P0", "");
+    }
+
+    if (envTemp >= 25 && envHumidity >= 75) {
+      envGate.judge("G15", -1, false, "hard_stop", "P0",
+        "气温 " + envTemp + "°C + 湿度 " + envHumidity + "%：汗液蒸发受阻，散热失效，禁止逗猎。");
+    } else {
+      envGate.judge("G15", -1, true, "ok", "P0", "");
+    }
+
+    if (envSun && envTemp >= 28) {
+      envGate.judge("G16", -1, false, "hard_stop", "P1",
+        "气温 " + envTemp + "°C 且有日光直射：地面辐射热叠加，把逗猎移到阴凉时段。");
+    } else {
+      envGate.judge("G16", -1, true, "ok", "P1", "");
+    }
+
+    if (envOutdoor <= 1 && envTemp >= 30) {
+      envGate.judge("G17", -1, false, "hard_stop", "P1",
+        "近 7 日户外适应仅 " + envOutdoor + " 天，气温 " + envTemp +
+        "°C：未适应的猫不能出户外环境。");
+    } else {
+      envGate.judge("G17", -1, true, "ok", "P1", "");
+    }
 
     // 序列闭合判定
     var seqComplete = ctx.stages.STALK > 0.5 && ctx.stages.POUNCE > 0.3 && ctx.stages.KILL_BITE > 0.2;
@@ -414,7 +483,16 @@
       gates: gateMatrix.gates,
       gateFailCount: gateMatrix.gateFailCount,
       gateNaCount:   gateMatrix.gateNaCount,
-      env: { floor: envFloor, surface: envGrip },
+      env: {
+        floor: envFloor,
+        surface: envGrip,
+        tempC: envTemp,
+        humidity: envHumidity,
+        outdoorDays: envOutdoor,
+        directSun: envSun,
+        heatRisk: heatRisk,
+        heatLabel: ["", "轻度", "中度", "高度"][heatRisk] || ""
+      },
       quota: quota,
       healthScore: healthScore,
       triage: triage,
