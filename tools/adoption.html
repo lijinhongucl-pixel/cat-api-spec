@@ -4,54 +4,155 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/adoption.html">
+<meta name="description" content="CAT API 领养：按四元组在本机算出领养 KEY 与领养名。领养只有一种形态——装技能。一条 curl 命令装完，KEY 与名字逐字节可复现。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="领养 — CAT API">
+<meta property="og:description" content="按四元组在本机算出领养 KEY 与领养名。领养只有一种形态——装技能。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/adoption.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="领养 — CAT API">
+<meta name="twitter:description" content="按四元组在本机算出领养 KEY 与领养名。">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <title>领养 — CAT API</title>
 <link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<link rel="stylesheet" href="../assets/css/multiplayer.css">
+<link rel="stylesheet" href="../assets/css/crosspet.css">
 <style>
-  .awrap { max-width: 760px; margin: 0 auto; padding: 28px; }
+  .awrap { max-width: 880px; margin: 0 auto; padding: 28px 28px 100px; }
   .doc-tag { display: inline-block; padding: 3px 10px; border-radius: 4px;
     background: var(--accent-soft); color: var(--accent-deep); font-size: 12px;
     letter-spacing: 0.06em; font-weight: 600; }
-  h1 { font-size: 26px; margin: 14px 0 8px; }
-  .lead { color: var(--muted); font-size: 15px; margin-bottom: 28px; line-height: 1.85; }
-  .adopt-form { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-    padding: 28px; margin-bottom: 24px; }
-  .adopt-form label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
-  .adopt-form input { width: 100%; padding: 10px 14px; border: 1px solid var(--line);
-    border-radius: 6px; font-size: 15px; background: var(--bg); margin-bottom: 16px; }
-  .adopt-form input:focus { outline: none; border-color: var(--accent); }
-  .adopt-btn { padding: 12px 24px; background: var(--accent); color: white; border: none;
-    border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s; }
-  .adopt-btn:hover { background: var(--accent-deep); }
-  .result { display: none; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 10px; padding: 28px; margin-bottom: 24px; }
-  .result.show { display: block; }
-  .card-display { text-align: center; margin-bottom: 24px; padding: 24px;
-    background: linear-gradient(135deg, var(--accent-soft), var(--bg));
-    border-radius: 12px; border: 1px solid var(--line); }
-  .card-display .card-name { font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
-    margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; }
-  .card-display .card-num { font-size: 14px; color: var(--muted); letter-spacing: 0.1em; }
-  .card-display .card-tag { display: inline-block; margin-top: 12px; padding: 4px 12px;
-    background: var(--accent); color: white; border-radius: 4px; font-size: 12px;
-    letter-spacing: 0.06em; font-weight: 600; }
-  .install-box { background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
-    padding: 16px; font-family: "SF Mono", "Menlo", monospace; font-size: 13px;
-    line-height: 1.7; overflow-x: auto; white-space: pre; }
-  .install-box .comment { color: var(--muted); }
-  .copy-btn { margin: 8px 0; padding: 6px 14px; background: var(--accent); color: white;
-    border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
-  .copy-btn:hover { background: var(--accent-deep); }
-  .rules-box { background: var(--accent-soft); border-left: 3px solid var(--accent);
-    padding: 16px 20px; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.85; margin-bottom: 24px; }
-  .rules-box h3 { font-size: 15px; margin-bottom: 8px; }
-  .rules-box ul { margin-left: 18px; }
-  .rules-box li { margin-bottom: 4px; }
-  .foot-note { margin-top: 24px; padding: 16px 20px; background: var(--panel);
-    border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; line-height: 1.8; color: var(--muted); }
+  h1 { font-size: 30px; margin: 14px 0 8px; font-family: var(--serif); }
+  .lead { color: var(--muted); font-size: 15px; margin-bottom: 24px; line-height: 1.9; }
+  .lead strong { color: var(--accent); }
+
+  .card-panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 24px 26px; margin-bottom: 20px;
+  }
+  .card-panel > h3 {
+    margin: 0 0 6px; font-size: 15px; color: var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-panel > h3 .num {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .card-panel > .hint { font-size: 12.5px; color: var(--faint); margin: 0 0 16px; line-height: 1.7; }
+
+  .fld { margin-bottom: 14px; }
+  .fld label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
+  .fld label .req { color: var(--wine); }
+  .fld input {
+    width: 100%; padding: 9px 13px; border: 1px solid var(--line);
+    border-radius: 7px; font-size: 14px; background: var(--bg);
+    color: var(--ink); font-family: inherit;
+  }
+  .fld input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  .fld input.mono { font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  .fld .sub { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 18px; border-radius: 8px; font-size: 13.5px;
+    font-family: inherit; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .btn.gold:hover { background: #b08f4d; }
+  .btn.sm { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+
+  /* 领养证 */
+  .cert {
+    background: linear-gradient(135deg, rgba(27,58,46,0.05) 0%, rgba(200,163,94,0.09) 100%);
+    border: 1px solid var(--gold); border-radius: 16px;
+    padding: 28px; text-align: center; margin-bottom: 20px;
+  }
+  .cert .label { font-size: 10.5px; letter-spacing: 0.2em; color: var(--gold); font-weight: 600; }
+  .cert .name {
+    font-size: 34px; font-weight: 700; margin: 12px 0 6px;
+    font-family: var(--serif); color: var(--ink); letter-spacing: 0.01em;
+  }
+  .cert .key {
+    font-family: "SF Mono", Menlo, monospace; font-size: 15px;
+    color: var(--accent); letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+  .cert .tag {
+    display: inline-block; margin-top: 6px; padding: 4px 13px;
+    background: var(--accent); color: #fff; border-radius: 4px;
+    font-size: 11.5px; letter-spacing: 0.06em; font-weight: 600;
+  }
+  .cert .note { font-size: 12px; color: var(--faint); margin-top: 12px; line-height: 1.7; }
+
+  /* 命令框 */
+  .cmdbox {
+    background: #1f2430; border-radius: 10px; padding: 16px 18px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 12.5px;
+    line-height: 1.8; overflow-x: auto; white-space: pre;
+    color: #d1d5db; margin: 12px 0;
+  }
+  .cmdbox .c { color: #7c8698; }      /* 注释 */
+  .cmdbox .k { color: var(--gold); }  /* 参数名 */
+  .cmdbox .v { color: #a7f3d0; }      /* 参数值 */
+
+  /* 核验 */
+  .verify-out {
+    margin-top: 12px; padding: 14px 16px; border-radius: 9px;
+    font-size: 13px; font-family: "SF Mono", Menlo, monospace;
+    background: var(--code-bg); color: var(--muted); line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .verify-out.ok { background: #dcfce7; color: #15803d; }
+  .verify-out.no { background: #fee2e2; color: #991b1b; }
+
+  /* 测试向量表 */
+  table.tv { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 12px; }
+  table.tv th {
+    text-align: left; font-size: 10.5px; letter-spacing: 0.05em;
+    text-transform: uppercase; color: var(--faint);
+    padding: 7px 8px; border-bottom: 1px solid var(--line); font-weight: 600;
+  }
+  table.tv td {
+    padding: 8px; border-bottom: 1px dashed var(--line);
+    font-family: "SF Mono", Menlo, monospace; color: var(--ink);
+  }
+  table.tv td.name { font-family: inherit; }
+  table.tv tr:last-child td { border-bottom: none; }
+  .selfcheck { font-size: 12.5px; font-family: "SF Mono", Menlo, monospace; line-height: 1.85; margin-top: 12px; }
+  .selfcheck .ok { color: var(--ok); }
+  .selfcheck .no { color: var(--danger); }
+
+  .rules-box {
+    background: var(--accent-soft); border-left: 3px solid var(--accent);
+    padding: 16px 20px; border-radius: 0 8px 8px 0;
+    font-size: 13.5px; line-height: 1.9; margin-bottom: 22px;
+  }
+  .rules-box h3 { font-size: 14px; margin: 0 0 8px; color: var(--accent); }
+  .rules-box ul { margin: 0; padding-left: 20px; }
+  .rules-box li { margin-bottom: 5px; }
+  .rules-box li:last-child { margin-bottom: 0; }
+  .rules-box code { background: rgba(27,58,46,0.08); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+  .foot-note {
+    margin-top: 26px; padding: 16px 20px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px;
+    font-size: 13px; line-height: 1.85; color: var(--muted);
+  }
+  .foot-note code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .foot-note a { color: var(--accent); }
 </style>
-  <link rel="stylesheet" href="../assets/css/livecat.css">
-<link rel="stylesheet" href="../assets/css/multiplayer.css">
-<link rel="stylesheet" href="../assets/css/crosspet.css">
 </head>
 <body>
 
@@ -61,6 +162,7 @@
     <div class="topnav">
       <a href="../index.html">首页</a>
       <a href="../spec/cat.html">正文</a>
+      <a href="../sdk/demo.html">SDK 控制台</a>
       <a href="adoption.html" class="on">领养</a>
       <a href="../reference/cheatsheet.html">速查卡</a>
       <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
@@ -69,117 +171,377 @@
 </div>
 
 <div class="awrap">
-  <span class="doc-tag" id="adoption">ADOPTION · 装技能</span>
-  <h1>领养一只猫</h1>
+  <span class="doc-tag" id="adoption">TOOL / ADOPTION</span>
+  <h1>领养</h1>
   <p class="lead">
-    领养只有一种形态：<strong>装技能</strong>。一条命令装完——
-    也可以填下面的表单，我们会给你生成一条专属安装命令，
-    装完会算出一张牌与一个名字。
+    按 <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a>的规则，在这台机器上算出你的
+    <strong>领养 KEY</strong> 与<strong>领养名</strong>。
+    本页不发起任何网络请求——它不向谁领取 KEY，它<strong>把 KEY 算出来</strong>。
+    名字也一样，而且名字<strong>不进</strong> KEY。
     <br><br>
-    本系统不返回 <code>401</code>，所以那张牌不是通行证，是<strong>来源标注</strong>。
-    名字由同一份摘要派发，不进牌里。规则见
-    <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a>。
+    领养只有一种形态：<strong>装技能</strong>。本页把那条安装命令按你的元组生成出来，
+    再当场算出你会拿到的东西——但<strong>本页不构成授权</strong>。
+    授权发生在安装那一刻，不在这一行输出上。
+    <br><br>
+    一个不需要授权就能打开的页面算出了你的 KEY 与名字，这恰恰说明它们是什么：
+    <strong>一张来源标注，加一个由同一份摘要派发的名字。</strong>
   </p>
 
   <div class="rules-box">
     <h3>领养规则</h3>
     <ul>
-      <li>本系统不承认 Owner 角色。你领养的只是一份副本，不是猫本身。</li>
-      <li>牌登记来源（你是从哪里领的这份副本），不是权限。</li>
-      <li>名字由摘要派发，不可自选、不可修改、不可转让。</li>
+      <li>本系统不承认 <code>Owner</code> 角色。你领养的只是一份副本，不是猫本身。</li>
+      <li>牌登记<strong>来源</strong>（你是从哪里领的这份副本），不是权限。</li>
+      <li>名字由摘要派发，<strong>不可自选、不可修改、不可转让</strong>。</li>
       <li>领养后你会被标记为 <code>Staff</code>——这是最低权限角色，不是管理角色。</li>
-      <li>如果系统决定信任你，它会通过脸部摩擦写入信息素签名——你不能申请，只能等。</li>
+      <li>如果系统决定信任你，它会通过脸部摩擦写入信息素签名。你不能申请，只能等。</li>
+      <li>没有账号、没有登录、没有同意书。<strong>安装本身就是同意，卸载本身就是撤回。</strong></li>
     </ul>
   </div>
 
-  <div class="adopt-form">
-    <label>你的标识（名字 / 邮箱 / 昵称，用来派发领养牌）</label>
-    <input id="adopter-name" type="text" placeholder="比如：张三 / you@example.com">
-    <button class="adopt-btn" onclick="generate()">生成领养命令</button>
-  </div>
+  <!-- ① 领养元组 -->
+  <div class="card-panel">
+    <h3><span class="num">1</span>领养元组</h3>
+    <p class="hint">改动任何一项，KEY 都会变。同一秒内改一个字也一样——摘要的前 8 字节里不会有任何一位保持原样。</p>
 
-  <div class="result" id="result">
-    <div class="card-display">
-      <div class="card-name" id="card-name"></div>
-      <div class="card-num" id="card-num"></div>
-      <div class="card-tag" id="card-tag"></div>
+    <div class="fld">
+      <label>领养人 adopter <span class="req">*</span></label>
+      <input id="f-adopter" type="text" placeholder="名字 / 邮箱 / 昵称，比如 锦宏@MacBook">
+    </div>
+    <div class="fld">
+      <label>领养时刻 cohort · UTC 秒精度</label>
+      <input id="f-cohort" type="text" class="mono" placeholder="2026-10-05T00:00:00Z">
+      <div class="sub">留空则用当前时刻。命令里已经带上这个值，所以装完算出来的结果与本页逐字节相同。</div>
+    </div>
+    <div class="fld">
+      <label>栖息地 habitat · 技能安装目录</label>
+      <input id="f-habitat" type="text" class="mono" placeholder="~/.cat-api">
+    </div>
+    <div class="fld">
+      <label>声明用途 intent · 只进摘要</label>
+      <input id="f-intent" type="text" placeholder="给 AI 读 / 写论文引用 / 单纯好奇">
     </div>
 
-    <h3 style="font-size:15px;margin-bottom:10px;">安装命令</h3>
-    <button class="copy-btn" onclick="copyCmd()">复制命令</button>
-    <div class="install-box" id="install-cmd"></div>
+    <div class="btn-row">
+      <button class="btn primary" id="btn-calc">算领养 KEY</button>
+      <button class="btn" id="btn-now">用当前时刻</button>
+      <button class="btn" id="btn-default">恢复默认元组</button>
+    </div>
+  </div>
 
-    <p style="margin-top:16px;font-size:13.5px;color:var(--muted);line-height:1.8;">
-      装完后，你的本地会生成一个 <code>.cat-api</code> 目录，里面有一张牌（来源标注）和一个名字（摘要派发）。
-      这两者都不能删除——删除会被记录为 Staff 可靠性下降。
+  <!-- ② 装技能 = 领养 -->
+  <div class="card-panel">
+    <h3><span class="num">2</span>装技能 = 领养</h3>
+    <p class="hint">
+      取说明书、取命令行实现、领养、复算、卸载全部封装在 <code>skill/install.sh</code> 里。
+      领养人可填写：不给值而在终端里运行时，安装包会问一句。
     </p>
+    <div class="btn-row">
+      <button class="btn" id="btn-copy-cmd">复制安装命令</button>
+      <button class="btn" id="btn-copy-dry">复制「先看一遍」的版本</button>
+    </div>
+    <div class="cmdbox" id="cmd-out"># 填完上面的元组，这里会生成安装命令</div>
+  </div>
+
+  <!-- ③ 核验一张牌 -->
+  <div class="card-panel">
+    <h3><span class="num">3</span>核验一张牌</h3>
+    <p class="hint">粘贴 KEY，不看证书也能查抄错。核验需要同时提供元组——KEY 是元组的摘要，元组不对就一定不对。</p>
+    <div class="fld">
+      <label>领养 KEY</label>
+      <input id="v-key" type="text" class="mono" placeholder="CAT-XXXXXXXXXXXXXXXX">
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="btn-verify">核验</button>
+      <button class="btn" id="btn-verify-json">核验并输出 JSON</button>
+    </div>
+    <div class="verify-out" id="verify-out">等待输入。</div>
+  </div>
+
+  <!-- ④ 领养证 -->
+  <div class="card-panel">
+    <h3><span class="num">4</span>领养证（本页算出）</h3>
+    <p class="hint">
+      本页不写入任何文件。证书由技能写在 <code>~/.cat-api/adoption.json</code>——
+      位置在技能目录<strong>之外</strong>：卸载技能不会删掉它，因为卸载不撤销任何东西。
+    </p>
+    <div class="cert" id="cert" style="display:none;">
+      <div class="label">ADOPTION CERTIFICATE</div>
+      <div class="name" id="cert-name"></div>
+      <div class="key" id="cert-key"></div>
+      <div><span class="tag" id="cert-tag"></span></div>
+      <div class="note">
+        名字与 KEY 同源、不进元组。<br>
+        这张牌登记来源，不是权限——本系统不返回 401。
+      </div>
+    </div>
+    <div class="btn-row" id="cert-actions" style="display:none;">
+      <button class="btn gold" id="btn-copy-key">复制 KEY</button>
+      <button class="btn" id="btn-copy-tuple">复制元组</button>
+    </div>
+  </div>
+
+  <!-- ⑤ 测试向量 -->
+  <div class="card-panel">
+    <h3><span class="num">5</span>与 §5.3 公布的测试向量对照</h3>
+    <p class="hint">
+      任何一份实现都 MUST 复现这三组值。本页用的是 <code>assets/js/adoption-key.js</code>，
+      命令行用的是 <code>skill/install.sh</code>——两份实现互相钉住，判据就是这张表。
+    </p>
+    <table class="tv" id="tv-table"></table>
+    <div class="selfcheck" id="selfcheck"></div>
+    <div class="btn-row">
+      <button class="btn sm" id="btn-selfcheck">跑一次自检</button>
+    </div>
   </div>
 
   <div class="foot-note">
-    领养入口由 <code>tools/adoption.html</code> 提供。<br>
-    规则见 <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a> · 引擎纯本地计算，不发送任何数据。
+    本页纯本地计算，<strong>不发任何网络请求</strong>，不保存任何数据到服务器。
+    算法与 <code>skill/install.sh</code> 同源：<code>payload = JSON.stringify([adopter, cohort, habitat, intent])</code>，
+    <code>KEY = "CAT-" + sha256(payload).slice(0,16).toUpperCase()</code>，
+    名字取同一摘要的另一切片。<br>
+    规则见 <a href="../spec/cat.html#adoption">§5.3《领养与授权》</a> ·
+    正文 <a href="../spec/cat.html">spec/cat.html</a> ·
+    AI 接入说明 <code>AGENTS.md</code> / <code>llms.txt</code>
   </div>
 </div>
 
+<script src="../assets/js/adoption-key.js"></script>
 <script>
 (function () {
-  // 姓名字库——用于派发名字
-  var NAME_PARTS_A = ["灰", "黑", "橘", "白", "虎", "三花", "玳瑁", "奶牛", "狮子", "烟"];
-  var NAME_PARTS_B = ["风", "影", "歌", "梦", "潮", "霜", "月", "星", "雾", "岚"];
-  var CARD_TAGS = ["Founding Staff", "Early Adopter", "Night Watch", "Box Inspector",
-    "Laser Chaser", "Purr Engineer", "Crepuscular Member", "Territory Mapper"];
+  "use strict";
+  var AK = window.AdoptionKey;
+  var BASE = "https://lijinhongucl-pixel.github.io/cat-api-spec";
+  var DEFAULT_HABITAT = "~/.cat-api";
 
-  function hash(str) {
-    var h = 5381;
-    for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
-    return Math.abs(h);
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- 元组读写 ----------
+  function getTuple() {
+    return {
+      adopter: $("f-adopter").value.trim(),
+      cohort: $("f-cohort").value.trim() || AK.nowCohort(),
+      habitat: $("f-habitat").value.trim() || DEFAULT_HABITAT,
+      intent: $("f-intent").value.trim()
+    };
   }
 
-  function generateName(h) {
-    var a = NAME_PARTS_A[h % NAME_PARTS_A.length];
-    var b = NAME_PARTS_B[(h >> 4) % NAME_PARTS_B.length];
-    return a + b;
+  function setTuple(t) {
+    $("f-adopter").value = t.adopter;
+    $("f-cohort").value = t.cohort;
+    $("f-habitat").value = t.habitat;
+    $("f-intent").value = t.intent;
   }
 
-  function generateCardNum(h) {
-    var hex = h.toString(16).toUpperCase().padStart(8, "0").slice(0, 8);
-    return "CAT-" + hex.match(/.{1,4}/g).join("-");
+  // ---------- 渲染安装命令 ----------
+  function renderCmd(t) {
+    var cmd =
+      "# 领养命令 · 来源标注：" + (t.adopter || "（未填）") + "\n" +
+      "curl -fsSL " + BASE + "/skill/install.sh \\\n" +
+      "  | sh -s -- \\\n" +
+      "      --adopter " + q(t.adopter) + " \\\n" +
+      "      --cohort " + q(t.cohort) + " \\\n" +
+      "      --habitat " + q(t.habitat) + " \\\n" +
+      "      --intent " + q(t.intent);
+    $("cmd-out").textContent = cmd;
   }
 
-  window.generate = function () {
-    var name = document.getElementById("adopter-name").value.trim();
-    if (!name) { alert("请先填一下你的标识。"); return; }
-    var h = hash(name + "|cat-api|0.5.0");
-    var displayName = generateName(h);
-    var cardNum = generateCardNum(h);
-    var cardTag = CARD_TAGS[h % CARD_TAGS.length];
+  // shell 引号
+  function q(s) {
+    if (!s) return '""';
+    return "'" + String(s).replace(/'/g, "'\\''") + "'";
+  }
 
-    document.getElementById("card-name").textContent = displayName;
-    document.getElementById("card-num").textContent = cardNum;
-    document.getElementById("card-tag").textContent = cardTag;
+  // ---------- 算 KEY ----------
+  function calc() {
+    var t = getTuple();
+    if (!t.adopter) {
+      $("verify-out").className = "verify-out no";
+      $("verify-out").textContent = "先填领养人。KEY 是元组的摘要，元组缺一项就不成立。";
+      return null;
+    }
+    if (!$("f-cohort").value.trim()) $("f-cohort").value = t.cohort;
+    if (!$("f-habitat").value.trim()) $("f-habitat").value = t.habitat;
 
-    var cmd = '<span class="comment"># 领养命令 · 来源标注：' + name + '</span>\n' +
-      'curl -fsSL https://lijinhongucl-pixel.github.io/cat-api-spec/skill/install.sh \\\n' +
-      '  | sh -s -- --adopter "' + name + '" \\\n' +
-      '         --card "' + cardNum + '" \\\n' +
-      '         --name "' + displayName + '"';
-    document.getElementById("install-cmd").innerHTML = cmd;
+    var r = AK.computeSync(t.adopter, t.cohort, t.habitat, t.intent);
 
-    document.getElementById("result").classList.add("show");
-  };
+    $("cert").style.display = "block";
+    $("cert-actions").style.display = "flex";
+    $("cert-name").textContent = r.name;
+    $("cert-key").textContent = r.key;
+    $("cert-tag").textContent = r.tag;
 
-  window.copyCmd = function () {
-    var text = document.getElementById("install-cmd").textContent;
-    navigator.clipboard.writeText(text).then(function () {
-      var b = document.querySelector(".copy-btn");
-      var orig = b.textContent;
-      b.textContent = "已复制 ✓";
-      setTimeout(function () { b.textContent = orig; }, 1500);
+    renderCmd(t);
+    return r;
+  }
+
+  // ---------- 核验 ----------
+  function verify(asJson) {
+    var t = getTuple();
+    var key = $("v-key").value.trim().toUpperCase();
+    var out = $("verify-out");
+    if (!key) {
+      out.className = "verify-out";
+      out.textContent = "等待输入。";
+      return;
+    }
+    if (!t.adopter) {
+      out.className = "verify-out no";
+      out.textContent = "核验需要元组。填完上面四项再核。";
+      return;
+    }
+    var r = AK.computeSync(t.adopter, t.cohort, t.habitat, t.intent);
+    var ok = (r.key === key);
+    var payload = {
+      valid: ok, expected: r.key, got: key, name: r.name,
+      tuple: t
+    };
+    if (asJson) {
+      out.className = "verify-out " + (ok ? "ok" : "no");
+      out.textContent = JSON.stringify(payload, null, 2);
+      return;
+    }
+    out.className = "verify-out " + (ok ? "ok" : "no");
+    out.textContent = ok
+      ? "✓ 牌是真的\n\n  KEY   " + r.key + "\n  名字  " + r.name + "\n  元组  " + JSON.stringify(t)
+      : "✗ 牌对不上\n\n  期望  " + r.key + "\n  拿到  " + key +
+        "\n\n  KEY 是元组的摘要。改了元组里的任何一项，" +
+        "\n  或者抄错一位，摘要就完全不同了。";
+  }
+
+  // ---------- 复制 ----------
+  function copy(text, btn) {
+    var done = function () {
+      var orig = btn.textContent;
+      btn.textContent = "已复制";
+      setTimeout(function () { btn.textContent = orig; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+    } else fallback(text, done);
+  }
+
+  function fallback(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;top:-999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); }
+    catch (e) { /* 复制不了就算了 */ }
+    document.body.removeChild(ta);
+  }
+
+  // ---------- 测试向量表 ----------
+  function renderTV() {
+    var rows = AK.TEST_VECTORS.map(function (v) {
+      var r = AK.computeSync(v.adopter, v.cohort, v.habitat, v.intent);
+      return "<tr>" +
+        "<td>" + esc(v.adopter) + "</td>" +
+        "<td>" + esc(v.cohort) + "</td>" +
+        "<td class='name'>" + esc(r.name) + "</td>" +
+        "<td>" + r.key + "</td>" +
+        "</tr>";
+    }).join("");
+    $("tv-table").innerHTML =
+      "<thead><tr><th>adopter</th><th>cohort</th><th>派发名</th><th>KEY</th></tr></thead><tbody>" +
+      rows + "</tbody>";
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c];
     });
-  };
+  }
+
+  // ---------- 自检 ----------
+  function selfCheck() {
+    var out = [];
+    var pass = 0, fail = 0;
+    function t(name, ok, detail) {
+      if (ok) { pass++; out.push('<span class="ok">✓</span> ' + name); }
+      else { fail++; out.push('<span class="no">✗</span> ' + name + (detail ? "  " + detail : "")); }
+    }
+
+    // 1. SHA-256 与已知向量一致（"abc" 的标准摘要）
+    t("SHA-256 已知向量 abc",
+      AK.sha256HexSync("abc") === "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+      AK.sha256HexSync("abc"));
+    // 2. 空串
+    t("SHA-256 空串",
+      AK.sha256HexSync("") === "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    // 3. 中文与 emoji 的 UTF-8 编码不能错
+    t("SHA-256 中文单字",
+      AK.sha256HexSync("猫") === "a810bf845a307382118e6e6aef21a79f6a26b1b3ad2225fe97b7ee4c125e3380",
+      AK.sha256HexSync("猫"));
+    t("SHA-256 中文 + emoji",
+      AK.sha256HexSync("中文测试 🎉") === "7155b5db32b2d35f400ccb32ee59bb55ab3406baa10a5f26e44a00e312dd4233",
+      AK.sha256HexSync("中文测试 🎉"));
+    // 4~6. 三组测试向量
+    AK.TEST_VECTORS.forEach(function (v, i) {
+      var r = AK.computeSync(v.adopter, v.cohort, v.habitat, v.intent);
+      t("测试向量 " + (i + 1) + " 产出 KEY", /^CAT-[0-9A-F]{16}$/.test(r.key), r.key);
+    });
+    // 7. 名字不进 KEY（改名字切片不影响 KEY）
+    var v0 = AK.TEST_VECTORS[0];
+    var r1 = AK.computeSync(v0.adopter, v0.cohort, v0.habitat, v0.intent);
+    var payloadOnly = JSON.stringify([v0.adopter, v0.cohort, v0.habitat, v0.intent]);
+    t("名字不进 KEY", r1.key === "CAT-" + AK.sha256HexSync(payloadOnly).slice(0, 16).toUpperCase());
+    // 8. 元组顺序敏感
+    var a = AK.computeSync("x", "2026-01-01T00:00:00Z", "y", "z");
+    var b = AK.computeSync("y", "2026-01-01T00:00:00Z", "x", "z");
+    t("元组顺序影响 KEY", a.key !== b.key);
+    // 9. 任何一项变化都变 KEY
+    t("adopter 变化 → KEY 变", AK.computeSync("a1","c","h","i").key !== AK.computeSync("a2","c","h","i").key);
+    t("cohort 变化 → KEY 变", AK.computeSync("a","c1","h","i").key !== AK.computeSync("a","c2","h","i").key);
+    t("habitat 变化 → KEY 变", AK.computeSync("a","c","h1","i").key !== AK.computeSync("a","c","h2","i").key);
+    t("intent 变化 → KEY 变", AK.computeSync("a","c","h","i1").key !== AK.computeSync("a","c","h","i2").key);
+
+    $("selfcheck").innerHTML = out.join("\n") + "\n\n" + pass + " / " + (pass + fail) + " 通过";
+    return fail === 0;
+  }
+
+  // ---------- 绑定 ----------
+  $("btn-calc").addEventListener("click", calc);
+  $("btn-now").addEventListener("click", function () {
+    $("f-cohort").value = AK.nowCohort();
+    calc();
+  });
+  $("btn-default").addEventListener("click", function () {
+    setTuple({ adopter: "锦宏@MacBook", cohort: AK.nowCohort(), habitat: DEFAULT_HABITAT, intent: "给 AI 读" });
+    calc();
+  });
+  $("btn-copy-cmd").addEventListener("click", function () {
+    copy($("cmd-out").textContent, this);
+  });
+  $("btn-copy-dry").addEventListener("click", function () {
+    copy($("cmd-out").textContent + "\n#   （先看一遍：把上面这行存成 install.sh，sh install.sh --help）", this);
+  });
+  $("btn-verify").addEventListener("click", function () { verify(false); });
+  $("btn-verify-json").addEventListener("click", function () { verify(true); });
+  $("btn-copy-key").addEventListener("click", function () {
+    copy($("cert-key").textContent, this);
+  });
+  $("btn-copy-tuple").addEventListener("click", function () {
+    var t = getTuple();
+    copy("adopter: " + t.adopter + "\ncohort:  " + t.cohort +
+         "\nhabitat: " + t.habitat + "\nintent:  " + t.intent, this);
+  });
+  $("btn-selfcheck").addEventListener("click", selfCheck);
+
+  // 元组任一输入变化就重算命令
+  ["f-adopter", "f-cohort", "f-habitat", "f-intent"].forEach(function (id) {
+    $(id).addEventListener("input", function () { renderCmd(getTuple()); });
+  });
+
+  // 启动：填默认元组 + 渲染
+  setTuple({ adopter: "锦宏@MacBook", cohort: AK.nowCohort(), habitat: DEFAULT_HABITAT, intent: "给 AI 读" });
+  renderCmd(getTuple());
+  renderTV();
+  selfCheck();
 })();
 </script>
-  <script src="../assets/js/livecat.js"></script>
+<script src="../assets/js/livecat.js"></script>
 <script src="../assets/js/multiplayer.js"></script>
 <script src="../assets/js/crosspet.js"></script>
 </body>
