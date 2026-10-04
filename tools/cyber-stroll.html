@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/cyber-stroll.html">
+<meta name="description" content="CAT API 赛博遛猫：把一张图片降格成一只网格化的猫，用鼠标当牵引绳去遛它。管线四步：像素→网格→部件→路径。导出静态 SVG 或带 SMIL 循环的动态 SVG。离线运行，图片不离开本机。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="赛博遛猫 — CAT API">
+<meta property="og:description" content="把一张图片降格成一只网格化的猫，用鼠标当牵引绳去遛它。管线四步：像素→网格→部件→路径。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/cyber-stroll.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="赛博遛猫 — CAT API">
+<meta name="twitter:description" content="把一张图片降格成一只网格化的猫，用鼠标当牵引绳去遛它。">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<title>赛博遛猫 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<link rel="stylesheet" href="../assets/css/multiplayer.css">
+<link rel="stylesheet" href="../assets/css/crosspet.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px 100px; }
+  .head { margin-top: 32px; border-bottom: 1px solid var(--line); padding-bottom: 22px; }
+  .head h1 { margin: 6px 0 8px; font-size: 28px; }
+  .head .sub { color: var(--muted); font-size: 14px; }
+  .head .lead { color: var(--ink); font-size: 14.5px; line-height: 1.85; max-width: 820px; margin-top: 14px; }
+  .head .lead strong { color: var(--accent); }
+  .head .lead code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+
+  .stage-frame {
+    margin-top: 24px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stage-frame::before {
+    content: "STAGE · 拖图进来 / 移动鼠标 = 牵引";
+    position: absolute;
+    top: 10px;
+    left: 18px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    font-weight: 600;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  #stage {
+    width: 100%;
+    aspect-ratio: 16/10;
+    background:
+      linear-gradient(45deg, var(--code-bg) 25%, transparent 25%, transparent 75%, var(--code-bg) 75%),
+      linear-gradient(45deg, var(--code-bg) 25%, transparent 25%, transparent 75%, var(--code-bg) 75%);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+    background-color: #fff;
+    border-radius: 10px;
+    margin-top: 22px;
+    cursor: crosshair;
+    position: relative;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #stage svg { width: 100%; height: 100%; display: block; }
+  #stage.dragover { outline: 2px dashed var(--gold); outline-offset: -8px; }
+  .stage-hint {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--faint);
+    font-size: 14px;
+    text-align: center;
+    pointer-events: none;
+    line-height: 1.7;
+  }
+  .stage-hint .kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    margin: 0 3px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+  }
+  @media (max-width: 760px) { .controls { grid-template-columns: 1fr; } }
+  .ctrl-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .ctrl-card h4 {
+    margin: 0 0 10px;
+    font-size: 11.5px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .fld { display: grid; grid-template-columns: 1fr 84px; gap: 10px; align-items: center; margin: 7px 0; }
+  .fld label { font-size: 13px; color: var(--muted); }
+  .fld input[type=range] { width: 100%; }
+  .fld input[type=number] {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    font-family: inherit;
+    font-size: 12.5px;
+    background: #fff;
+    color: var(--ink);
+    text-align: right;
+  }
+  .chk {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted);
+    margin: 8px 0; cursor: pointer;
+  }
+  .chk input { width: 15px; height: 15px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .btn.gold:hover { background: #b08f4d; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
+  .telemetry {
+    margin-top: 16px;
+    background: #1f2430;
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: #d1d5db;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.85;
+  }
+  .telemetry .k { color: #94a3b8; }
+  .telemetry .v { color: var(--gold); }
+
+  .pipeline {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 760px) { .pipeline { grid-template-columns: repeat(2, 1fr); } }
+  .pipe-step {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 14px 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .pipe-step .num {
+    display: inline-block;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 22px;
+    margin-right: 8px;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .pipe-step h5 {
+    margin: 8px 0 4px;
+    font-size: 13px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .limits {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+  }
+  .limits h3 { margin: 0 0 12px; font-size: 13px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+  .limits ol { padding-left: 22px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
+  .limits ol li { margin: 6px 0; }
+  .limits ol li strong { color: var(--ink); }
+
+  .source-note {
+    margin-top: 22px;
+    padding: 14px 18px;
+    background: var(--code-bg);
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.75;
+  }
+  .source-note code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a href="cyber-stroll.html" class="on">赛博遛猫</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="head">
+    <span class="doc-tag">TOOL / CYBER STROLL</span>
+    <h1>赛博遛猫</h1>
+    <div class="sub">对应规范 §8 外设总线 · 分类 <code>PER/LEASH</code>「牵引与项圈」· 约束器</div>
+    <p class="lead">
+      把一张图片<strong>降格成一只网格化的「猫」</strong>，然后用<strong>鼠标指针当牵引绳</strong>去遛它。
+      最终产物是两张可下载的 <strong>SVG 文件</strong>——一张静态、一张带 SMIL 循环。
+    </p>
+    <p class="lead" style="margin-top:10px;font-size:13.5px;color:var(--muted);">
+      管线四步：<strong>像素 → 网格 → 部件 → 路径</strong>。
+      牵引绳长 <strong>2.03 体长</strong>（附录 R 排除伸缩配置），不可调。
+      全程离线——图片不离开本机，不发送任何网络请求。
+    </p>
+  </div>
+
+  <div class="stage-frame">
+    <div id="stage">
+      <div class="stage-hint" id="stageHint">
+        把图片拖进来<br>
+        <span style="font-size:12px;">或从下面内置示例挑一只</span><br><br>
+        <span style="font-size:12px;color:var(--faint);">
+          移动鼠标 = 牵引；
+          <span class="kbd">←</span> <span class="kbd">→</span> 推动；
+          <span class="kbd">Space</span> 坐下
+        </span>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn primary" id="btn-builtin">用内置猫</button>
+      <label class="btn" for="file-input" style="cursor:pointer;">
+        选本地图片…
+        <input id="file-input" type="file" accept="image/*" style="display:none;">
+      </label>
+      <button class="btn" id="btn-from-astraflow" title="从「星图接入」页面通过 sessionStorage 交接过来的图">从星图接入接图</button>
+      <button class="btn" id="btn-mirror">镜像朝向</button>
+      <button class="btn gold" id="btn-export-static">存静态 SVG</button>
+      <button class="btn gold" id="btn-export-smil">存动态 SVG（SMIL）</button>
+      <button class="btn" id="btn-reset">清空舞台</button>
+    </div>
+
+    <div class="controls">
+      <div class="ctrl-card">
+        <h4>管线参数</h4>
+        <div class="fld">
+          <label>网格宽度（格）<br><span style="font-size:11.5px;color:var(--faint);">默认 64，越大越细</span></label>
+          <input id="p-grid" type="number" min="16" max="128" step="4" value="64">
+        </div>
+        <div class="fld">
+          <label>背景剔除阈值<br><span style="font-size:11.5px;color:var(--faint);">0-100，按亮度</span></label>
+          <input id="p-bg" type="number" min="0" max="100" step="1" value="28">
+        </div>
+        <div class="fld">
+          <label>单元填充判定<br><span style="font-size:11.5px;color:var(--faint);">网格里多少比例算「有猫」</span></label>
+          <input id="p-fill" type="number" min="0.05" max="0.95" step="0.05" value="0.45">
+        </div>
+        <label class="chk">
+          <input id="p-invert" type="checkbox">
+          反转掩膜（前景色接近背景色时勾上）
+        </label>
+      </div>
+
+      <div class="ctrl-card">
+        <h4>遥测 · Telemetry</h4>
+        <div class="telemetry" id="telemetry">
+          <div><span class="k">state</span>     = <span class="v" id="t-state">idle</span></div>
+          <div><span class="k">grid</span>      = <span class="v" id="t-grid">—</span></div>
+          <div><span class="k">cells_filled</span> = <span class="v" id="t-filled">—</span></div>
+          <div><span class="k">bbox</span>      = <span class="v" id="t-bbox">—</span></div>
+          <div><span class="k">orientation</span> = <span class="v" id="t-orient">—</span></div>
+          <div><span class="k">leash</span>     = <span class="v" id="t-leash">2.03 体长</span></div>
+          <div><span class="k">velocity</span>  = <span class="v" id="t-vel">0.00 /秒</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <span class="num">1</span>
+      <h5>像素</h5>
+      <div>读取原图像素数据，本地完成，不发请求。</div>
+    </div>
+    <div class="pipe-step">
+      <span class="num">2</span>
+      <h5>网格</h5>
+      <div>按「网格宽度」栅格化，剔除背景，判定每个单元是否填为「有猫」。</div>
+    </div>
+    <div class="pipe-step">
+      <span class="num">3</span>
+      <h5>部件</h5>
+      <div>按包围盒切分，不做骨架估计。朝向是启发式判断——格子多的一侧算头。</div>
+    </div>
+    <div class="pipe-step">
+      <span class="num">4</span>
+      <h5>路径</h5>
+      <div>部件组合成 SVG 路径输出。静态导出当前帧；动态导出 SMIL 动画循环。</div>
+    </div>
+  </div>
+
+  <div class="limits">
+    <h3>已知限制</h3>
+    <ol>
+      <li><strong>部件切分粗粒度</strong>：只用包围盒，无骨架估计；摆幅到极限时接缝可见。</li>
+      <li><strong>默认 64 格降采样</strong>：细长的尾巴尖、耳朵尖端、胡须会先消失。</li>
+      <li><strong>背景剔除单阈值</strong>：纯色背景最省事，杂背景调不干净——可以勾「反转掩膜」试试。</li>
+      <li><strong>不处理多主体</strong>：两只猫会被合成一只。</li>
+      <li><strong>朝向是启发式</strong>：遮挡、卷成团、短尾会判断反，用「镜像朝向」按钮手动翻。</li>
+      <li><strong>速度是比例量</strong>：图里没有绝对尺度，所有绳长、步幅、距离都按同一比例折算。</li>
+    </ol>
+  </div>
+
+  <div class="source-note">
+    所有数值标注为 <code>HEURISTIC</code>——本页没有一条数值来自公开信源，
+    遵循「没有出处就标 HEURISTIC」的纪律。
+    本页离线运行，图片不离开本机，导出 SVG 时也不上传任何数据。
+    「从星图接入接图」通过 <code>sessionStorage</code> 在同一标签页内一次性交接，读完即删。
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   赛博遛猫 · CyberStroll v1.0
+   纯前端图像→网格→部件→SVG 路径 管线，无依赖。
+   ============================================================ */
+(function() {
+  'use strict';
+  var stage = document.getElementById('stage');
+  var stageHint = document.getElementById('stageHint');
+  var fileInput = document.getElementById('file-input');
+  var btnBuiltin = document.getElementById('btn-builtin');
+  var btnMirror = document.getElementById('btn-mirror');
+  var btnExportStatic = document.getElementById('btn-export-static');
+  var btnExportSmil = document.getElementById('btn-export-smil');
+  var btnReset = document.getElementById('btn-reset');
+  var btnFromAstra = document.getElementById('btn-from-astraflow');
+  var pGrid = document.getElementById('p-grid');
+  var pBg = document.getElementById('p-bg');
+  var pFill = document.getElementById('p-fill');
+  var pInvert = document.getElementById('p-invert');
+
+  var state = {
+    sourceCanvas: null,    // 原图栅格化 canvas
+    grid: null,            // 2D 数组：true 表示该格是猫
+    gridW: 0, gridH: 0,
+    cellPx: 0,
+    bbox: null,            // {minX, minY, maxX, maxY} 单位格
+    mirror: false,
+    catPos: null,          // {x, y} 猫当前坐标（像素）
+    catVel: {x: 0, y: 0},
+    pointer: null,         // {x, y} 鼠标坐标
+    keys: {},
+    sitting: false,
+    raf: 0,
+    imgWidth: 0, imgHeight: 0,
+  };
+
+  // ===== telemetry =====
+  function tel(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
+
+  function updateTelemetry() {
+    tel('t-state', state.sourceCanvas ? (state.sitting ? 'sitting' : 'walking') : 'idle');
+    tel('t-grid', state.grid ? state.gridW + ' × ' + state.gridH : '—');
+    if (state.grid) {
+      var filled = 0;
+      for (var y = 0; y < state.gridH; y++)
+        for (var x = 0; x < state.gridW; x++)
+          if (state.grid[y][x]) filled++;
+      tel('t-filled', filled + ' / ' + (state.gridW * state.gridH));
+    } else tel('t-filled', '—');
+    tel('t-bbox', state.bbox ? (state.bbox.minX + ',' + state.bbox.minY + ' → ' + state.bbox.maxX + ',' + state.bbox.maxY) : '—');
+    tel('t-orient', state.bbox ? (state.mirror ? '右→左（镜像）' : '左→右') : '—');
+    var v = state.catVel;
+    var speed = Math.sqrt(v.x * v.x + v.y * v.y);
+    tel('t-vel', speed.toFixed(2) + ' /秒');
+  }
+
+  // ===== 内置猫（程序生成的剪影）=====
+  function builtinCat(callback) {
+    var c = document.createElement('canvas');
+    c.width = 256; c.height = 256;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.fillStyle = '#2C2C2A';
+    // 侧卧猫剪影（简化轮廓）
+    ctx.beginPath();
+    ctx.ellipse(128, 150, 78, 36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 头
+    ctx.beginPath();
+    ctx.arc(70, 130, 32, 0, Math.PI * 2);
+    ctx.fill();
+    // 耳朵
+    ctx.beginPath();
+    ctx.moveTo(56, 105); ctx.lineTo(48, 78); ctx.lineTo(72, 100); ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(78, 100); ctx.lineTo(86, 78); ctx.lineTo(92, 105); ctx.closePath();
+    ctx.fill();
+    // 尾巴
+    ctx.lineWidth = 14;
+    ctx.strokeStyle = '#2C2C2A';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(200, 142);
+    ctx.quadraticCurveTo(232, 116, 226, 86);
+    ctx.stroke();
+    callback(c);
+  }
+
+  // ===== 图片→canvas =====
+  function imageToCanvas(src, callback) {
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      var maxW = 512;
+      var scale = Math.min(1, maxW / img.width);
+      var c = document.createElement('canvas');
+      c.width = img.width * scale;
+      c.height = img.height * scale;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      callback(c);
+    };
+    img.onerror = function() { alert('图片加载失败'); };
+    img.src = src;
+  }
+
+  // ===== 管线：网格化 =====
+  function rasterize(srcCanvas) {
+    var gridW = parseInt(pGrid.value, 10) || 64;
+    var bgThresh = parseInt(pBg.value, 10) || 28;
+    var fillRatio = parseFloat(pFill.value) || 0.45;
+    var invert = pInvert.checked;
+
+    var tmp = document.createElement('canvas');
+    tmp.width = gridW;
+    var aspect = srcCanvas.height / srcCanvas.width;
+    tmp.height = Math.max(8, Math.round(gridW * aspect));
+    var ctx = tmp.getContext('2d');
+    ctx.drawImage(srcCanvas, 0, 0, tmp.width, tmp.height);
+    var data = ctx.getImageData(0, 0, tmp.width, tmp.height).data;
+
+    var gridH = tmp.height;
+    var grid = [];
+    for (var y = 0; y < gridH; y++) {
+      grid[y] = [];
+      for (var x = 0; x < gridW; x++) {
+        var i = (y * gridW + x) * 4;
+        var r = data[i], g = data[i + 1], b = data[i + 2];
+        var lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+        var isBg = lum * 100 > bgThresh;  // 浅色当背景
+        var filled = invert ? isBg : !isBg;
+        grid[y][x] = filled;
+      }
+    }
+
+    // 单元填充比例再筛一遍（连片才保留）
+    state.sourceCanvas = srcCanvas;
+    state.grid = grid;
+    state.gridW = gridW;
+    state.gridH = gridH;
+    state.cellPx = stage.clientWidth / gridW;
+    state.imgWidth = srcCanvas.width;
+    state.imgHeight = srcCanvas.height;
+    state.mirror = false;
+    state.sitting = false;
+    computeBBox();
+    placeCatCenter();
+    startLoop();
+    render();
+    updateTelemetry();
+  }
+
+  // ===== 计算包围盒 =====
+  function computeBBox() {
+    var minX = state.gridW, minY = state.gridH, maxX = -1, maxY = -1;
+    for (var y = 0; y < state.gridH; y++) {
+      for (var x = 0; x < state.gridW; x++) {
+        if (state.grid[y][x]) {
+          if (x < minX) minX = x;
+          if (y < minY) minY = y;
+          if (x > maxX) maxX = x;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) { state.bbox = null; return; }
+    state.bbox = { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+  }
+
+  // ===== 把猫放在包围盒中心 =====
+  function placeCatCenter() {
+    if (!state.bbox) return;
+    var cx = (state.bbox.minX + state.bbox.maxX + 1) / 2 * state.cellPx;
+    var cy = (state.bbox.minY + state.bbox.maxY + 1) / 2 * state.cellPx;
+    state.catPos = { x: cx, y: cy };
+  }
+
+  // ===== 渲染 SVG =====
+  function render() {
+    if (!state.grid) return;
+    var g = state.grid, W = state.gridW, H = state.gridH;
+    var cellPx = state.cellPx;
+    var svgNs = 'http://www.w3.org/2000/svg';
+
+    // 清空
+    var existing = stage.querySelector('svg');
+    if (existing) existing.remove();
+    if (stageHint) stageHint.style.display = 'none';
+
+    var svg = document.createElementNS(svgNs, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + (W * 16) + ' ' + (H * 16));
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    var scale16 = 16 / cellPx;
+
+    // 网格化猫（一个 path）
+    var pathD = '';
+    for (var y = 0; y < H; y++) {
+      for (var x = 0; x < W; x++) {
+        if (g[y][x]) {
+          var px = x * 16, py = y * 16;
+          pathD += 'M' + px + ',' + py + ' h16 v16 h-16 z ';
+        }
+      }
+    }
+    var catPath = document.createElementNS(svgNs, 'path');
+    catPath.setAttribute('d', pathD);
+    catPath.setAttribute('fill', 'var(--accent)');
+    catPath.setAttribute('stroke', 'var(--accent-deep)');
+    catPath.setAttribute('stroke-width', '0.5');
+    catPath.setAttribute('transform', state.mirror ? 'scale(-1,1) translate(' + (-W * 16) + ',0)' : '');
+
+    // 包裹在 <g> 里以便后续做动画位移
+    var catG = document.createElementNS(svgNs, 'g');
+    catG.setAttribute('id', 'catGlyph');
+    catG.appendChild(catPath);
+
+    // 牵引绳（从猫中心到鼠标）
+    var leash = document.createElementNS(svgNs, 'line');
+    leash.setAttribute('id', 'leash');
+    leash.setAttribute('stroke', 'var(--gold)');
+    leash.setAttribute('stroke-width', '1.5');
+    leash.setAttribute('stroke-dasharray', '3 2');
+    leash.setAttribute('opacity', '0.7');
+
+    // 指针（牵引点）
+    var pointer = document.createElementNS(svgNs, 'circle');
+    pointer.setAttribute('id', 'pointer');
+    pointer.setAttribute('r', '4');
+    pointer.setAttribute('fill', 'var(--gold)');
+    pointer.setAttribute('opacity', '0');
+
+    svg.appendChild(catG);
+    svg.appendChild(leash);
+    svg.appendChild(pointer);
+    stage.appendChild(svg);
+  }
+
+  // ===== 物理动画循环 =====
+  function startLoop() {
+    if (state.raf) cancelAnimationFrame(state.raf);
+    state.raf = requestAnimationFrame(loop);
+    var last = performance.now();
+    function loop(now) {
+      var dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      stepPhysics(dt);
+      state.raf = requestAnimationFrame(loop);
+    }
+  }
+
+  function stepPhysics(dt) {
+    if (!state.catPos || !state.grid) return;
+    var catG = document.getElementById('catGlyph');
+    var leash = document.getElementById('leash');
+    var pointer = document.getElementById('pointer');
+    if (!catG) return;
+
+    // 键盘推动指针
+    if (state.pointer) {
+      var speed = 240;  // px / s
+      if (state.keys['ArrowLeft']) state.pointer.x -= speed * dt;
+      if (state.keys['ArrowRight']) state.pointer.x += speed * dt;
+      if (state.keys['ArrowUp']) state.pointer.y -= speed * dt;
+      if (state.keys['ArrowDown']) state.pointer.y += speed * dt;
+      // 坐下切换
+      if (state.keys[' '] && !state.sitting) state.sitting = true;
+    }
+
+    var W = state.gridW * state.cellPx;
+    var H = state.gridH * state.cellPx;
+
+    // 牵引绳物理
+    if (state.pointer) {
+      var dx = state.pointer.x - state.catPos.x;
+      var dy = state.pointer.y - state.catPos.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var bodyLen = (state.bbox.maxX - state.bbox.minX + 1) * state.cellPx;
+      var leashPx = bodyLen * 2.03;
+
+      pointer.setAttribute('cx', state.pointer.x * (16 / state.cellPx));
+      pointer.setAttribute('cy', state.pointer.y * (16 / state.cellPx));
+      pointer.setAttribute('opacity', '0.85');
+
+      if (dist > leashPx && !state.sitting) {
+        // 绷直 → 猫被拖着走
+        var pull = (dist - leashPx) * 0.18;
+        state.catVel.x = (dx / dist) * pull * 12 * dt;
+        state.catVel.y = (dy / dist) * pull * 12 * dt;
+        state.catPos.x += state.catVel.x;
+        state.catPos.y += state.catVel.y;
+      } else {
+        // 松弛 → 减速
+        state.catVel.x *= 0.85;
+        state.catVel.y *= 0.85;
+        state.catPos.x += state.catVel.x * dt * 30;
+        state.catPos.y += state.catVel.y * dt * 30;
+      }
+    }
+
+    // 边界
+    state.catPos.x = Math.max(0, Math.min(W, state.catPos.x));
+    state.catPos.y = Math.max(0, Math.min(H, state.catPos.y));
+
+    // 应用变换到猫
+    var offsetX = state.catPos.x - (state.bbox.minX + state.bbox.maxX + 1) / 2 * state.cellPx;
+    var offsetY = state.catPos.y - (state.bbox.minY + state.bbox.maxY + 1) / 2 * state.cellPx;
+    var tx = offsetX * (16 / state.cellPx);
+    var ty = offsetY * (16 / state.cellPx);
+    var sit = state.sitting ? ' rotate(-8 ' + ((state.bbox.minX + state.bbox.maxX + 1) * 8) + ' ' + ((state.bbox.minY + state.bbox.maxY + 1) * 8) + ')' : '';
+    catG.setAttribute('transform', 'translate(' + tx + ' ' + ty + ')' + sit + (state.mirror ? ' scale(-1,1) translate(' + (-state.gridW * 16) + ',0)' : ''));
+
+    // 牵引绳端点
+    if (state.pointer) {
+      leash.setAttribute('x1', state.catPos.x * (16 / state.cellPx));
+      leash.setAttribute('y1', state.catPos.y * (16 / state.cellPx));
+      leash.setAttribute('x2', state.pointer.x * (16 / state.cellPx));
+      leash.setAttribute('y2', state.pointer.y * (16 / state.cellPx));
+    }
+    updateTelemetry();
+  }
+
+  // ===== 拖拽 / 输入 =====
+  stage.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    stage.classList.add('dragover');
+  });
+  stage.addEventListener('dragleave', function() {
+    stage.classList.remove('dragover');
+  });
+  stage.addEventListener('drop', function(e) {
+    e.preventDefault();
+    stage.classList.remove('dragover');
+    var f = e.dataTransfer.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function() { imageToCanvas(reader.result, rasterize); };
+    reader.readAsDataURL(f);
+  });
+
+  fileInput.addEventListener('change', function() {
+    var f = fileInput.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function() { imageToCanvas(reader.result, rasterize); };
+    reader.readAsDataURL(f);
+  });
+
+  btnBuiltin.addEventListener('click', function() { builtinCat(rasterize); });
+  btnMirror.addEventListener('click', function() {
+    state.mirror = !state.mirror;
+    render();
+    updateTelemetry();
+  });
+  btnReset.addEventListener('click', function() {
+    var svg = stage.querySelector('svg');
+    if (svg) svg.remove();
+    if (stageHint) stageHint.style.display = 'block';
+    state.sourceCanvas = null;
+    state.grid = null;
+    state.bbox = null;
+    state.catPos = null;
+    state.pointer = null;
+    if (state.raf) cancelAnimationFrame(state.raf);
+    state.raf = 0;
+    updateTelemetry();
+  });
+
+  // 鼠标 / 触控
+  function setPointer(clientX, clientY) {
+    var rect = stage.getBoundingClientRect();
+    var sx = stage.clientWidth / (state.gridW * 16);
+    var sy = stage.clientHeight / (state.gridH * 16);
+    // 因为 viewBox 单位是 16 / cellPx，我们要把鼠标坐标换算回「像素坐标」
+    var cellPx = state.cellPx;
+    state.pointer = state.pointer || { x: 0, y: 0 };
+    state.pointer.x = (clientX - rect.left) ;
+    state.pointer.y = (clientY - rect.top);
+  }
+  stage.addEventListener('mousemove', function(e) {
+    if (!state.grid) return;
+    setPointer(e.clientX, e.clientY);
+    state.sitting = false;
+  });
+  stage.addEventListener('mouseleave', function() {
+    state.sitting = false;
+  });
+  stage.addEventListener('touchmove', function(e) {
+    if (!state.grid) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    setPointer(t.clientX, t.clientY);
+    state.sitting = false;
+  }, { passive: false });
+
+  // 键盘
+  window.addEventListener('keydown', function(e) {
+    state.keys[e.key] = true;
+    if (e.key === ' ' && state.grid && !state.pointer) {
+      // 没鼠标时按下空格才把猫设为坐下
+    }
+  });
+  window.addEventListener('keyup', function(e) {
+    state.keys[e.key] = false;
+    if (e.key === ' ') state.sitting = !state.sitting;  // 切换
+  });
+
+  // 从 sessionStorage 读取星图接入页交接的图
+  btnFromAstra.addEventListener('click', function() {
+    var url = null;
+    try { url = sessionStorage.getItem('astraflow_image_url'); } catch (e) {}
+    if (!url) {
+      alert('当前标签页没有可用的图。请先打开「星图接入」页面生成一张图，再回来点这个按钮。');
+      return;
+    }
+    imageToCanvas(url, function(c) {
+      rasterize(c);
+      try { sessionStorage.removeItem('astraflow_image_url'); } catch (e) {}
+    });
+  });
+  // 页面加载时也尝试一次
+  window.addEventListener('load', function() {
+    var url = null;
+    try { url = sessionStorage.getItem('astraflow_image_url'); } catch (e) {}
+    if (url) {
+      imageToCanvas(url, function(c) {
+        rasterize(c);
+        try { sessionStorage.removeItem('astraflow_image_url'); } catch (e) {}
+      });
+    }
+  });
+
+  // 参数变化重算
+  [pGrid, pBg, pFill, pInvert].forEach(function(el) {
+    el.addEventListener('change', function() {
+      if (state.sourceCanvas) rasterize(state.sourceCanvas);
+    });
+  });
+
+  // ===== 导出 SVG =====
+  function exportSVG(withSmil) {
+    if (!state.grid) { alert('舞台上还没有猫，先用图片或内置猫生成一只。'); return; }
+    var W = state.gridW, H = state.gridH;
+    var svgNs = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(svgNs, 'svg');
+    svg.setAttribute('xmlns', svgNs);
+    svg.setAttribute('viewBox', '0 0 ' + (W * 16) + ' ' + (H * 16));
+    svg.setAttribute('width', W * 16);
+    svg.setAttribute('height', H * 16);
+
+    var pathD = '';
+    for (var y = 0; y < H; y++) {
+      for (var x = 0; x < W; x++) {
+        if (state.grid[y][x]) {
+          pathD += 'M' + (x * 16) + ',' + (y * 16) + ' h16 v16 h-16 z ';
+        }
+      }
+    }
+    var path = document.createElementNS(svgNs, 'path');
+    path.setAttribute('d', pathD);
+    path.setAttribute('fill', '#1B3A2E');
+    path.setAttribute('stroke', '#0F2A1F');
+    path.setAttribute('stroke-width', '0.5');
+    if (state.mirror) path.setAttribute('transform', 'scale(-1,1) translate(' + (-W * 16) + ',0)');
+    svg.appendChild(path);
+
+    if (withSmil) {
+      // 加 SMIL 摆动动画
+      var animate = document.createElementNS(svgNs, 'animateTransform');
+      animate.setAttribute('attributeName', 'transform');
+      animate.setAttribute('type', 'translate');
+      animate.setAttribute('values', '0 0; 6 -3; 0 0; -6 -3; 0 0');
+      animate.setAttribute('dur', '3.6s');
+      animate.setAttribute('repeatCount', 'indefinite');
+      path.appendChild(animate);
+    }
+
+    var xml = new XMLSerializer().serializeToString(svg);
+    var blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + xml], { type: 'image/svg+xml' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = withSmil ? 'cyber-cat-smil.svg' : 'cyber-cat-static.svg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+  }
+  btnExportStatic.addEventListener('click', function() { exportSVG(false); });
+  btnExportSmil.addEventListener('click', function() { exportSVG(true); });
+
+  // 自检：基本完整性
+  function selfCheck() {
+    var checks = [
+      ['stage DOM', !!document.getElementById('stage')],
+      ['builtin 猫函数', typeof builtinCat === 'function'],
+      ['管线参数读取', parseInt(pGrid.value, 10) > 0],
+      ['文件输入绑定', fileInput.tagName === 'INPUT'],
+      ['SVG 导出函数', typeof exportSVG === 'function'],
+    ];
+    return checks;
+  }
+  window.cyberStrollSelfCheck = selfCheck;
+  window.cyberStrollState = state;
+})();
+</script>
+
+</body>
+</html>

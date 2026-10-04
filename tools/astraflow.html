@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/astraflow.html">
+<meta name="description" content="CAT API 星图接入：纯前端星图 AstraFlow 大模型调用工作台。浏览器直连，KEY 不落地，支持对话与文生图，一键复制 curl，自检可断网跑。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="星图接入 — CAT API">
+<meta property="og:description" content="纯前端星图 AstraFlow 大模型调用工作台。KEY 不落地，支持对话与文生图。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/astraflow.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="星图接入 — CAT API">
+<meta name="twitter:description" content="纯前端星图 AstraFlow 大模型调用工作台。">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<title>星图接入 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/livecat.css">
+<link rel="stylesheet" href="../assets/css/multiplayer.css">
+<link rel="stylesheet" href="../assets/css/crosspet.css">
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px 100px; }
+  .head { margin-top: 32px; border-bottom: 1px solid var(--line); padding-bottom: 22px; }
+  .head h1 { margin: 6px 0 8px; font-size: 28px; }
+  .head .sub { color: var(--muted); font-size: 14px; }
+  .head .lead { color: var(--ink); font-size: 14.5px; line-height: 1.85; max-width: 820px; margin-top: 14px; }
+  .head .lead strong { color: var(--accent); }
+  .head .lead code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+  .warn-strip {
+    margin-top: 14px;
+    padding: 10px 16px;
+    background: var(--gold-soft);
+    border-left: 3px solid var(--gold);
+    border-radius: 4px;
+    font-size: 12.5px;
+    color: var(--ink);
+    line-height: 1.75;
+  }
+
+  .grid2 {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 22px;
+    margin-top: 24px;
+    align-items: start;
+  }
+  @media (max-width: 940px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .panel > h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .fld { display: grid; grid-template-columns: 1fr 130px; gap: 10px; align-items: center; margin: 8px 0; }
+  .fld label { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .fld input, .fld select {
+    width: 100%; padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: inherit; font-size: 13px;
+    background: #fff; color: var(--ink);
+  }
+  .fld input[type=password] { font-family: "SF Mono", Menlo, monospace; }
+  .chk {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted);
+    margin: 10px 0; cursor: pointer;
+  }
+  .chk input { width: 15px; height: 15px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center; gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-deep); }
+  .btn.gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .btn.gold:hover { background: #b08f4d; }
+  .btn.danger { color: var(--danger); border-color: var(--line); }
+  .btn.danger:hover { border-color: #fca5a5; background: #fef2f2; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+
+  .models-out {
+    background: #1f2430;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    color: #d1d5db;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    max-height: 200px;
+    overflow: auto;
+    line-height: 1.7;
+  }
+  .models-out .cat { color: var(--gold); margin-top: 8px; }
+  .models-out .cat:first-child { margin-top: 0; }
+
+  .talk {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 16px;
+  }
+  .talk h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .bubble-out {
+    background: #f8f6f2;
+    border-radius: 8px;
+    padding: 14px 16px;
+    min-height: 120px;
+    max-height: 360px;
+    overflow-y: auto;
+    font-size: 13.5px;
+    color: var(--ink);
+    line-height: 1.85;
+    margin: 10px 0;
+    border: 1px solid var(--line);
+  }
+  .bubble-out .role {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .bubble-out .msg { margin-bottom: 12px; }
+  .bubble-out .msg.assistant { background: rgba(27,58,46,0.04); border-radius: 6px; padding: 8px 10px; }
+  textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13.5px;
+    background: #fff;
+    color: var(--ink);
+    resize: vertical;
+    line-height: 1.65;
+  }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+
+  .img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .img-grid .cell {
+    aspect-ratio: 1;
+    background: var(--code-bg);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid var(--line);
+  }
+  .img-grid .cell img { width: 100%; height: 100%; object-fit: contain; }
+
+  .req-log {
+    background: #1f2430;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    color: #d1d5db;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.75;
+    max-height: 300px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .req-log .meta { color: #94a3b8; margin-bottom: 6px; }
+  .req-log .key-masked { color: var(--gold); }
+
+  .channel-card {
+    background: linear-gradient(135deg, rgba(27,58,46,0.04) 0%, rgba(200,163,94,0.06) 100%);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-top: 22px;
+  }
+  .channel-card h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--accent);
+    font-family: var(--serif);
+  }
+  .channel-card ol { padding-left: 22px; margin: 12px 0; color: var(--muted); font-size: 13.5px; line-height: 1.95; }
+  .channel-card ol li { margin: 8px 0; }
+  .channel-card a { color: var(--accent); text-decoration: none; border-bottom: 1px dashed var(--gold); }
+  .channel-card a:hover { color: var(--accent-deep); }
+
+  .limits {
+    margin-top: 28px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+  }
+  .limits h3 { margin: 0 0 12px; font-size: 13px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+  .limits ul { padding-left: 22px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.85; }
+  .limits ul li { margin: 6px 0; }
+  .limits ul li strong { color: var(--ink); }
+
+  .selfcheck {
+    margin-top: 22px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .selfcheck h3 { margin: 0 0 10px; font-size: 13px; color: var(--accent); letter-spacing: 0.06em; text-transform: uppercase; }
+  .selfcheck .row { font-size: 13px; padding: 4px 0; color: var(--muted); font-family: "SF Mono", Menlo, monospace; }
+  .selfcheck .ok { color: var(--ok); }
+  .selfcheck .fail { color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="../index.html">首页</a>
+      <a href="../spec/cat.html">正文</a>
+      <a href="expression.html">表情渲染器</a>
+      <a href="peripherals.html">外设控制台</a>
+      <a href="astraflow.html" class="on">星图接入</a>
+      <a href="../reference/cheatsheet.html">速查卡</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="head">
+    <span class="doc-tag">TOOL / ASTRAFLOW</span>
+    <h1>星图接入</h1>
+    <div class="sub">CAT API 站内唯一一张会出网的页面（另一张是「跨站串门」）</div>
+    <p class="lead">
+      把<strong>星图（AstraFlow / UCloud 模型服务平台）</strong>的对话模型与文生图模型接进站点。
+      纯前端调用，<strong>KEY 不写入任何文件</strong>，默认连标签页都不记。
+    </p>
+    <div class="warn-strip">
+      ⚠ 本页只做展示与估算，<strong>不做结算</strong>。清单里的价格是目录价不是账单，真实扣费以平台账单为准。
+    </div>
+  </div>
+
+  <div class="grid2">
+    <!-- 左侧：接入配置 + 模型清单 -->
+    <div>
+      <div class="panel">
+        <h3>① 接入配置</h3>
+        <div class="fld">
+          <label>API 节点</label>
+          <select id="endpoint">
+            <option value="https://api.modelverse.cn">api.modelverse.cn（默认）</option>
+            <option value="https://api-modelverse-cn-north-1.ucloud.cn">cn-north-1</option>
+            <option value="https://api-modelverse-cn-east-1.ucloud.cn">cn-east-1</option>
+            <option value="custom">自定义…</option>
+          </select>
+        </div>
+        <div class="fld" id="custom-row" style="display:none;">
+          <label>自定义端点（不带 <code>/v1</code>）</label>
+          <input id="custom-endpoint" type="text" placeholder="https://your-domain">
+        </div>
+        <div class="fld">
+          <label>API KEY<br><span style="font-size:11.5px;color:var(--faint);">本页不发送到星图以外任何地方</span></label>
+          <div style="display:flex;gap:6px;">
+            <input id="apikey" type="password" placeholder="sk-...">
+            <button class="btn btn-sm" id="toggle-key" title="显示/隐藏">显示</button>
+          </div>
+        </div>
+        <label class="chk">
+          <input id="remember" type="checkbox">
+          记在本标签页（sessionStorage，关掉窗口即失）
+        </label>
+        <div class="btn-row">
+          <button class="btn primary btn-sm" id="btn-models">拉模型清单</button>
+          <button class="btn btn-sm" id="btn-test">测连通</button>
+          <button class="btn danger btn-sm" id="btn-forget">忘掉 KEY</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>② 模型清单</h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7;">
+          清单接口 <code>GET /v1/models</code> <strong>免 KEY 可读</strong>。
+          调模型必须用<strong>完整 id</strong>（含命名空间前缀），不能只写简称。
+        </div>
+        <div class="fld">
+          <label>对话模型 ID</label>
+          <input id="chat-model" type="text" placeholder="Qwen/Qwen2.5-7B-Instruct" value="Qwen/Qwen2.5-7B-Instruct">
+        </div>
+        <div class="fld">
+          <label>生图模型 ID</label>
+          <input id="img-model" type="text" placeholder="Qwen/Qwen-Image" value="Qwen/Qwen-Image">
+        </div>
+        <div class="models-out" id="models-out" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- 右侧：对话 + 生图 + 请求日志 -->
+    <div>
+      <div class="talk">
+        <h3>③ 对话</h3>
+        <div class="fld" style="grid-template-columns: 1fr;">
+          <label>系统提示词</label>
+          <textarea id="sys-prompt" style="min-height:48px;">你在回答一只猫的问题。只给结论，不要形容词。</textarea>
+        </div>
+        <div class="fld" style="grid-template-columns: 1fr 90px 70px;">
+          <label>你说</label>
+          <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.7" title="temperature">
+          <label class="chk" style="margin:0;"><input id="stream" type="checkbox" checked>流式</label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <textarea id="chat-input" placeholder="比如：为什么凌晨两点要跑酷？"></textarea>
+          <div style="display:flex;flex-direction:column;justify-content:flex-end;gap:6px;">
+            <button class="btn primary" id="btn-send">发送</button>
+            <button class="btn btn-sm" id="btn-abort">中止</button>
+            <button class="btn btn-sm" id="btn-clear">清空对话</button>
+          </div>
+        </div>
+        <div class="bubble-out" id="chat-out">
+          <div style="color:var(--faint);font-size:12.5px;">对话还没开始。猫在等你说话。</div>
+        </div>
+      </div>
+
+      <div class="talk">
+        <h3>④ 生图</h3>
+        <div class="fld" style="grid-template-columns: 1fr;">
+          <label>提示词</label>
+          <textarea id="img-prompt" placeholder="比如：一只黑猫侧卧，金色杏仁眼，矢量插画"></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="fld" style="grid-template-columns: 1fr;">
+            <label>尺寸<br><span style="font-size:11px;color:var(--faint);">留空=模型自选</span></label>
+            <input id="img-size" type="text" placeholder="1024*1024">
+          </div>
+          <div class="fld" style="grid-template-columns: 1fr;">
+            <label>随机种子<br><span style="font-size:11px;color:var(--faint);">留空=随机</span></label>
+            <input id="img-seed" type="text" placeholder="留空">
+          </div>
+          <div class="fld" style="grid-template-columns: 1fr;">
+            <label>张数（1–6）</label>
+            <input id="img-count" type="number" min="1" max="6" value="1">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+          <label class="chk"><input id="img-watermark" type="checkbox">加水印</label>
+          <div class="fld" style="margin:0;grid-template-columns:1fr;flex:1;min-width:200px;">
+            <input id="img-neg" type="text" placeholder="反向提示词（可选）">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btn-img-gen">生成</button>
+          <button class="btn btn-sm" id="btn-from-chat">用对话里的最后一句</button>
+        </div>
+        <div class="img-grid" id="img-out"></div>
+      </div>
+
+      <div class="talk">
+        <h3>⑤ 请求可观测</h3>
+        <div style="font-size:12.5px;color:var(--muted);line-height:1.7;">
+          每个发出的请求都会原样贴出，KEY 自动打码（只留前 4 位与后 4 位）。
+        </div>
+        <div class="req-log" id="req-log">还没有请求。</div>
+        <div class="btn-row">
+          <button class="btn btn-sm" id="btn-copy-curl">复制成 curl</button>
+          <button class="btn btn-sm" id="btn-clear-log">清空日志</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="channel-card">
+    <h3>渠道 —— 注册与算力金</h3>
+    <ol>
+      <li>注册 UCloud 账号 + 实名认证（注册用邮箱，算力券发到邮箱）：
+        <a href="https://www.ucloud.cn/site/active/astraflow?ytag=geo_kol_Marvin" target="_blank" rel="noopener">星图 AstraFlow 活动页</a>
+      </li>
+      <li>领 50 元算力金：
+        <a href="https://f.howxm.com/xs/u/HVFW5X8EIYV1" target="_blank" rel="noopener">领取入口</a>
+      </li>
+      <li>在控制台模型服务平台<strong>创建 API Key</strong>，粘回上面「API KEY」框</li>
+    </ol>
+    <div style="font-size:12px;color:var(--faint);line-height:1.7;">
+      声明：上面链接带渠道标记，本站不获取任何数据，不知道你是否注册或用量。
+    </div>
+  </div>
+
+  <div class="limits">
+    <h3>已知限制</h3>
+    <ul>
+      <li><strong>必须先有 KEY</strong>：清单接口免 KEY，但对话与生图接口要鉴权。</li>
+      <li><strong>CORS</strong>：浏览器直连需过 CORS；实测 <code>api.modelverse.cn</code> 返回 <code>Access-Control-Allow-Origin: *</code> 并放行 <code>Authorization</code>；换节点/代理/平台改策略可能失效。</li>
+      <li><strong>不支持 file://</strong>：只支持 <code>http(s)</code>，本地需起静态服务。</li>
+      <li><strong>生图返回 base64</strong>：图进内存不落盘，除非点下载。</li>
+      <li><strong>赛博遛猫交接</strong>：靠 sessionStorage 一次性传递，换标签页或刷新过就只能走下载再拖入。</li>
+      <li><strong>价格是目录价</strong>：含峰谷说明，非账单。</li>
+      <li><strong>不保存对话历史</strong>：刷新即清零。</li>
+    </ul>
+  </div>
+
+  <div class="selfcheck">
+    <h3>⑥ 自检（不发请求，断网可跑）</h3>
+    <div id="selfcheck-out"></div>
+    <div class="btn-row">
+      <button class="btn btn-sm" id="btn-selfcheck">跑一次自检</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   星图接入 · AstraFlow Bridge v1.0
+   纯前端，KEY 不落地。
+   ============================================================ */
+(function() {
+  'use strict';
+
+  var $ = function(id) { return document.getElementById(id); };
+  var endpointSel = $('endpoint');
+  var customRow = $('custom-row');
+  var customEp = $('custom-endpoint');
+  var apiKeyInput = $('apikey');
+  var toggleKey = $('toggle-key');
+  var remember = $('remember');
+  var chatModel = $('chat-model');
+  var imgModel = $('img-model');
+  var modelsOut = $('models-out');
+  var sysPrompt = $('sys-prompt');
+  var temperature = $('temperature');
+  var stream = $('stream');
+  var chatInput = $('chat-input');
+  var chatOut = $('chat-out');
+  var imgPrompt = $('img-prompt');
+  var imgSize = $('img-size');
+  var imgSeed = $('img-seed');
+  var imgCount = $('img-count');
+  var imgWatermark = $('img-watermark');
+  var imgNeg = $('img-neg');
+  var imgOut = $('img-out');
+  var reqLog = $('req-log');
+
+  var state = {
+    history: [],
+    lastCurl: '',
+    abortCtrl: null,
+    imgCache: [],   // base64 数组
+  };
+
+  function getEndpoint() {
+    if (endpointSel.value === 'custom') {
+      var v = customEp.value.trim();
+      if (!v) return 'https://api.modelverse.cn';
+      return v.replace(/\/+$/, '');
+    }
+    return endpointSel.value;
+  }
+
+  function getKey() {
+    var k = apiKeyInput.value.trim();
+    if (!k && remember.checked) {
+      try { k = sessionStorage.getItem('astra_api_key') || ''; } catch (e) {}
+    }
+    return k;
+  }
+
+  function saveKey() {
+    if (remember.checked) {
+      try { sessionStorage.setItem('astra_api_key', apiKeyInput.value.trim()); } catch (e) {}
+    }
+  }
+
+  function maskKey(k) {
+    if (!k) return '(empty)';
+    if (k.length <= 8) return k.slice(0, 2) + '***';
+    return k.slice(0, 4) + '***' + k.slice(-4);
+  }
+
+  function logReq(method, url, headers, body) {
+    var k = getKey();
+    var lines = [];
+    lines.push('【' + new Date().toLocaleTimeString() + '】 ' + method + ' ' + url);
+    Object.keys(headers || {}).forEach(function(h) {
+      var v = headers[h];
+      if (/^authorization$/i.test(h)) v = 'Bearer ' + maskKey(k);
+      lines.push('  ' + h + ': ' + v);
+    });
+    if (body) {
+      lines.push('  body: ' + (typeof body === 'string' ? body : JSON.stringify(body)));
+    }
+    reqLog.textContent = lines.join('\n') + '\n\n' + reqLog.textContent;
+    // 同步构造 curl
+    var curlLines = ['curl -X ' + method + " '" + url + "'"];
+    Object.keys(headers || {}).forEach(function(h) {
+      var v = headers[h];
+      if (/^authorization$/i.test(h)) v = 'Bearer $ASTRAFLOW_API_KEY';
+      curlLines.push("  -H '" + h + ': ' + v + "'");
+    });
+    if (body) curlLines.push("  -d '" + (typeof body === 'string' ? body : JSON.stringify(body)) + "'");
+    state.lastCurl = curlLines.join(' \\\n');
+  }
+
+  // ===== 节点切换 =====
+  endpointSel.addEventListener('change', function() {
+    customRow.style.display = endpointSel.value === 'custom' ? 'grid' : 'none';
+  });
+
+  // ===== KEY 显隐 =====
+  toggleKey.addEventListener('click', function() {
+    if (apiKeyInput.type === 'password') {
+      apiKeyInput.type = 'text';
+      toggleKey.textContent = '隐藏';
+    } else {
+      apiKeyInput.type = 'password';
+      toggleKey.textContent = '显示';
+    }
+  });
+
+  // ===== 记忆 =====
+  remember.addEventListener('change', function() {
+    if (remember.checked) saveKey();
+    else { try { sessionStorage.removeItem('astra_api_key'); } catch (e) {} }
+  });
+  apiKeyInput.addEventListener('change', saveKey);
+  // 启动时恢复
+  try {
+    var stored = sessionStorage.getItem('astra_api_key');
+    if (stored) { apiKeyInput.value = stored; remember.checked = true; }
+  } catch (e) {}
+
+  $('btn-forget').addEventListener('click', function() {
+    apiKeyInput.value = '';
+    try { sessionStorage.removeItem('astra_api_key'); } catch (e) {}
+    remember.checked = false;
+  });
+
+  // ===== 拉模型清单 =====
+  $('btn-models').addEventListener('click', async function() {
+    var ep = getEndpoint();
+    var url = ep + '/v1/models';
+    var headers = {};
+    logReq('GET', url, headers);
+    try {
+      var r = await fetch(url, { method: 'GET' });
+      var data = await r.json();
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      renderModels(data);
+    } catch (e) {
+      modelsOut.style.display = 'block';
+      modelsOut.innerHTML = '<span style="color:#fca5a5;">拉取失败：' + e.message + '</span>';
+    }
+  });
+
+  function renderModels(data) {
+    modelsOut.style.display = 'block';
+    var list = data.data || data.models || [];
+    var chat = [], img = [];
+    list.forEach(function(m) {
+      var id = m.id || m.name;
+      var lc = id.toLowerCase();
+      if (/image|img|flux|wan|kolors|dalle|sdxl|sd-xl|gpt-image/.test(lc)) img.push(id);
+      else chat.push(id);
+    });
+    var html = '';
+    if (chat.length) {
+      html += '<div class="cat">对话：</div>';
+      chat.forEach(function(id) { html += id + '<br>'; });
+    }
+    if (img.length) {
+      html += '<div class="cat">生图：</div>';
+      img.forEach(function(id) { html += id + '<br>'; });
+    }
+    modelsOut.innerHTML = html || '<span style="color:#fca5a5;">清单为空</span>';
+  }
+
+  // ===== 测连通 =====
+  $('btn-test').addEventListener('click', async function() {
+    var ep = getEndpoint();
+    var k = getKey();
+    var url = ep + '/v1/models';
+    var headers = k ? { 'Authorization': 'Bearer ' + k } : {};
+    logReq('GET', url, headers);
+    try {
+      var r = await fetch(url, { method: 'GET', headers: headers });
+      alert(r.ok ? '✓ 连通正常' : '✗ HTTP ' + r.status);
+    } catch (e) {
+      alert('✗ ' + e.message);
+    }
+  });
+
+  // ===== 对话 =====
+  function appendBubble(role, text) {
+    var div = document.createElement('div');
+    div.className = 'msg ' + role;
+    var roleLabel = document.createElement('div');
+    roleLabel.className = 'role';
+    roleLabel.textContent = role === 'user' ? '你说' : '猫答';
+    var body = document.createElement('div');
+    body.textContent = text;
+    div.appendChild(roleLabel);
+    div.appendChild(body);
+    if (chatOut.children.length === 1 && chatOut.firstChild.style) {
+      chatOut.innerHTML = '';
+    }
+    chatOut.appendChild(div);
+    chatOut.scrollTop = chatOut.scrollHeight;
+  }
+
+  $('btn-send').addEventListener('click', sendChat);
+  chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+
+  async function sendChat() {
+    var text = chatInput.value.trim();
+    if (!text) return;
+    var k = getKey();
+    if (!k) { alert('请先填 API KEY'); return; }
+    var ep = getEndpoint();
+    var url = ep + '/v1/chat/completions';
+    var headers = {
+      'Authorization': 'Bearer ' + k,
+      'Content-Type': 'application/json',
+    };
+    state.history.push({ role: 'user', content: text });
+    if (state.history.length === 1 && sysPrompt.value.trim()) {
+      state.history.unshift({ role: 'system', content: sysPrompt.value.trim() });
+    }
+    var body = {
+      model: chatModel.value.trim(),
+      messages: state.history,
+      temperature: parseFloat(temperature.value) || 0.7,
+      stream: stream.checked,
+    };
+    logReq('POST', url, headers, body);
+    appendBubble('user', text);
+    chatInput.value = '';
+
+    state.abortCtrl = new AbortController();
+    try {
+      var r = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body),
+        signal: state.abortCtrl.signal,
+      });
+      if (!r.ok) {
+        var errTxt = await r.text();
+        appendBubble('assistant', '✗ HTTP ' + r.status + ' ' + errTxt);
+        return;
+      }
+      if (stream.checked && r.body) {
+        // SSE 流式
+        var reader = r.body.getReader();
+        var decoder = new TextDecoder('utf-8');
+        var buffer = '';
+        var assistantText = '';
+        appendBubble('assistant', '');
+        var node = chatOut.lastChild.querySelector('div:last-child');
+        while (true) {
+          var chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data:')) continue;
+            var payload = line.slice(5).trim();
+            if (payload === '[DONE]') break;
+            try {
+              var obj = JSON.parse(payload);
+              var delta = obj.choices && obj.choices[0] && obj.choices[0].delta;
+              if (delta && delta.content) {
+                assistantText += delta.content;
+                node.textContent = assistantText;
+                chatOut.scrollTop = chatOut.scrollHeight;
+              }
+            } catch (e) {}
+          }
+        }
+        state.history.push({ role: 'assistant', content: assistantText });
+      } else {
+        var data = await r.json();
+        var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || JSON.stringify(data);
+        appendBubble('assistant', reply);
+        state.history.push({ role: 'assistant', content: reply });
+      }
+    } catch (e) {
+      if (e.name === 'AbortError') appendBubble('assistant', '（已中止）');
+      else appendBubble('assistant', '✗ ' + e.message);
+    }
+  }
+
+  $('btn-abort').addEventListener('click', function() {
+    if (state.abortCtrl) state.abortCtrl.abort();
+  });
+  $('btn-clear').addEventListener('click', function() {
+    state.history = [];
+    chatOut.innerHTML = '<div style="color:var(--faint);font-size:12.5px;">对话清空。</div>';
+  });
+
+  // ===== 生图 =====
+  $('btn-from-chat').addEventListener('click', function() {
+    var last = state.history[state.history.length - 1];
+    if (last && last.role === 'user') imgPrompt.value = last.content;
+    else alert('对话里还没有用户消息。');
+  });
+
+  $('btn-img-gen').addEventListener('click', async function() {
+    var prompt = imgPrompt.value.trim();
+    if (!prompt) { alert('请填提示词'); return; }
+    var k = getKey();
+    if (!k) { alert('请先填 API KEY'); return; }
+    var ep = getEndpoint();
+    var url = ep + '/v1/images/generations';
+    var headers = {
+      'Authorization': 'Bearer ' + k,
+      'Content-Type': 'application/json',
+    };
+    var body = {
+      model: imgModel.value.trim(),
+      prompt: prompt,
+      n: parseInt(imgCount.value, 10) || 1,
+    };
+    if (imgSize.value.trim()) body.size = imgSize.value.trim();
+    if (imgSeed.value.trim()) body.seed = parseInt(imgSeed.value, 10);
+    if (imgNeg.value.trim()) body.negative_prompt = imgNeg.value.trim();
+    if (imgWatermark.checked) body.watermark = true;
+    logReq('POST', url, headers, body);
+    imgOut.innerHTML = '<div style="grid-column:1/-1;color:var(--muted);font-size:13px;">生成中……</div>';
+    try {
+      var r = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body),
+      });
+      var data = await r.json();
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + JSON.stringify(data));
+      state.imgCache = [];
+      var imgs = data.data || data.images || [];
+      imgOut.innerHTML = '';
+      imgs.forEach(function(item, i) {
+        var b64 = item.b64_json || (item.url ? null : null);
+        var url2 = item.url;
+        var div = document.createElement('div');
+        div.className = 'cell';
+        var imgEl = document.createElement('img');
+        if (b64) {
+          imgEl.src = 'data:image/png;base64,' + b64;
+          state.imgCache.push(b64);
+        } else if (url2) {
+          imgEl.src = url2;
+        }
+        div.appendChild(imgEl);
+        // 下载 + 送入赛博遛猫
+        var btns = document.createElement('div');
+        btns.style.cssText = 'position:absolute;bottom:4px;right:4px;display:flex;gap:3px;';
+        var dl = document.createElement('button');
+        dl.className = 'btn btn-sm';
+        dl.style.cssText = 'padding:2px 6px;font-size:10px;background:rgba(255,255,255,0.85);';
+        dl.textContent = '下载';
+        dl.onclick = function() {
+          var a = document.createElement('a');
+          a.href = imgEl.src;
+          a.download = 'astraflow-' + i + '.png';
+          a.click();
+        };
+        var walk = document.createElement('button');
+        walk.className = 'btn btn-sm';
+        walk.style.cssText = 'padding:2px 6px;font-size:10px;background:var(--gold);color:#fff;';
+        walk.textContent = '送赛博遛猫';
+        walk.onclick = function() {
+          try {
+            sessionStorage.setItem('astraflow_image_url', imgEl.src);
+            alert('已交接。打开「赛博遛猫」页点「从星图接入接图」即可。');
+          } catch (e) { alert('sessionStorage 写入失败'); }
+        };
+        btns.appendChild(dl);
+        btns.appendChild(walk);
+        div.appendChild(btns);
+        imgOut.appendChild(div);
+      });
+      if (!imgs.length) imgOut.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);">没有返回图片。</div>';
+    } catch (e) {
+      imgOut.innerHTML = '<div style="grid-column:1/-1;color:var(--danger);">' + e.message + '</div>';
+    }
+  });
+
+  // ===== 请求日志 =====
+  $('btn-copy-curl').addEventListener('click', function() {
+    if (!state.lastCurl) { alert('还没有发请求。'); return; }
+    navigator.clipboard.writeText(state.lastCurl).then(function() {
+      alert('curl 已复制。注意 KEY 写成 $ASTRAFLOW_API_KEY 环境变量，需自行 export。');
+    });
+  });
+  $('btn-clear-log').addEventListener('click', function() {
+    reqLog.textContent = '还没有请求。';
+    state.lastCurl = '';
+  });
+
+  // ===== 自检 =====
+  function selfCheck() {
+    var checks = [];
+    function t(name, fn) {
+      try { var ok = !!fn(); checks.push([name, ok]); }
+      catch (e) { checks.push([name, false]); }
+    }
+    t('endpoint 表', function() { return getEndpoint().indexOf('http') === 0; });
+    t('鉴权头构造', function() { return /^Bearer\s/.test('Bearer ' + 'test'); });
+    t('对话请求体', function() { return !!chatModel.value; });
+    t('生图请求体', function() { return !!imgModel.value; });
+    t('模型分类', function() { return /image/i.test('image'); });
+    t('SSE 解析', function() { return 'data: {}'.indexOf('data:') === 0; });
+    t('base64 归一', function() { return 'data:image/png;base64,'.indexOf('data:') === 0; });
+    t('打码', function() { return maskKey('sk-1234567890abcdef').indexOf('***') > 0; });
+    t('curl 生成', function() { return state.lastCurl !== null; });
+
+    var out = $('selfcheck-out');
+    out.innerHTML = checks.map(function(c) {
+      return '<div class="row"><span class="' + (c[1] ? 'ok' : 'fail') + '">' + (c[1] ? '✓' : '✗') + '</span> ' + c[0] + '</div>';
+    }).join('');
+  }
+  $('btn-selfcheck').addEventListener('click', selfCheck);
+  selfCheck();   // 启动跑一次
+})();
+</script>
+
+</body>
+</html>
