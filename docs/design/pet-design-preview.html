@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>新宠物形象设计稿（内部）</title>
+<style>
+  body { background: #faf9f7; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; margin: 0; padding: 40px; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .sub { color: #6b6b6b; font-size: 13px; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; max-width: 720px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: #fff;
+    border: 1px solid #e5e2dd;
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+  }
+  .card .preview {
+    width: 160px; height: 112px;
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card .preview svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1)); }
+  .card h3 { font-size: 17px; margin: 0 0 4px; }
+  .card .role { font-size: 12px; color: #b8b4ae; margin-bottom: 12px; }
+  .card .palette { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+  .card .swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+
+<h1>新宠物形象设计稿 v2</h1>
+<div class="sub">马文的狗 · 隔壁橘猫 · 奶茶鼠 · 黑猫警长 — 独立造型，各有性格</div>
+
+<div class="grid">
+
+  <!-- 1. 马文的狗 — 金毛寻回犬 -->
+  <div class="card">
+    <div class="preview">
+      <!-- 金毛犬：垂耳、宽嘴、舌头外露、摇摆的尾巴 -->
+      <svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">
+        <!-- 尾巴（向右上翘） -->
+        <path d="M64 38 C72 36 76 28 74 20" fill="none" stroke="#c08850" stroke-width="5" stroke-linecap="round"/>
+        <path d="M64 38 C72 36 76 28 74 20" fill="none" stroke="#d4a574" stroke-width="3" stroke-linecap="round"/>
+
+        <!-- 身体 -->
+        <ellipse cx="40" cy="40" rx="24" ry="13" fill="#e8b87a"/>
+        <ellipse cx="40" cy="40" rx="24" ry="13" fill="none" stroke="#c08850" stroke-width="1.5"/>
+
+        <!-- 前腿 -->
+        <rect x="28" y="44" width="6" height="10" rx="3" fill="#d4a574"/>
+        <rect x="46" y="44" width="6" height="10" rx="3" fill="#d4a574"/>
+        <!-- 爪子 -->
+        <ellipse cx="31" cy="53" rx="3.5" ry="2" fill="#c49565"/>
+        <ellipse cx="49" cy="53" rx="3.5" ry="2" fill="#c49565"/>
+
+        <!-- 头部 -->
+        <ellipse cx="40" cy="22" rx="16" ry="15" fill="#f0c890"/>
+        <ellipse cx="40" cy="22" rx="16" ry="15" fill="none" stroke="#c08850" stroke-width="1.5"/>
+
+        <!-- 左耳（垂耳） -->
+        <path d="M26 16 C20 16 18 24 22 30 C24 32 28 30 30 26 L30 18 Z" fill="#c08850"/>
+        <!-- 右耳（垂耳） -->
+        <path d="M54 16 C60 16 62 24 58 30 C56 32 52 30 50 26 L50 18 Z" fill="#c08850"/>
+
+        <!-- 眼睛 -->
+        <ellipse cx="33" cy="20" rx="2.8" ry="3.2" fill="#2a1a0a"/>
+        <ellipse cx="47" cy="20" rx="2.8" ry="3.2" fill="#2a1a0a"/>
+        <!-- 眼睛高光 -->
+        <circle cx="34" cy="19" r="1" fill="#fff"/>
+        <circle cx="48" cy="19" r="1" fill="#fff"/>
+
+        <!-- 鼻子 -->
+        <ellipse cx="40" cy="27" rx="3" ry="2.5" fill="#3a2008"/>
+
+        <!-- 嘴 + 吐舌头 -->
+        <path d="M40 29 Q40 33 36 33" fill="none" stroke="#3a2008" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M40 29 Q40 33 44 33" fill="none" stroke="#3a2008" stroke-width="1.2" stroke-linecap="round"/>
+        <path d="M37 33 Q40 39 43 33 L42 37 Q40 38 38 37 Z" fill="#e8709a"/>
+
+        <!-- 项圈 -->
+        <ellipse cx="40" cy="36" rx="14" ry="2.5" fill="#d44848"/>
+        <circle cx="40" cy="37" r="2" fill="#f5c542"/>
+
+        <!-- 雀斑 -->
+        <circle cx="35" cy="25" r="0.5" fill="#c08850" opacity="0.5"/>
+        <circle cx="45" cy="25" r="0.5" fill="#c08850" opacity="0.5"/>
+      </svg>
+    </div>
+    <h3>🐶 马文的狗</h3>
+    <div class="role">友善金毛 · 舌头永远外挂 · 红色项圈</div>
+    <div class="palette">
+      <div class="swatch" style="background:#e8b87a;"></div>
+      <div class="swatch" style="background:#c08850;"></div>
+      <div class="swatch" style="background:#d44848;"></div>
+      <div class="swatch" style="background:#e8709a;"></div>
+    </div>
+  </div>
+
+  <!-- 2. 隔壁橘猫 -->
+  <div class="card">
+    <div class="preview">
+      <!-- 橘猫：虎斑纹路、尖耳、圆胖身体、慵懒半眯眼 -->
+      <svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">
+        <!-- 尾巴卷曲 -->
+        <path d="M62 38 C70 36 76 32 74 24 C73 20 70 20 70 24" fill="none" stroke="#cc7820" stroke-width="5" stroke-linecap="round"/>
+        <path d="M62 38 C70 36 76 32 74 24 C73 20 70 20 70 24" fill="none" stroke="#ee9a40" stroke-width="3" stroke-linecap="round"/>
+
+        <!-- 身体（圆胖） -->
+        <ellipse cx="40" cy="40" rx="22" ry="12" fill="#f0a050"/>
+        <ellipse cx="40" cy="40" rx="22" ry="12" fill="none" stroke="#cc7820" stroke-width="1.5"/>
+
+        <!-- 虎斑纹路（背部） -->
+        <path d="M30 34 Q32 31 34 34" fill="none" stroke="#cc7820" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+        <path d="M38 33 Q40 30 42 33" fill="none" stroke="#cc7820" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+        <path d="M46 34 Q48 31 50 34" fill="none" stroke="#cc7820" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+
+        <!-- 前腿 -->
+        <ellipse cx="32" cy="50" rx="4" ry="5" fill="#ee9a40"/>
+        <ellipse cx="48" cy="50" rx="4" ry="5" fill="#ee9a40"/>
+
+        <!-- 头部（略扁） -->
+        <ellipse cx="40" cy="22" rx="15" ry="13" fill="#f5aa5a"/>
+        <ellipse cx="40" cy="22" rx="15" ry="13" fill="none" stroke="#cc7820" stroke-width="1.5"/>
+
+        <!-- 耳朵（尖耳，内耳粉色） -->
+        <path d="M28 14 L25 4 L33 11 Z" fill="#cc7820"/>
+        <path d="M52 14 L55 4 L47 11 Z" fill="#cc7820"/>
+        <path d="M29 12 L28 7 32 10 Z" fill="#f4b07a"/>
+        <path d="M51 12 L52 7 48 10 Z" fill="#f4b07a"/>
+
+        <!-- 额纹 M 形 -->
+        <path d="M36 14 L38 17 L40 15 L42 17 L44 14" fill="none" stroke="#cc7820" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+
+        <!-- 眼睛（半眯高冷） -->
+        <path d="M31 21 Q33 19 35 21" fill="none" stroke="#2a1500" stroke-width="2" stroke-linecap="round"/>
+        <path d="M45 21 Q47 19 49 21" fill="none" stroke="#2a1500" stroke-width="2" stroke-linecap="round"/>
+
+        <!-- 鼻子 -->
+        <path d="M38 26 L40 28 L42 26 Z" fill="#cc5555"/>
+
+        <!-- 嘴 -->
+        <path d="M40 28 L40 30" stroke="#2a1500" stroke-width="1"/>
+        <path d="M40 30 Q37 32 35 31" fill="none" stroke="#2a1500" stroke-width="1" stroke-linecap="round"/>
+        <path d="M40 30 Q43 32 45 31" fill="none" stroke="#2a1500" stroke-width="1" stroke-linecap="round"/>
+
+        <!-- 胡须 -->
+        <line x1="28" y1="26" x2="20" y2="25" stroke="#cc7820" stroke-width="0.8" opacity="0.5"/>
+        <line x1="28" y1="28" x2="20" y2="29" stroke="#cc7820" stroke-width="0.8" opacity="0.5"/>
+        <line x1="52" y1="26" x2="60" y2="25" stroke="#cc7820" stroke-width="0.8" opacity="0.5"/>
+        <line x1="52" y1="28" x2="60" y2="29" stroke="#cc7820" stroke-width="0.8" opacity="0.5"/>
+
+        <!-- 肚子浅色 -->
+        <ellipse cx="40" cy="44" rx="10" ry="6" fill="#f5c88a" opacity="0.7"/>
+      </svg>
+    </div>
+    <h3>🐱 隔壁橘猫</h3>
+    <div class="role">高冷大佬 · 半眯眼 · M 额纹 · 虎斑</div>
+    <div class="palette">
+      <div class="swatch" style="background:#f0a050;"></div>
+      <div class="swatch" style="background:#cc7820;"></div>
+      <div class="swatch" style="background:#f4b07a;"></div>
+      <div class="swatch" style="background:#cc5555;"></div>
+    </div>
+  </div>
+
+  <!-- 3. 奶茶鼠（仓鼠） -->
+  <div class="card">
+    <div class="preview">
+      <!-- 仓鼠：超大腮帮子、圆球身体、小耳朵、瓜子 -->
+      <svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">
+        <!-- 身体（超级圆） -->
+        <ellipse cx="40" cy="38" rx="24" ry="18" fill="#e8d4b8"/>
+        <ellipse cx="40" cy="38" rx="24" ry="18" fill="none" stroke="#c0a080" stroke-width="1.5"/>
+
+        <!-- 腮帮子（超大圆鼓） -->
+        <ellipse cx="28" cy="36" rx="8" ry="10" fill="#f0dcbc" opacity="0.8"/>
+        <ellipse cx="52" cy="36" rx="8" ry="10" fill="#f0dcbc" opacity="0.8"/>
+
+        <!-- 肚子白色 -->
+        <ellipse cx="40" cy="44" rx="12" ry="8" fill="#f5e8d0" opacity="0.6"/>
+
+        <!-- 小爪子 -->
+        <ellipse cx="34" cy="52" rx="3" ry="2.5" fill="#d4b896"/>
+        <ellipse cx="46" cy="52" rx="3" ry="2.5" fill="#d4b896"/>
+
+        <!-- 头（和身体一体，头部稍微凸出） -->
+        <!-- 耳朵（小圆耳） -->
+        <circle cx="30" cy="18" r="5" fill="#d4b896"/>
+        <circle cx="50" cy="18" r="5" fill="#d4b896"/>
+        <circle cx="30" cy="18" r="3" fill="#f0b0a0"/>
+        <circle cx="50" cy="18" r="3" fill="#f0b0a0"/>
+
+        <!-- 眼睛（黑亮豆豆眼） -->
+        <circle cx="34" cy="30" r="2.2" fill="#1a1a1a"/>
+        <circle cx="46" cy="30" r="2.2" fill="#1a1a1a"/>
+        <circle cx="35" cy="29" r="0.8" fill="#fff"/>
+        <circle cx="47" cy="29" r="0.8" fill="#fff"/>
+
+        <!-- 鼻子（粉色小三角） -->
+        <path d="M39 35 L41 35 L40 37 Z" fill="#e89090"/>
+
+        <!-- 嘴 -->
+        <path d="M40 37 L40 38" stroke="#c08080" stroke-width="0.8"/>
+        <path d="M40 38 Q38 39 37 38.5" fill="none" stroke="#c08080" stroke-width="0.8" stroke-linecap="round"/>
+        <path d="M40 38 Q42 39 43 38.5" fill="none" stroke="#c08080" stroke-width="0.8" stroke-linecap="round"/>
+
+        <!-- 瓜子（手里抱着） -->
+        <ellipse cx="40" cy="47" rx="5" ry="3" fill="#c08850" transform="rotate(20 40 47)"/>
+        <line x1="38" y1="46" x2="42" y2="48" stroke="#a06030" stroke-width="0.6"/>
+
+        <!-- 背部奶茶色渐变条纹 -->
+        <path d="M28 22 Q40 18 52 22" fill="none" stroke="#d4b896" stroke-width="2.5" opacity="0.4"/>
+      </svg>
+    </div>
+    <h3>🐹 奶茶鼠</h3>
+    <div class="role">腮帮鼓鼓 · 抱着瓜子 · 粉色小耳</div>
+    <div class="palette">
+      <div class="swatch" style="background:#e8d4b8;"></div>
+      <div class="swatch" style="background:#d4b896;"></div>
+      <div class="swatch" style="background:#f0b0a0;"></div>
+      <div class="swatch" style="background:#c08850;"></div>
+    </div>
+  </div>
+
+  <!-- 4. 黑猫警长 -->
+  <div class="card">
+    <div class="preview">
+      <!-- 黑猫：全黑流线身体、金色竖瞳、警帽星徽、凌厉眼神 -->
+      <svg viewBox="0 0 80 56" xmlns="http://www.w3.org/2000/svg">
+        <!-- 尾巴（优雅上扬） -->
+        <path d="M61 36 C68 32 74 34 76 28 C77 25 75 23 73 26" fill="none" stroke="#15130f" stroke-width="4.5" stroke-linecap="round"/>
+
+        <!-- 身体 -->
+        <ellipse cx="40" cy="40" rx="22" ry="12" fill="#2a2825"/>
+        <ellipse cx="40" cy="40" rx="22" ry="12" fill="none" stroke="#0d0c0b" stroke-width="1"/>
+
+        <!-- 前腿 -->
+        <ellipse cx="32" cy="50" rx="3.5" ry="5" fill="#222220"/>
+        <ellipse cx="48" cy="50" rx="3.5" ry="5" fill="#222220"/>
+        <!-- 爪垫 -->
+        <circle cx="31" cy="53" r="1" fill="#5a4030" opacity="0.6"/>
+        <circle cx="33" cy="53" r="1" fill="#5a4030" opacity="0.6"/>
+        <circle cx="47" cy="53" r="1" fill="#5a4030" opacity="0.6"/>
+        <circle cx="49" cy="53" r="1" fill="#5a4030" opacity="0.6"/>
+
+        <!-- 头部 -->
+        <ellipse cx="40" cy="22" rx="15" ry="14" fill="#332f2c"/>
+        <ellipse cx="40" cy="22" rx="15" ry="14" fill="none" stroke="#0d0c0b" stroke-width="1"/>
+
+        <!-- 耳朵（尖锐） -->
+        <path d="M27 13 L24 3 L33 10 Z" fill="#2a2825"/>
+        <path d="M53 13 L56 3 L47 10 Z" fill="#2a2825"/>
+        <!-- 内耳 -->
+        <path d="M28 11 L27 6 31 9 Z" fill="#5a3838"/>
+        <path d="M52 11 L53 6 49 9 Z" fill="#5a3838"/>
+
+        <!-- 警帽 -->
+        <ellipse cx="40" cy="8" rx="14" ry="3" fill="#1a3a5e"/>
+        <rect x="29" y="5" width="22" height="4" rx="1" fill="#205080"/>
+        <!-- 警徽（金星） -->
+        <path d="M40 3 L40.8 5.2 L43 5.2 L41.2 6.5 L41.8 8.7 L40 7.4 L38.2 8.7 L38.8 6.5 L37 5.2 L39.2 5.2 Z" fill="#f5c542"/>
+
+        <!-- 眼睛（金色竖瞳，凌厉） -->
+        <ellipse cx="34" cy="21" rx="3.5" ry="4" fill="#f5c542"/>
+        <ellipse cx="46" cy="21" rx="3.5" ry="4" fill="#f5c542"/>
+        <!-- 竖瞳 -->
+        <ellipse cx="34" cy="21" rx="0.8" ry="3.2" fill="#0a0a0a"/>
+        <ellipse cx="46" cy="21" rx="0.8" ry="3.2" fill="#0a0a0a"/>
+        <!-- 眼睛高光 -->
+        <circle cx="35" cy="20" r="0.6" fill="#fff"/>
+        <circle cx="47" cy="20" r="0.6" fill="#fff"/>
+
+        <!-- 鼻子 -->
+        <path d="M38 26 L40 28 L42 26 Z" fill="#3a1010"/>
+
+        <!-- 嘴（严肃一字嘴） -->
+        <path d="M36 30 L44 30" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+
+        <!-- 胡须 -->
+        <line x1="28" y1="27" x2="20" y2="26" stroke="#888" stroke-width="0.6" opacity="0.6"/>
+        <line x1="28" y1="29" x2="20" y2="30" stroke="#888" stroke-width="0.6" opacity="0.6"/>
+        <line x1="52" y1="27" x2="60" y2="26" stroke="#888" stroke-width="0.6" opacity="0.6"/>
+        <line x1="52" y1="29" x2="60" y2="30" stroke="#888" stroke-width="0.6" opacity="0.6"/>
+
+        <!-- 领结/警徽 -->
+        <path d="M36 37 L40 39 L44 37 L44 41 L40 39 L36 41 Z" fill="#f5c542" opacity="0.9"/>
+      </svg>
+    </div>
+    <h3>🐈‍⬛ 黑猫警长</h3>
+    <div class="role">警帽金星 · 凌厉竖瞳 · 一字嘴 · 正义的黑色</div>
+    <div class="palette">
+      <div class="swatch" style="background:#2a2825;"></div>
+      <div class="swatch" style="background:#1a3a5e;"></div>
+      <div class="swatch" style="background:#f5c542;"></div>
+      <div class="swatch" style="background:#5a3838;"></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

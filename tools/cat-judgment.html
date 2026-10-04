@@ -7,7 +7,9 @@
 <title>猫语审判台 — CAT API</title>
 <meta name="description" content="用 AI 判定模型（TypeSafe Jev）从猫的视角审判猫行为事件。输入一个事件，获得内疚度、作案动机、该不该罚、猫自豪度四维判决。">
 <link rel="stylesheet" href="../assets/css/spec.css">
+<link rel="stylesheet" href="../assets/css/multiplayer.css">
 <link rel="stylesheet" href="../assets/css/livecat.css">
+<link rel="stylesheet" href="../assets/css/crosspet.css">
 <style>
   body { background: var(--bg); }
   .wrap { max-width: 860px; margin: 0 auto; padding: 0 28px 80px; }
@@ -356,7 +358,7 @@
     <!-- API Key -->
     <div class="apikey-row">
       <label for="apiKeyInput">Jev API Key：</label>
-      <input type="password" id="apiKeyInput" placeholder="sk-..." value="sk-deb652bfc628cf283af3c1154ff1bd5117e01fd7f24a0400">
+      <input type="password" id="apiKeyInput" placeholder="sk-..." value="">
     </div>
   </div>
 
@@ -365,7 +367,7 @@
     <!-- 加载中 -->
     <div class="loading-state" id="loadingState" style="display:none;">
       <div class="spinner"></div>
-      <div class="loading-text" id="loadingText">猫法官正在审议中...</div>
+      <div class="loading-text" id="loadingText">猫法官正在审议中……</div>
     </div>
 
     <!-- 错误 -->
@@ -424,6 +426,7 @@
   <a href="../index.html" class="back-link">← 返回 CAT API</a>
 </div>
 
+<script src="../assets/js/jev.js"></script>
 <script>
 /* ==========================================================================
  * 猫语审判台 — 前端逻辑
@@ -449,11 +452,21 @@
   var incidentInput = document.getElementById("incidentInput");
   var judgeBtn = document.getElementById("judgeBtn");
 
-  // 如果 JevCat 存在，预配置 API Key
+  // 从 localStorage 恢复上次输入的 apiKey（不入仓、不硬编码）
+  try {
+    var savedKey = localStorage.getItem("catapi_jev_key");
+    if (savedKey) apiKeyInput.value = savedKey;
+  } catch (e) {}
+
+  // 如果 JevCat 存在，预配置 API Key，并把 key 存到 localStorage
   function syncApiKey() {
-    if (window.JevCat && apiKeyInput.value.trim()) {
-      JevCat.configure({ apiKey: apiKeyInput.value.trim() });
+    var v = apiKeyInput.value.trim();
+    if (window.JevCat && v) {
+      JevCat.configure({ apiKey: v });
     }
+    try {
+      if (v) localStorage.setItem("catapi_jev_key", v);
+    } catch (e) {}
   }
   apiKeyInput.addEventListener("change", syncApiKey);
   apiKeyInput.addEventListener("input", syncApiKey);
@@ -706,7 +719,8 @@
 
 })();
 </script>
-<script src="../assets/js/jev.js"></script>
+<script src="../assets/js/multiplayer.js"></script>
+<script src="../assets/js/crosspet.js"></script>
 <script src="../assets/js/livecat.js"></script>
 </body>
 </html>
