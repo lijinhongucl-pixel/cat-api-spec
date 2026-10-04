@@ -345,6 +345,32 @@ th { background: var(--code-bg); font-weight: 600; }
 }
 .tab-btn.active .count { color: var(--gold); }
 
+/* Tab 说明条：让用户知道每个分类里有什么 */
+.tab-hint {
+  max-width: 940px;
+  margin: 14px auto 0;
+  padding: 0 28px;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.tab-hint-lead { color: var(--faint); }
+.tab-hint-sep { color: var(--line); }
+.tab-hint-desc {
+  color: var(--accent);
+  font-weight: 500;
+  transition: opacity 0.22s ease;
+}
+/* 切换时的淡出淡入 */
+.tab-hint-desc.swapping { opacity: 0; }
+@media (max-width: 640px) {
+  .tab-hint { font-size: 12px; }
+}
+
 .tab-panel { display: none; }
 .tab-panel.active { display: block; animation: fadeIn 0.25s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
