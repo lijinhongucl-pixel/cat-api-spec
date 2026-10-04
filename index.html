@@ -625,6 +625,85 @@
     document.addEventListener('DOMContentLoaded', autoEnable);
   }
 })();
+
+// ===== Hero 状态机动画 =====
+// 按真实猫作息循环点亮 6 个状态节点，对应连线脉冲，猫眼定时眨，caption 同步更新
+(function() {
+  var groups = document.querySelectorAll('.m-group');
+  var stateEl = document.getElementById('now-state');
+  if (!groups.length || !stateEl) return;
+
+  // 检查 prefers-reduced-motion
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // 状态中文描述（caption 里显示的话术）
+  var stateText = {
+    ZOOMIES: '凌晨两点，开始疯跑',
+    EAT: '天亮了，要求进食',
+    GROOM: '吃完舔毛，自我维护',
+    SLEEP: '午后深度睡眠，不要打扰',
+    PATROL: '傍晚巡逻领地，检查门窗',
+    PLAY: '入夜前最后一场模拟狩猎'
+  };
+
+  // 按数据里的 data-next 顺序排好循环队列
+  var order = ['ZOOMIES', 'EAT', 'GROOM', 'SLEEP', 'PATROL', 'PLAY'];
+  var idx = 0;
+
+  function activate(stateName) {
+    groups.forEach(function(g) {
+      var s = g.getAttribute('data-state');
+      var node = g.querySelector('.m-node');
+      var label = g.querySelector('.m-label');
+      var isActive = (s === stateName);
+      if (node) node.classList.toggle('active', isActive);
+      if (label) label.classList.toggle('active', isActive);
+    });
+    // 连线脉冲
+    document.querySelectorAll('.m-link').forEach(function(l) {
+      l.classList.toggle('pulse', l.id === 'link-' + stateName);
+    });
+    // 更新 caption
+    stateEl.style.opacity = '0';
+    setTimeout(function() {
+      stateEl.textContent = '—— ' + (stateText[stateName] || stateName);
+      stateEl.style.opacity = '1';
+    }, 280);
+  }
+
+  function tick() {
+    activate(order[idx]);
+    idx = (idx + 1) % order.length;
+  }
+
+  // 初始点亮
+  tick();
+
+  if (!reduceMotion) {
+    // 每 3.5 秒切一次状态
+    setInterval(tick, 3500);
+
+    // 猫眼定时眨（每 4-7 秒随机一次，快速眨完）
+    var eyeL = document.getElementById('cat-eye-l');
+    var eyeR = document.getElementById('cat-eye-r');
+    function blink() {
+      if (eyeL) eyeL.classList.add('blink');
+      if (eyeR) eyeR.classList.add('blink');
+      setTimeout(function() {
+        if (eyeL) eyeL.classList.remove('blink');
+        if (eyeR) eyeR.classList.remove('blink');
+      }, 180);
+    }
+    function scheduleBlink() {
+      var delay = 4000 + Math.random() * 3000;
+      setTimeout(function() {
+        blink();
+        scheduleBlink();
+      }, delay);
+    }
+    scheduleBlink();
+  }
+})();
 </script>
 
 </body>
