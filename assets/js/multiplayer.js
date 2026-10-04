@@ -526,7 +526,7 @@
             var pageName = (p.page || '').split('/').pop() || '另一页';
             var who = p.name || ('访客#' + p.by);
             var verb = p.byUser ? '亲手抓到' : '抓到';
-            showToast('🏆 ' + escapeHtml(who) + ' 在「' + pageName + '」' + verb + '了 Token 老鼠（累计 ' + (p.tokens || 0) + '）');
+            showToast(escapeHtml(who) + ' 在「' + pageName + '」' + verb + '了 Token 老鼠（累计 ' + (p.tokens || 0) + '）');
 
             // 联动 livecat：让本页的猫也嘟囔一句
             if (root.LiveCat && typeof root.LiveCat.transitionTo === 'function') {
@@ -766,7 +766,7 @@
     if (bowlState.level >= BOWL_LEGENDARY && !bowlState.legendaryUnlocked) {
       bowlState.legendaryUnlocked = true;
       saveBowlState();
-      showToast('🌟 全站解锁传说徽章：金色猫碗！站点 logo 变金一周', 8000);
+      showToast('全站解锁传说徽章：金色猫碗！站点 logo 变金一周', 8000);
     }
   }
 
@@ -795,7 +795,7 @@
   }
 
   function triggerBowlCelebration() {
-    showToast('🎉 全站今日猫碗已填满！所有猫进入吃饱喝足模式', 6000);
+    showToast('全站今日猫碗已填满！所有猫进入吃饱喝足模式', 6000);
     // 撒金币粒子
     for (var i = 0; i < 16; i++) {
       setTimeout(spawnBowlParticle, i * 80);
@@ -830,7 +830,7 @@
     bowlWidgetEl.innerHTML =
       '<button class="mp-close-btn" type="button" aria-label="关闭猫碗" title="关闭（刷新恢复）">×</button>' +
       '<div class="mp-bowl-header">' +
-        '<span class="mp-bowl-icon">🥣</span>' +
+        '' +
         '<span class="mp-bowl-title">今日猫碗</span>' +
         '<button class="mp-bowl-feed-btn" type="button" aria-label="投喂">投喂 +1</button>' +
       '</div>' +

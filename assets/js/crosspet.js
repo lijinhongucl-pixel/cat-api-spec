@@ -205,7 +205,7 @@
     };
 
     // 显示欢迎 toast
-    showToast('🐾 ' + (payload.petName || '一只来访宠物') + ' 从 ' + shortenHost(payload.fromSite || '远方') + ' 穿越过来');
+    showToast((payload.petName || '一只来访宠物') + ' 从 ' + shortenHost(payload.fromSite || '远方') + ' 穿越过来');
 
     // 触发本站宠物的相遇回调
     if (typeof config.onPetArrive === 'function') {
@@ -270,7 +270,7 @@
     }
 
     // 显示互动 toast
-    showToast('🐶 ' + interaction);
+    showToast(' ' + interaction);
 
     // 让来访宠物也做一个动作
     if (currentVisitor.el) {
@@ -390,7 +390,7 @@
             var p = msg && msg.payload;
             if (!p) return;
             // 别站发生了互动——只显示 toast（不做本地动画，因为我们没那只宠物）
-            showToast('💬 ' + (p.petName || '一只宠物') + ' 和 ' + (p.visitorName || '另一只') + ' 在别处：' + (p.interaction || '相遇了'));
+            showToast(' ' + (p.petName || '一只宠物') + ' 和 ' + (p.visitorName || '另一只') + ' 在别处：' + (p.interaction || '相遇了'));
           })
           .subscribe(function (status) {
             if (status === 'SUBSCRIBED') {

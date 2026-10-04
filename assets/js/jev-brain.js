@@ -264,7 +264,7 @@
 
     var pct = confidence ? Math.round(confidence * 100) : "--";
     bubbleEl.innerHTML =
-      '<span class="jev-brain-icon">🧠</span>' +
+      '' +
       '<span class="jev-thought-text">猫想：' + escapeHtml(reason) + '</span>' +
       '<span class="jev-thought-conf">' + pct + '%</span>';
 
@@ -342,7 +342,7 @@
     enabled = true;
     injectStyles();
     var mode = apiKey ? "systemone 直连" : "JevCat 兼容";
-    console.log("[JevBrain] AI 决策模式已开启 🧠 (" + mode + ")");
+    console.log("[JevBrain] AI 决策模式已开启 (" + mode + ")");
   }
 
   function disable() {

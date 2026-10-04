@@ -377,17 +377,19 @@
 (function() {
   var btn = document.createElement('button');
   btn.id = 'jev-toggle';
-  btn.textContent = '🧠 AI 模式';
+  // 用 SVG 替代 emoji，跟老钱风视觉系统对齐
+  var aiIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><path d="M12 4a2.5 2.5 0 0 0-2.5 2.5v.06a3 3 0 0 0-2 2.8v.34a3 3 0 0 0 .5 1.66A3 3 0 0 0 7.5 14v.5a3 3 0 0 0 4.5 2.6V20a2.5 2.5 0 0 0 5 0v-3.4a3 3 0 0 0 2.5-2.85V13.5a3 3 0 0 0-.5-1.66A3 3 0 0 0 19.5 9.7V9.4a3 3 0 0 0-2-2.8V6.5A2.5 2.5 0 0 0 15 4"/><circle cx="9.5" cy="11" r="0.8" fill="currentColor"/><circle cx="14.5" cy="11" r="0.8" fill="currentColor"/></svg>';
+  btn.innerHTML = aiIcon + 'AI 模式';
   btn.title = '切换活猫决策引擎：加权随机 ↔ Jev AI';
-  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #C8A35E;background:#FAF8F5;font-size:12px;font-weight:600;color:#1B3A2E;cursor:pointer;box-shadow:0 2px 8px rgba(27,58,46,0.08);transition:all .2s;';
+  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #C8A35E;background:#FAF8F5;font-size:12px;font-weight:600;color:#1B3A2E;cursor:pointer;box-shadow:0 2px 8px rgba(27,58,46,0.08);transition:all .2s;display:inline-flex;align-items:center;gap:4px;';
   function updateBtn() {
     if (window.JevBrain && JevBrain.isEnabled()) {
-      btn.textContent = '🧠 AI 模式 ON';
+      btn.innerHTML = aiIcon + 'AI 模式 ON';
       btn.style.background = '#1B3A2E';
       btn.style.color = '#FAF8F5';
       btn.style.borderColor = '#C8A35E';
     } else {
-      btn.textContent = '🧠 AI 模式';
+      btn.innerHTML = aiIcon + 'AI 模式';
       btn.style.background = '#FAF8F5';
       btn.style.color = '#1B3A2E';
       btn.style.borderColor = '#C8A35E';

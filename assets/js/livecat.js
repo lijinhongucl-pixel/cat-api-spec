@@ -480,12 +480,23 @@
 
     var ctrls = document.createElement("div");
     ctrls.className = "lc2-ctrls";
+    // 内联 SVG 图标替代 emoji，跟老钱风视觉系统对齐（细描边、单色）
     ctrls.innerHTML =
-      '<button class="lc2-btn" data-act="pet" title="戳一下">👋</button>' +
-      '<button class="lc2-btn" data-act="treat" title="给零食">🐟</button>' +
-      '<button class="lc2-btn" data-act="nip" title="给猫薄荷">🌿</button>' +
-      '<button class="lc2-btn" data-act="rules" title="行为准则">📜</button>' +
-      '<button class="lc2-btn" data-act="hide" title="让它消失">×</button>';
+      '<button class="lc2-btn" data-act="pet" title="戳一下" aria-label="戳一下">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V6a2 2 0 0 1 4 0v5"/><path d="M13 7a2 2 0 0 1 4 0v4"/><path d="M17 8a2 2 0 0 1 4 0v6a8 8 0 0 1-8 8H9a4 4 0 0 1-4-4v-3a2 2 0 0 1 4 0v1"/><path d="M9 11V8a2 2 0 0 0-4 0v8"/></svg>' +
+      '</button>' +
+      '<button class="lc2-btn" data-act="treat" title="给零食" aria-label="给零食">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c.5-3 2.5-6 5.5-6s5 3 5.5 6"/><path d="M3 12c0-1.5 1-3 3-3s3 1.5 3 3-1 3-3 3-3-1.5-3-3z"/><path d="M15 12c0-1.5 1-3 3-3s3 1.5 3 3-1 3-3 3-3-1.5-3-3z"/><path d="M12 18v2"/><path d="M8 22h8"/></svg>' +
+      '</button>' +
+      '<button class="lc2-btn" data-act="nip" title="给猫薄荷" aria-label="给猫薄荷">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg>' +
+      '</button>' +
+      '<button class="lc2-btn" data-act="rules" title="行为准则" aria-label="行为准则">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>' +
+      '</button>' +
+      '<button class="lc2-btn" data-act="hide" title="让它消失" aria-label="让它消失">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+      '</button>';
     ctrlsEl = ctrls;  // 缓存到模块作用域，tick 里直接拿，不再每帧 querySelector
 
     var wrap = document.createElement("div");
@@ -1043,7 +1054,7 @@
       document.body.appendChild(ghostHintEl);
     }
     var pageName = (otherPath || '').split('/').pop() || '另一页面';
-    ghostHintEl.textContent = '🐾 Token 老鼠正在「' + pageName + '」出没';
+    ghostHintEl.textContent = 'Token 老鼠正在「' + pageName + '」出没';
     // 随机放置在屏幕边缘
     var side = Math.random() < 0.5 ? 0 : 1;
     ghostHintEl.style.left = (side === 0 ? 20 : window.innerWidth - 240) + 'px';
@@ -1658,9 +1669,9 @@
     setTimeout(function () { cat.classList.remove("lc2-blinking"); }, 1500);
     // 回应台词
     if (userInitiated) {
-      speak(["😊 协议握手成功。", "眨眼已收到。", "我也信任你。", "SLOW_BLINK → ACK。"]);
+      speak(["协议握手成功。", "眨眼已收到。", "我也信任你。", "SLOW_BLINK → ACK。"]);
     } else {
-      speak(["…😊", "我也眨了。"]);
+      speak(["我也眨了。", "我也眨了。"]);
     }
   }
 
@@ -1831,7 +1842,7 @@
       }
       targetX = Math.max(40, Math.min(window.innerWidth - 100, prev.x * window.innerWidth));
       targetY = Math.max(60, Math.min(window.innerHeight - 80, prev.y * window.innerHeight));
-      showPortalHint('🐾 猫从 ' + (prev.page.split('/').pop() || '首页') + ' 穿越过来');
+      showPortalHint('猫从 ' + (prev.page.split('/').pop() || '首页') + ' 穿越过来');
     } else {
       // 初始位置：屏幕底部偏右
       x = window.innerWidth - 200;
