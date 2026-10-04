@@ -479,8 +479,47 @@
   transform: translate(-50%, 0);
   transition: opacity .3s ease;
   z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .lc2-wrap:hover .lc2-label { opacity: 1; }
+/* AI 决策时让标签始终可见，并用古铜金描边突出 */
+.lc2-label.ai-mode {
+  opacity: 1;
+  border-color: #C8A35E;
+  background: rgba(245, 237, 218, .95);
+  color: #1B3A2E;
+  font-weight: 600;
+}
+.lc2-label .ai-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C8A35E;
+  flex-shrink: 0;
+  animation: ai-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ai-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+/* AI 决策期间的气泡用古铜金描边突出 */
+.lc2-bubble.ai-bubble {
+  background: #1B3A2E;
+  border: 1.5px solid #C8A35E;
+  box-shadow: 0 8px 22px rgba(27, 58, 46, .25), 0 0 0 4px rgba(200, 163, 94, .12);
+}
+.lc2-bubble.ai-bubble::before {
+  content: "🧠 AI 决策";
+  display: block;
+  font-size: 10px;
+  color: #C8A35E;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
 
 /* ---------- 控制按钮 ---------- */
 .lc2-ctrls {

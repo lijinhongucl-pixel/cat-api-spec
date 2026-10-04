@@ -241,8 +241,11 @@
       lastDecision = result;
       lastDecisionTs = Date.now();
 
-      // 显示「猫在想什么」气泡
-      showThoughtBubble(result.state, result.reason, result.confidence);
+      // 显示「猫在想什么」气泡（通过 livecat 统一通道，不再自建独立 DOM）
+      // 由调用方 transitionTo(opts.isAI) 处理视觉，这里只做诊断日志
+      if (typeof console !== 'undefined' && console.debug) {
+        console.debug('[JevBrain] 决策:', result.state, '置信度:', (result.confidence * 100).toFixed(1) + '%', '理由:', result.reason);
+      }
 
       return result;
     });

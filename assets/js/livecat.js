@@ -1471,18 +1471,32 @@
   }
 
   /* ---------- 状态切换 ---------- */
-  function transitionTo(name) {
+  function transitionTo(name, opts) {
     var next = STATES[name];
     if (!next) return;
     var prevName = currentStateName;
     var prevEpoch = stateEpoch;  // 捕获切换前的代际
     current = next;
-    // interrupt() 用 label 作为 currentStateName，transitionTo 也应该这样
-    // （否则守卫检查时要同时匹配 key 和 label，容易出错）
     currentStateName = next.label || name;
     stateStart = Date.now();
     stateEpoch++;  // 状态代际 +1：所有捕获了旧代际的延迟回调都不再生效
     label.textContent = current.label;
+    // AI 决策路径：给标签加 ai-mode 标识和闪烁圆点
+    if (opts && opts.isAI) {
+      label.classList.add('ai-mode');
+      // 如果标签里还没有 ai-dot，加一个
+      if (!label.querySelector('.ai-dot')) {
+        var dot = document.createElement('span');
+        dot.className = 'ai-dot';
+        label.insertBefore(dot, label.firstChild);
+      }
+      // AI 决策时让台词气泡持续可见，并通过 speak 通道统一展示
+      if (next.lines && next.lines.length) {
+        speak(next.lines, { isAI: true });
+      }
+    } else {
+      label.classList.remove('ai-mode');
+    }
     if (current.behavior) current.behavior();
 
     // 链式动作：SLEEP → 65% 概率接 STRETCH（真实猫醒后必伸懒腰）
@@ -1540,6 +1554,21 @@
           return s && s.label !== jevStateSnapshot && k !== jevStateSnapshot;
         });
         var mouseIdleSec = lastMouseTime > 0 ? (Date.now() - lastMouseTime) / 1000 : 999;
+
+        // §思考中：Jev 决策发起时立即显示「猫在思考」反馈，避免静默等待
+        if (label) {
+          label.classList.add('ai-mode');
+          if (!label.querySelector('.ai-dot')) {
+            var dot = document.createElement('span');
+            dot.className = 'ai-dot';
+            label.insertBefore(dot, label.firstChild);
+          }
+        }
+        if (bubble) {
+          bubble.classList.add('ai-bubble', 'show');
+          bubble.textContent = '猫正在思考下一步……';
+        }
+
         window.JevBrain.think({
           hour: hour,
           mouseIdleSec: mouseIdleSec,
@@ -1551,7 +1580,8 @@
           if (stateEpoch !== jevEpoch) return;
           if (decision && decision.state && STATES[decision.state]) {
             if (currentStateName === jevStateSnapshot) {
-              transitionTo(decision.state);
+              // 用 isAI 标识走过 Jev 决策路径——标签亮金边、台词加 🧠 前缀
+              transitionTo(decision.state, { isAI: true, reason: decision.reason, confidence: decision.confidence });
             }
           }
         }).catch(function() { /* Jev 挂了就用加权随机，静默降级 */ });
@@ -1597,11 +1627,25 @@
     }, dwell);
   }
 
-  function speak(lines) {
+  function speak(lines, opts) {
     if (!bubble || !lines) return;
-    bubble.textContent = lines[Math.floor(Math.random() * lines.length)];
+    var picked = lines[Math.floor(Math.random() * lines.length)];
+    // AI 模式：给气泡加 ai-bubble 类，并把文字 wrap 一层以便顶部插入标识
+    if (opts && opts.isAI) {
+      bubble.classList.add('ai-bubble');
+      bubble.textContent = picked;
+    } else {
+      bubble.classList.remove('ai-bubble');
+      bubble.textContent = picked;
+    }
     bubble.classList.add("show");
-    setTimeout(function () { bubble.classList.remove("show"); }, 2800);
+    // AI 模式气泡持续 4 秒（普通 2.8 秒）
+    var ttl = (opts && opts.isAI) ? 4000 : 2800;
+    clearTimeout(speak._t);
+    speak._t = setTimeout(function () {
+      bubble.classList.remove("show");
+      bubble.classList.remove('ai-bubble');
+    }, ttl);
   }
 
   /* ---------- §4.2 缓慢眨眼（协议握手彩蛋）---------- */
