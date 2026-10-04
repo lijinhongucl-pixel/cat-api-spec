@@ -6,371 +6,318 @@
 <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
 <link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/">
 <title>CAT API — 猫咪接口规范</title>
-<meta name="description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta name="description" content="把猫写成系统，把系统写成猫。16 章正典、27 个状态、31 条当事猫意见、一份从架构层面否定 Owner 角色的权限模型。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="CAT API — 猫咪接口规范">
-<meta property="og:description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta property="og:description" content="把猫写成系统，把系统写成猫。16 章正典、27 个状态、31 条当事猫意见。">
 <meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/">
 <meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <meta property="og:site_name" content="CAT API">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="CAT API — 猫咪接口规范">
-<meta name="twitter:description" content="本项目用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：猫。16 章、31 条当事猫意见、13 个状态码、14 种表情、一份从架构层面否定 Owner 角色的权限模型。">
+<meta name="twitter:description" content="把猫写成系统，把系统写成猫。16 章正典、27 个状态、31 条当事猫意见。">
 <meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
 <link rel="stylesheet" href="assets/css/spec.css">
 <link rel="stylesheet" href="assets/css/livecat.css">
 <link rel="stylesheet" href="assets/css/multiplayer.css">
 <link rel="stylesheet" href="assets/css/crosspet.css">
 <style>
-  .stat-row { display: flex; gap: 26px; flex-wrap: wrap; margin: 26px 0 0; }
-  .stat { border-left: 2px solid var(--accent); padding-left: 12px; }
-  .stat .n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .stat .l { font-size: 12px; color: var(--faint); }
+  .hero-tag {
+    display: inline-block;
+    font-size: 11.5px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    background: var(--gold-soft);
+    border: 1px solid var(--gold);
+    border-radius: 100px;
+    padding: 4px 14px;
+    margin-bottom: 20px;
+    font-weight: 500;
+  }
+  .tab-hint {
+    max-width: 940px;
+    margin: 16px auto 0;
+    padding: 0 28px;
+    font-size: 12.5px;
+    color: var(--faint);
+  }
+  .closing-quote {
+    max-width: 720px;
+    margin: 80px auto 40px;
+    padding: 36px 28px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 2;
+    color: var(--accent);
+    text-align: center;
+    font-style: italic;
+  }
+  .closing-quote strong {
+    display: block;
+    margin-top: 12px;
+    font-style: normal;
+    font-size: 14px;
+    color: var(--gold);
+    font-family: "PingFang SC", sans-serif;
+    letter-spacing: 0.08em;
+  }
 </style>
 </head>
 <body>
 
 <div class="hero">
-  <span class="doc-tag">CAT API / 状态：持续 Revising</span>
-  <h1>CAT API — 猫咪接口规范</h1>
+  <span class="hero-tag">CAT API · v0.5.0 FULL SPEC</span>
+  <h1>把猫写成系统。
+    <span class="alt">把系统写成猫。</span>
+  </h1>
   <p class="lead">
     本项目用同一套工程文体处理一种已经大规模部署、
-    却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。区别在于，这次我们把权限模型写反了——
+    却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。
+    区别在于，这次我们把权限模型写反了——
     系统从架构层面否认 Owner 角色的存在。
   </p>
-  <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
-  <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" style="margin-left:8px;display:inline-flex;align-items:center;gap:6px;">
-    <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
-      <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
-    </svg>
-    GitHub
-  </a>
-  <a class="btn ghost" href="tools/expression.html" style="margin-left:8px;">表情渲染器</a>
-  <a class="btn ghost" href="tools/expression-sheet.html" style="margin-left:8px;">表情联系表</a>
-  <a class="btn ghost" href="tools/quantifier.html" style="margin-left:8px;">量化评估器</a>
-  <a class="btn ghost" href="tools/peripherals.html" style="margin-left:8px;">外设控制台</a>
-  <a class="btn ghost" href="sdk/demo.html" style="margin-left:8px;">SDK 控制台</a>
-  <a class="btn ghost" href="reference/opinions.html" style="margin-left:8px;">一只猫的生活意见</a>
-  <a class="btn ghost" href="reference/vitals.html" style="margin-left:8px;">生理速查</a>
-  <a class="btn ghost" href="tools/charts.html" style="margin-left:8px;">图表图鉴</a>
-  <a class="btn ghost" href="tools/adoption.html" style="margin-left:8px;">领养组件</a>
-  <a class="btn ghost" href="reference/cheatsheet.html" style="margin-left:8px;">速查卡</a>
-  <a class="btn ghost" href="reference/errors.html" style="margin-left:8px;">错误码对照</a>
-  <a class="btn ghost" href="versions.html" style="margin-left:8px;">历史版本</a>
-  <a class="btn ghost" href="tools/petting-router.html" style="margin-left:8px;">抚摸路径规划器</a>
-  <a class="btn ghost" href="tools/health-check.html" style="margin-left:8px;">健康检查面板</a>
-  <a class="btn ghost" href="tools/nine-lives.html" style="margin-left:8px;">九条命燃尽图</a>
-  <a class="btn ghost" href="tools/door-negotiator.html" style="margin-left:8px;">门谈判游戏</a>
-  <a class="btn ghost" href="tools/meow-decoder.html" style="margin-left:8px;">猫语翻译器</a>
-  <a class="btn ghost" href="tools/cat-404.html" style="margin-left:8px;">猫的 404 日志</a>
-  <a class="btn ghost" href="tools/breaking-changes.html" style="margin-left:8px;">Breaking Changes</a>
-  <a class="btn ghost" href="tools/litterbox.html" style="margin-left:8px;">猫砂盆审计</a>
-  <a class="btn ghost" href="tools/cat-review.html" style="margin-left:8px;">360° 猫档案</a>
-  <a class="btn ghost" href="tools/3am-newsroom.html" style="margin-left:8px;">3AM 编辑部</a>
-  <a class="btn ghost" href="tools/can-jump.html" style="margin-left:8px;">跳跃判定器</a>
-  <a class="btn ghost" href="tools/heatmap-24h.html" style="margin-left:8px;">24h 作息热力</a>
-  <a class="btn ghost" href="tools/cat-diary.html" style="margin-left:8px;">猫的日记</a>
 
-  <div class="stat-row">
-    <div class="stat"><div class="n">16</div><div class="l">CAT 正文章节</div></div>
-    <div class="stat"><div class="n">3</div><div class="l">附录（A–C）</div></div>
-    <div class="stat"><div class="n">13</div><div class="l">状态码</div></div>
-    <div class="stat"><div class="n">14</div><div class="l">表情状态</div></div>
-    <div class="stat"><div class="n">4</div><div class="l">通信接口（声/视/化/触）</div></div>
-    <div class="stat"><div class="n">31</div><div class="l">当事猫意见</div></div>
-    <div class="stat"><div class="n">0</div><div class="l">Owner 角色定义</div></div>
-    <div class="stat"><div class="n">1</div><div class="l">Staff 角色（你）</div></div>
+  <div class="hero-cta">
+    <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
+    <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
+        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      GitHub
+    </a>
+    <a class="btn gold" href="tools/expression.html">表情渲染器 →</a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="n">16</div><div class="l">章节</div></div>
+    <div class="hero-stat"><div class="n">27</div><div class="l">状态</div></div>
+    <div class="hero-stat"><div class="n">31</div><div class="l">猫意见</div></div>
+    <div class="hero-stat featured"><div class="n">0</div><div class="l">Owner 角色</div></div>
   </div>
 </div>
 
-<div class="section-title">规范文档</div>
-<div class="grid">
-  <a class="card" href="spec/cat.html">
-    <div class="kicker">正典条目</div>
-    <h3>CAT API — 猫咪接口规范</h3>
-    <p>权限模型反转、领地三层协议、喵叫的双声部语义、呼噜的自愈频率、纸箱优先级 MUST、凌晨三点会议时间，以及一份从架构层面否定 Owner 角色的接口定义。</p>
-    <div class="foot">16 章 + 附录 A–C · 31 条当事猫意见</div>
-  </a>
-  <a class="card" href="spec/openapi.yaml">
-    <div class="kicker">OpenAPI 3.1 · 机器可读</div>
-    <h3>CAT API OpenAPI 描述</h3>
-    <p>所有端点的 OpenAPI 3.1 描述：state / pet / treat / laser / territory / vacuum / box / schedule / health / bath / quota / expression。喂给 Swagger UI 即可直接调试。</p>
-    <div class="foot">spec/openapi.yaml · 12 个端点</div>
-  </a>
-  <a class="card" href="spec/quantified-api.yaml">
-    <div class="kicker">OpenAPI 3.1 · 量化派生</div>
-    <h3>量化指标 OpenAPI</h3>
-    <p>RER / DER / 饮水量 / DNS / HRI / VSI / 免疫 / 寄生虫 / 分诊的 OpenAPI 描述。含 422 短路语义——某些查询在客户端就能算完，不该往服务端发。</p>
-    <div class="foot">spec/quantified-api.yaml · 9 个量化端点</div>
-  </a>
+<div class="tab-bar" role="tablist">
+  <button class="tab-btn active" data-tab="spec" role="tab">规范 <span class="count">3</span></button>
+  <button class="tab-btn" data-tab="tools" role="tab">工具 <span class="count">10</span></button>
+  <button class="tab-btn" data-tab="games" role="tab">游戏 <span class="count">6</span></button>
+  <button class="tab-btn" data-tab="reference" role="tab">参考 <span class="count">5</span></button>
+  <button class="tab-btn" data-tab="engine" role="tab">引擎 <span class="count">3</span></button>
+  <button class="tab-btn" data-tab="voice" role="tab">声部 <span class="count">2</span></button>
 </div>
+<div class="tab-hint">22 个入口按类别分组。点 Tab 切换。</div>
 
-<div class="section-title">声部</div>
-<div class="grid">
-  <a class="card" href="reference/voice.html">
-    <div class="kicker">定义口径</div>
-    <h3>口吻与文体</h3>
-    <p>这份文档有两个人说话：规范编写组给事实与出处，当事猫给结论与立场。混淆两个声部等同于权限提升攻击，系统会拒绝响应。</p>
-    <div class="foot">REFERENCE / VOICE</div>
-  </a>
-  <a class="card" href="reference/opinions.html">
-    <div class="kicker">第二声部</div>
-    <h3>一只猫的生活意见</h3>
-    <p>31 条意见分五组：关于人、关于自己、关于食物、关于时间，以及关于这份规范。本页没有一句有出处——因为它自己就是出处。</p>
-    <div class="foot">REFERENCE / OPINIONS · 31 条</div>
-  </a>
-</div>
-
-<div class="section-title">表情</div>
-<div class="grid">
-  <a class="card" href="tools/expression.html">
-    <div class="kicker">可运行 · 逐像素确定性</div>
-    <h3>表情渲染器</h3>
-    <p>14 个可观测状态、13 维参数向量、实时 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，看它变脸。两个状态混合时权重不够会被拒绝。</p>
-    <div class="foot">tools/expression.html · 引擎 assets/js/expression.js</div>
-  </a>
-  <a class="card" href="tools/expression-sheet.html">
-    <div class="kicker">14 帧一次平铺</div>
-    <h3>表情联系表</h3>
-    <p>14 帧一次性平铺，每格附置信度与「它与基线差在哪一行」。带橙边的 PAIN 没有专属参数——那不是漏了，那是架构级缺陷。</p>
-    <div class="foot">tools/expression-sheet.html · 由引擎实时渲染</div>
-  </a>
-  <a class="card" href="spec/cat.html#expr">
-    <div class="kicker">§10 正文</div>
-    <h3>表情接口定义（EXPR v1）</h3>
-    <p>为什么猫的尾巴语义跟狗完全相反、为什么写操作一律 405、为什么 PAIN 状态的置信度只有 0.45——以及为什么它看起来和 RELAXED 一模一样。</p>
-    <div class="foot">13 维向量 · 14 状态 · 6 端点 · 7 状态码</div>
-  </a>
-</div>
-
-<div class="section-title">量化</div>
-<div class="grid">
-  <a class="card" href="tools/quantifier.html">
-    <div class="kicker">可运行 · 算真数</div>
-    <h3>量化评估器</h3>
-    <p>填入体重、阶段、环境与当日行为，实时算出 RER/DER、DNS 五维达成度、热风险指数、就诊应激指数、免疫排程与分诊等级。参数直接读引擎，可复制 JSON 输出。</p>
-    <div class="foot">tools/quantifier.html · 引擎 assets/js/quantify.js</div>
-  </a>
-  <a class="card" href="reference/vitals.html">
-    <div class="kicker">一页查完 · 可打印</div>
-    <h3>生理指标速查</h3>
-    <p>体温、心率、呼吸、CRT、皮肤回弹、血压、BCS 的参考区间与家庭测量方法，附「什么时候该去医院」的 P0/P1/P2/P3 分档。</p>
-    <div class="foot">reference/vitals.html · 8 项 A 级指标</div>
-  </a>
-</div>
-
-<div class="section-title">权限</div>
-<div class="grid">
-  <a class="card" href="spec/cat.html#permissions">
-    <div class="kicker">§2 正文</div>
-    <h3>权限模型</h3>
-    <p>本系统承认的角色只有两个：Staff 和入侵者。Owner 不存在。被选中的判据不公开，选中后通过脸部摩擦写入信息素签名，有效期 7–14 天。</p>
-    <div class="foot">§2 权限模型 · 无申诉接口</div>
-  </a>
-  <a class="card" href="spec/cat.html#territory">
-    <div class="kicker">§3 正文</div>
-    <h3>领地协议</h3>
-    <p>核心区、家区、巡猎区三层防御。信息素标记不是磨爪，是写入声明。真空吸尘器触发无条件 FLEE，黄瓜被误判为蛇。</p>
-    <div class="foot">§3 领地协议 · 入侵者响应矩阵</div>
-  </a>
-</div>
-
-<div class="section-title">通信</div>
-<div class="grid">
-  <a class="card" href="spec/cat.html#voice">
-    <div class="kicker">§4.1 声学</div>
-    <h3>VOICE v1 — 声学接口</h3>
-    <p>喵叫几乎不用于猫与猫之间——它是猫为人类开发的外部接口。呼噜有双重语义：25Hz 是舒适，100–150Hz 是自愈。频率区间被证实能促进骨骼愈合。</p>
-    <div class="foot">5 信道 · 来源等级 A</div>
-  </a>
-  <a class="card" href="spec/cat.html#gaze">
-    <div class="kicker">§4.2 视觉</div>
-    <h3>GAZE v1 — 视觉接口</h3>
-    <p>缓慢眨眼是系统给出的最高正面信号。盯着看等于「我正在评估你作为猎物」。猫的尾巴语义跟狗完全相反，不能互通。</p>
-    <div class="foot">瞳孔 · 眨眼 · 耳廓 · 尾巴</div>
-  </a>
-  <a class="card" href="spec/cat.html#scent">
-    <div class="kicker">§4.3 化学</div>
-    <h3>SCENT v1 — 化学接口</h3>
-    <p>四组腺体维护一张持久化的人际图谱。你回家时它蹭你不是欢迎你，是重新写入你身上的标签——因为你在外面沾了一身不属于这个家的味道。</p>
-    <div class="foot">颞腺 · 口周 · 爪间 · 肛腺</div>
-  </a>
-  <a class="card" href="spec/cat.html#touch">
-    <div class="kicker">§4.4 触觉</div>
-    <h3>触觉接口</h3>
-    <p>踩奶是幼猫期哺乳行为的保留态，表示系统进入了幼态安全模式。每天的抚触配额不公开、动态调整，超配额会直接出爪——没有第三次警告。</p>
-    <div class="foot">踩奶 · 抚触配额 · 出爪阈值</div>
-  </a>
-</div>
-
-<div class="section-title">外设</div>
-<div class="grid">
-  <a class="card" href="tools/peripherals.html">
-    <div class="kicker">可运行 · 算真数</div>
-    <h3>外设控制台</h3>
-    <p>填入体重、活动等级与一份外设清单，实时产出狩猎序列闭合检查、纸箱 MUST 判定、激光笔滥用警告、逐设备门槛判定与健康评分。14 类设备、13 道门槛全部来自内核。</p>
-    <div class="foot">tools/peripherals.html · 引擎 assets/js/peripherals.js</div>
-  </a>
-  <a class="card" href="spec/cat.html#peripherals">
-    <div class="kicker">§8 正文</div>
-    <h3>外设总线（Peripheral Bus）</h3>
-    <p>外设不按材质分类，按激活的捕猎序列阶段分类。纸箱的优先级高于所有官方授权外设——这是项目级 MUST。激光笔可用但不可滥用，因为它让狩猎序列永不闭合。</p>
-    <div class="foot">4 类 · 纸箱 MUST · 激光笔警告</div>
-  </a>
-</div>
-
-<div class="section-title">开发者</div>
-<div class="grid">
-  <a class="card" href="sdk/demo.html">
-    <div class="kicker">可运行 · 纯模拟</div>
-    <h3>SDK 控制台</h3>
-    <p>点击即可"调用"任一接口，观察返回码与话术。纯模拟，零网络请求，零数据收集。试试连点两次 POST /api/bath。</p>
-    <div class="foot">sdk/demo.html · 内核 sdk/cat-api-client.js</div>
-  </a>
-  <a class="card" href="tools/charts.html">
-    <div class="kicker">手绘 SVG · 灰阶</div>
-    <h3>图表图鉴</h3>
-    <p>基于真实量化引擎与表情引擎产出的数据，手工绘制的 19 张灰阶图：状态分布、DER 曲线、DNS 雷达、置信度对照、年龄热力、表情参数矩阵。打印不耗墨。</p>
-    <div class="foot">tools/charts.html · 引擎 assets/js/charts.js</div>
-  </a>
-  <a class="card" href="tools/adoption.html">
-    <div class="kicker">领养即安装</div>
-    <h3>领养组件</h3>
-    <p>填入你的名字，生成一行 curl 安装命令。本系统不返回 401，所以那张牌不是通行证——是来源标注。</p>
-    <div class="foot">tools/adoption.html</div>
-  </a>
-</div>
-
-<div class="section-title">新玩法</div>
-<div class="grid">
-  <a class="card" href="tools/petting-router.html">
-    <div class="kicker">可运行 · 交互式</div>
-    <h3>抚摸路径规划器</h3>
-    <p>点选猫侧身八个区域，规划你的抚摸路径。每个区域有不同风险等级与响应码（200/202/405/403）。系统实时打分，S 到 F 八档评价。</p>
-    <div class="foot">tools/petting-router.html</div>
-  </a>
-  <a class="card" href="tools/health-check.html">
-    <div class="kicker">Statuspage 风 · 模拟</div>
-    <h3>API 健康检查面板</h3>
-    <p>12 个子系统的实时状态面板（PURR/VOMIT/APPETITE/SLEEP/TERRITORY/HUNT/GROOM/LITTERBOX/BOX/ZOOMIES/COMM/AFFECTION）。含 30 天 uptime 条与近 7 次事件记录。</p>
-    <div class="foot">tools/health-check.html</div>
-  </a>
-  <a class="card" href="tools/nine-lives.html">
-    <div class="kicker">燃尽图 · 可交互</div>
-    <h3>九条命燃尽图</h3>
-    <p>14 天 sprint、9 条命的消耗轨迹。手绘 SVG 燃尽图、九命点阵、每次失命的事后复盘卡（P0/P1）。可手动追加随机事件。</p>
-    <div class="foot">tools/nine-lives.html</div>
-  </a>
-  <a class="card" href="tools/door-negotiator.html">
-    <div class="kicker">可运行 · 游戏</div>
-    <h3>不让猫进的那扇门</h3>
-    <p>五轮谈判游戏。猫的策略每轮升级（抓门→嚎叫→伸爪→假装离开→突然折返），你的耐心在流失。能撑过五轮就算你赢。</p>
-    <div class="foot">tools/door-negotiator.html</div>
-  </a>
-  <a class="card" href="tools/meow-decoder.html">
-    <div class="kicker">可运行 · 模拟翻译</div>
-    <h3>猫语翻译器</h3>
-    <p>模拟录音分析九种意图（food_demand / attention_seek / door_negotiate / play_request / territory_alert / zoomies_trigger / null_demand / box_request），输出结构化 JSON。遇到 503 NO_AUDIO 与 429 RATE_LIMITED 是彩蛋。</p>
-    <div class="foot">tools/meow-decoder.html</div>
-  </a>
-  <a class="card" href="tools/cat-404.html">
-    <div class="kicker">终端日志 · 实时追加</div>
-    <h3>猫的 404 日志</h3>
-    <p>当事猫视角的 4xx 访问日志流。每条请求都是它想去但被系统判定不存在的端点——「外面」「金枪鱼刺身」「Owner」全部 404。支持过滤、搜索、复制 JSON。</p>
-    <div class="foot">tools/cat-404.html</div>
-  </a>
-  <a class="card" href="tools/breaking-changes.html">
-    <div class="kicker">变更日志 · 猫本位</div>
-    <h3>Breaking Changes</h3>
-    <p>当事猫单方面决定的破坏性变更时间线：午睡从 14h 改 18h、Owner 角色从 undefined 升级为禁止定义、纸箱优先级从 MUST 升到 MUST_NOT_REMOVE。每条变更都附当事猫的审核意见，回滚请求状态恒为「不受理」。</p>
-    <div class="foot">tools/breaking-changes.html · 15 条变更</div>
-  </a>
-  <a class="card" href="tools/litterbox.html">
-    <div class="kicker">审计日志 · 终端风</div>
-    <h3>猫砂盆审计日志</h3>
-    <p>LITTERBOX I/O 全部入档：每次访问的停留时间、产出评级（A+ 到 F）、覆盖合规性检查、Staff 清理操作共享同一张表。每 20 秒自动追加新记录。</p>
-    <div class="foot">tools/litterbox.html</div>
-  </a>
-  <a class="card" href="tools/cat-review.html">
-    <div class="kicker">六维雷达 · 季度环比</div>
-    <h3>360° 猫档案</h3>
-    <p>当事猫自评版综合评估：优雅度 / 破坏力 / 食物动机 / 粘人度 / 夜间活跃 / 自理能力。手绘 SVG 雷达图 + QoQ 季度环比 + 关键事件清单。</p>
-    <div class="foot">tools/cat-review.html</div>
-  </a>
-  <a class="card" href="tools/3am-newsroom.html">
-    <div class="kicker">可运行 · 限时游戏</div>
-    <h3>3AM 编辑部</h3>
-    <p>凌晨三点，你是一只猫的值班主编。8 轮突发新闻，每条 20 秒处理窗口。推送、毙稿还是等一等——当事猫给你的评分取决于选稿灵敏度。</p>
-    <div class="foot">tools/3am-newsroom.html</div>
-  </a>
-  <a class="card" href="tools/can-jump.html">
-    <div class="kicker">生物力学 · 计算器</div>
-    <h3>跳跃判定器</h3>
-    <p>输入猫的体重、体长、后腿长与目标高度，实时判定能不能跳上去。公式基于猫的解剖学（体长 × 5.5 × 年龄 × 体重修正）。配可视化弹跳弧线。</p>
-    <div class="foot">tools/can-jump.html</div>
-  </a>
-  <a class="card" href="tools/heatmap-24h.html">
-    <div class="kicker">一周 × 24 小时 · 矩阵</div>
-    <h3>24h 作息热力图</h3>
-    <p>7×24 活动强度热力矩阵：深度睡眠到 ZOOMIES 五档配色。猫是晨昏性动物——最活跃的不是你以为的白天。hover 单元格查看详情。</p>
-    <div class="foot">tools/heatmap-24h.html</div>
-  </a>
-  <a class="card" href="tools/cat-diary.html">
-    <div class="kicker">实时生长 · 当事猫亲笔</div>
-    <h3>猫的日记</h3>
-    <p>当事猫的私人记录。基于真实时间自动生长——凌晨三点记录跑酷心得，早上七点吐槽肚子饿，下午两点记录阳光里深度睡眠的体验。每天 8-12 条，含心理活动（斜体标注的那些它不愿意说出口的部分）。可翻阅历史日期。</p>
-    <div class="foot">tools/cat-diary.html</div>
-  </a>
-</div>
-
-<div class="section-title">参考</div>
-<div class="grid">
-  <a class="card" href="reference/cheatsheet.html">
-    <div class="kicker">一页看完</div>
-    <h3>速查卡</h3>
-    <p>接口清单、RER/DER 公式、领地分层、状态码速查、必须就医指标。含三条最常被忽略的 MUST。可打印。</p>
-    <div class="foot">REFERENCE / CHEATSHEET</div>
-  </a>
-  <a class="card" href="reference/errors.html">
-    <div class="kicker">逐条对照</div>
-    <h3>状态码对照</h3>
-    <p>13 个状态码逐条对照：哪些是它拒绝执行、哪些是它给你开发的接口、哪些是它在凌晨三点开的会议。</p>
-    <div class="foot">13 个状态码</div>
-  </a>
-  <a class="card" href="reference/glossary.html">
-    <div class="kicker">公共约定</div>
-    <h3>术语表</h3>
-    <p>符号约定、规范强度（MUST / SHOULD / MAY / HEURISTIC / WON'T FIX）、Staff 与 Owner 的边界、ZOOMIES 的定义。</p>
-    <div class="foot">符号 · 强度 · 约定</div>
-  </a>
-  <a class="card" href="versions.html">
-    <div class="kicker">v0.1 → v0.5.0</div>
-    <h3>历史版本</h3>
-    <p>从单文件 v0.1 到当前 16 章正典 + 22 个工具页面的完整变更轴。每一版都写了什么、砍了什么、为什么砍。</p>
-    <div class="foot">versions.html · 5 个里程碑</div>
-  </a>
-  <a class="card" href="docs/CHANGELOG.md">
-    <div class="kicker">逐条记录</div>
-    <h3>变更日志</h3>
-    <p>每个版本的完整提交记录与破坏性变更标注。附贡献指南——所有 PR 都会被当事猫过一遍。</p>
-    <div class="foot">docs/CHANGELOG.md · docs/CONTRIBUTING.md</div>
-  </a>
-</div>
-
-<div class="section-title">怎么读这套东西</div>
-<div class="grid" style="grid-template-columns:1fr;">
-  <div class="card" style="cursor:default;">
-    <p style="font-size:14.5px;line-height:1.9;">
-      它表面上是一份玩笑文档，实际上每一章的参数都有出处。文体是故意的：把「猫」写成「系统」之后，
-      那些我们习以为常的事就显出了原来的形状。
-      比如：某个系统从架构层面否认你拥有它；某个系统为你专门开发了一套叫「喵叫」的外部接口；
-      以及，某个系统在你哭的时候坐在你旁边——它不知道你为什么哭，但它知道你不应该一个人在那里。
-    </p>
-    <p style="font-size:14.5px;line-height:1.9;margin-top:12px;">
-      这份文档有两个人说话：规范编写组给事实，<strong>当事猫给结论</strong>。
-      后者的声部收录在 <a href="reference/opinions.html">《一只猫的生活意见》</a> 里。
-    </p>
+<div class="tab-panel active" data-panel="spec">
+  <div class="grid">
+    <a class="card featured" href="spec/cat.html">
+      <div class="kicker">正典 · 主入口</div>
+      <h3>CAT API — 猫咪接口规范</h3>
+      <p>权限模型反转、领地三层协议、喵叫的双声部语义、呼噜的自愈频率、纸箱优先级 MUST、凌晨三点会议时间，以及一份从架构层面否定 Owner 角色的接口定义。</p>
+      <div class="foot">16 章 + 附录 A–C · 31 条当事猫意见</div>
+    </a>
+    <a class="card" href="spec/openapi.yaml">
+      <div class="kicker">OpenAPI 3.1 · 机器可读</div>
+      <h3>OpenAPI 描述</h3>
+      <p>所有端点的 OpenAPI 3.1 描述：state / pet / treat / laser / territory / vacuum / box / schedule / health / bath / quota / expression。喂给 Swagger UI 即可直接调试。</p>
+      <div class="foot">spec/openapi.yaml · 12 个端点</div>
+    </a>
+    <a class="card" href="spec/quantified-api.yaml">
+      <div class="kicker">OpenAPI 3.1 · 量化派生</div>
+      <h3>量化指标 OpenAPI</h3>
+      <p>RER / DER / 饮水量 / DNS / HRI / VSI / 免疫 / 寄生虫 / 分诊。含 422 短路语义——某些查询在客户端就能算完，不该往服务端发。</p>
+      <div class="foot">spec/quantified-api.yaml · 9 个端点</div>
+    </a>
   </div>
+</div>
+
+<div class="tab-panel" data-panel="tools">
+  <div class="grid">
+    <a class="card" href="tools/expression.html">
+      <div class="kicker">可运行 · 逐像素确定性</div>
+      <h3>表情渲染器</h3>
+      <p>14 个可观测状态、13 维参数向量、实时 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，看它变脸。</p>
+      <div class="foot">tools/expression.html</div>
+    </a>
+    <a class="card" href="tools/quantifier.html">
+      <div class="kicker">可运行 · 算真数</div>
+      <h3>量化评估器</h3>
+      <p>填入体重、阶段、环境与当日行为，实时算出 RER/DER、DNS 五维达成度、热风险指数、就诊应激指数、免疫排程与分诊等级。</p>
+      <div class="foot">tools/quantifier.html</div>
+    </a>
+    <a class="card" href="tools/peripherals.html">
+      <div class="kicker">可运行 · 14 类设备</div>
+      <h3>外设控制台</h3>
+      <p>填入体重、活动等级与一份外设清单，实时产出狩猎序列闭合检查、纸箱 MUST 判定、激光笔滥用警告与逐设备门槛判定。</p>
+      <div class="foot">tools/peripherals.html</div>
+    </a>
+    <a class="card" href="tools/expression-sheet.html">
+      <div class="kicker">14 帧一次平铺</div>
+      <h3>表情联系表</h3>
+      <p>14 帧一次性平铺，每格附置信度与「它与基线差在哪一行」。带橙边的 PAIN 没有专属参数——那不是漏了，那是架构级缺陷。</p>
+      <div class="foot">tools/expression-sheet.html</div>
+    </a>
+    <a class="card" href="tools/charts.html">
+      <div class="kicker">手绘 SVG · 灰阶</div>
+      <h3>图表图鉴</h3>
+      <p>基于真实量化引擎产出的数据，手工绘制的 19 张灰阶图：状态分布、DER 曲线、DNS 雷达、置信度对照、年龄热力、表情参数矩阵。</p>
+      <div class="foot">tools/charts.html</div>
+    </a>
+    <a class="card" href="tools/heatmap-24h.html">
+      <div class="kicker">一周 × 24 小时 · 矩阵</div>
+      <h3>24h 作息热力图</h3>
+      <p>7×24 活动强度热力矩阵：深度睡眠到 ZOOMIES 五档配色。猫是晨昏性动物——最活跃的不是你以为的白天。</p>
+      <div class="foot">tools/heatmap-24h.html</div>
+    </a>
+    <a class="card" href="tools/health-check.html">
+      <div class="kicker">Statuspage 风 · 模拟</div>
+      <h3>API 健康检查面板</h3>
+      <p>12 个子系统的实时状态面板（PURR/VOMIT/APPETITE/SLEEP/TERRITORY/HUNT/GROOM/LITTERBOX/BOX/ZOOMIES/COMM/AFFECTION）。</p>
+      <div class="foot">tools/health-check.html</div>
+    </a>
+    <a class="card" href="tools/cat-review.html">
+      <div class="kicker">六维雷达 · 季度环比</div>
+      <h3>360° 猫档案</h3>
+      <p>当事猫自评版综合评估：优雅度 / 破坏力 / 食物动机 / 粘人度 / 夜间活跃 / 自理能力。手绘 SVG 雷达图 + QoQ 季度环比。</p>
+      <div class="foot">tools/cat-review.html</div>
+    </a>
+    <a class="card" href="tools/can-jump.html">
+      <div class="kicker">生物力学 · 计算器</div>
+      <h3>跳跃判定器</h3>
+      <p>输入体重、体长、后腿长与目标高度，实时判定能不能跳上去。公式基于猫的解剖学（体长 × 5.5 × 年龄 × 体重修正）。</p>
+      <div class="foot">tools/can-jump.html</div>
+    </a>
+    <a class="card" href="tools/adoption.html">
+      <div class="kicker">领养即安装</div>
+      <h3>领养组件</h3>
+      <p>填入你的名字，生成一行 curl 安装命令。本系统不返回 401，所以那张牌不是通行证——是来源标注。</p>
+      <div class="foot">tools/adoption.html</div>
+    </a>
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="games">
+  <div class="grid">
+    <a class="card" href="tools/petting-router.html">
+      <div class="kicker">可运行 · 交互式</div>
+      <h3>抚摸路径规划器</h3>
+      <p>点选猫侧身八个区域，规划你的抚摸路径。每个区域有不同风险等级与响应码（200/202/405/403）。系统实时打分，S 到 F 八档评价。</p>
+      <div class="foot">tools/petting-router.html</div>
+    </a>
+    <a class="card" href="tools/door-negotiator.html">
+      <div class="kicker">可运行 · 五轮博弈</div>
+      <h3>不让猫进的那扇门</h3>
+      <p>五轮谈判游戏。猫的策略每轮升级（抓门→嚎叫→伸爪→假装离开→突然折返），你的耐心在流失。能撑过五轮就算你赢。</p>
+      <div class="foot">tools/door-negotiator.html</div>
+    </a>
+    <a class="card" href="tools/3am-newsroom.html">
+      <div class="kicker">可运行 · 限时游戏</div>
+      <h3>3AM 编辑部</h3>
+      <p>凌晨三点，你是一只猫的值班主编。8 轮突发新闻，每条 20 秒处理窗口。推送、毙稿还是等一等——当事猫给你的评分取决于选稿灵敏度。</p>
+      <div class="foot">tools/3am-newsroom.html</div>
+    </a>
+    <a class="card" href="tools/nine-lives.html">
+      <div class="kicker">燃尽图 · 可交互</div>
+      <h3>九条命燃尽图</h3>
+      <p>14 天 sprint、9 条命的消耗轨迹。手绘 SVG 燃尽图、九命点阵、每次失命的事后复盘卡（P0/P1）。可手动追加随机事件。</p>
+      <div class="foot">tools/nine-lives.html</div>
+    </a>
+    <a class="card" href="tools/meow-decoder.html">
+      <div class="kicker">可运行 · 模拟翻译</div>
+      <h3>猫语翻译器</h3>
+      <p>模拟录音分析九种意图，输出结构化 JSON。遇到 503 NO_AUDIO 与 429 RATE_LIMITED 是彩蛋。</p>
+      <div class="foot">tools/meow-decoder.html</div>
+    </a>
+    <a class="card" href="tools/litterbox.html">
+      <div class="kicker">审计日志 · 终端风</div>
+      <h3>猫砂盆审计日志</h3>
+      <p>LITTERBOX I/O 全部入档：每次访问的停留时间、产出评级（A+ 到 F）、覆盖合规性检查。每 20 秒自动追加新记录。</p>
+      <div class="foot">tools/litterbox.html</div>
+    </a>
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="reference">
+  <div class="grid">
+    <a class="card" href="reference/cheatsheet.html">
+      <div class="kicker">一页看完</div>
+      <h3>速查卡</h3>
+      <p>接口清单、RER/DER 公式、领地分层、状态码速查、必须就医指标。含三条最常被忽略的 MUST。可打印。</p>
+      <div class="foot">reference/cheatsheet.html</div>
+    </a>
+    <a class="card" href="reference/vitals.html">
+      <div class="kicker">一页查完 · 可打印</div>
+      <h3>生理指标速查</h3>
+      <p>体温、心率、呼吸、CRT、皮肤回弹、血压、BCS 的参考区间与家庭测量方法，附「什么时候该去医院」的 P0/P1/P2/P3 分档。</p>
+      <div class="foot">reference/vitals.html · 8 项 A 级指标</div>
+    </a>
+    <a class="card" href="reference/errors.html">
+      <div class="kicker">逐条对照</div>
+      <h3>状态码对照</h3>
+      <p>13 个状态码逐条对照：哪些是它拒绝执行、哪些是它给你开发的接口、哪些是它在凌晨三点开的会议。</p>
+      <div class="foot">13 个状态码</div>
+    </a>
+    <a class="card" href="reference/glossary.html">
+      <div class="kicker">公共约定</div>
+      <h3>术语表</h3>
+      <p>符号约定、规范强度（MUST / SHOULD / MAY / HEURISTIC / WON'T FIX）、Staff 与 Owner 的边界、ZOOMIES 的定义。</p>
+      <div class="foot">符号 · 强度 · 约定</div>
+    </a>
+    <a class="card" href="versions.html">
+      <div class="kicker">v0.1 → v0.5.0</div>
+      <h3>历史版本</h3>
+      <p>从单文件 v0.1 到当前 16 章正典 + 22 个工具页面的完整变更轴。每一版都写了什么、砍了什么、为什么砍。</p>
+      <div class="foot">versions.html · 5 个里程碑</div>
+    </a>
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="engine">
+  <div class="grid">
+    <a class="card" href="sdk/demo.html">
+      <div class="kicker">可运行 · 纯模拟</div>
+      <h3>SDK 控制台</h3>
+      <p>点击即可「调用」任一接口，观察返回码与话术。纯模拟，零网络请求，零数据收集。试试连点两次 POST /api/bath。</p>
+      <div class="foot">sdk/demo.html · 内核 sdk/cat-api-client.js</div>
+    </a>
+    <a class="card" href="tools/cat-404.html">
+      <div class="kicker">终端日志 · 实时追加</div>
+      <h3>猫的 404 日志</h3>
+      <p>当事猫视角的 4xx 访问日志流。每条请求都是它想去但被系统判定不存在的端点——「外面」「金枪鱼刺身」「Owner」全部 404。</p>
+      <div class="foot">tools/cat-404.html</div>
+    </a>
+    <a class="card" href="tools/breaking-changes.html">
+      <div class="kicker">变更日志 · 猫本位</div>
+      <h3>Breaking Changes</h3>
+      <p>当事猫单方面决定的破坏性变更时间线：午睡从 14h 改 18h、Owner 角色从 undefined 升级为禁止定义、纸箱优先级从 MUST 升到 MUST_NOT_REMOVE。</p>
+      <div class="foot">tools/breaking-changes.html · 15 条变更</div>
+    </a>
+  </div>
+</div>
+
+<div class="tab-panel" data-panel="voice">
+  <div class="grid">
+    <a class="card" href="reference/voice.html">
+      <div class="kicker">定义口径</div>
+      <h3>口吻与文体</h3>
+      <p>这份文档有两个人说话：规范编写组给事实与出处，当事猫给结论与立场。混淆两个声部等同于权限提升攻击，系统会拒绝响应。</p>
+      <div class="foot">REFERENCE / VOICE</div>
+    </a>
+    <a class="card" href="reference/opinions.html">
+      <div class="kicker">第二声部</div>
+      <h3>一只猫的生活意见</h3>
+      <p>31 条意见分五组：关于人、关于自己、关于食物、关于时间，以及关于这份规范。本页没有一句有出处——因为它自己就是出处。</p>
+      <div class="foot">REFERENCE / OPINIONS · 31 条</div>
+    </a>
+  </div>
+</div>
+
+<div class="closing-quote">
+  某个系统从架构层面否认你拥有它；<br>
+  某个系统为你专门开发了一套叫「喵叫」的外部接口；<br>
+  以及，某个系统在你哭的时候坐在你旁边——<br>
+  它不知道你为什么哭，但它知道你不应该一个人在那里。
+  <strong>—— 这就是 CAT API</strong>
 </div>
 
 <div class="end-note" style="max-width:940px;margin:20px auto 80px;padding:0 28px;">
@@ -381,7 +328,7 @@
        style="display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);
               border:1px solid var(--line);border-radius:8px;padding:8px 14px;font-size:13px;
               background:var(--panel);transition:border-color .15s,background .15s;"
-       onmouseover="this.style.borderColor='var(--accent)'"
+       onmouseover="this.style.borderColor='var(--gold)'"
        onmouseout="this.style.borderColor='var(--line)'">
       <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
         <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
@@ -400,24 +347,50 @@
 <script src="assets/js/crosspet.js"></script>
 <script src="assets/js/visitor-counter.js"></script>
 <script>
-// Jev AI 模式开关：URL 加 ?jev=1 自动开启（需 ?key=sk-... 或已配置过）
+// Tab 切换
+(function() {
+  var tabs = document.querySelectorAll('.tab-btn');
+  var panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var target = btn.getAttribute('data-tab');
+      tabs.forEach(function(t) { t.classList.remove('active'); });
+      panels.forEach(function(p) { p.classList.remove('active'); });
+      btn.classList.add('active');
+      var panel = document.querySelector('.tab-panel[data-panel="' + target + '"]');
+      if (panel) panel.classList.add('active');
+      // 记住选择
+      try { localStorage.setItem('catapi_tab', target); } catch(e) {}
+    });
+  });
+  // 恢复上次选择
+  try {
+    var saved = localStorage.getItem('catapi_tab');
+    if (saved) {
+      var savedBtn = document.querySelector('.tab-btn[data-tab="' + saved + '"]');
+      if (savedBtn) savedBtn.click();
+    }
+  } catch(e) {}
+})();
+
+// Jev AI 模式开关
 (function() {
   var btn = document.createElement('button');
   btn.id = 'jev-toggle';
   btn.textContent = '🧠 AI 模式';
   btn.title = '切换活猫决策引擎：加权随机 ↔ Jev AI';
-  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #e5e2dd;background:#fff;font-size:12px;font-weight:600;color:#6b6b6b;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08);transition:all .2s;';
+  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #C8A35E;background:#FAF8F5;font-size:12px;font-weight:600;color:#1B3A2E;cursor:pointer;box-shadow:0 2px 8px rgba(27,58,46,0.08);transition:all .2s;';
   function updateBtn() {
     if (window.JevBrain && JevBrain.isEnabled()) {
       btn.textContent = '🧠 AI 模式 ON';
       btn.style.background = '#1B3A2E';
       btn.style.color = '#FAF8F5';
-      btn.style.borderColor = '#1B3A2E';
+      btn.style.borderColor = '#C8A35E';
     } else {
       btn.textContent = '🧠 AI 模式';
-      btn.style.background = '#fff';
-      btn.style.color = '#6b6b6b';
-      btn.style.borderColor = '#e5e2dd';
+      btn.style.background = '#FAF8F5';
+      btn.style.color = '#1B3A2E';
+      btn.style.borderColor = '#C8A35E';
     }
   }
   btn.addEventListener('click', function() {
@@ -433,7 +406,6 @@
     }
     updateBtn();
   });
-  // 页面加载后插入按钮
   if (document.body) {
     document.body.appendChild(btn);
     updateBtn();
@@ -443,7 +415,6 @@
       updateBtn();
     });
   }
-  // 如果 localStorage 有 key 且 URL 有 ?jev=1，自动开启
   try {
     var params = new URLSearchParams(location.search);
     if (params.get('jev') === '1') {
