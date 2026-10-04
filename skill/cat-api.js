@@ -148,6 +148,28 @@
         { code: 406, body: { error: "Not Acceptable", attempt: 2, hint: "它已经知道你要干什么了" } },
         { code: 503, body: { error: "FLEE", attempt: 3, hidden: true, hint: "它走了。你找不到它。" } }
       ]
+    },
+    {
+      method: "POST",
+      path: "/api/v1/territory/negotiate",
+      desc: "与狗谈判领地（跨物种）",
+      note: "猫特色端点。狗的社交信号对猫不是友好是兴奋，所以成功率很低。",
+      responses: [
+        { w: 4, code: 200, body: { ok: true, outcome: "standoff", detail: "弓背对峙 3 秒，双方各自后退一步", trust_delta: 0 } },
+        { w: 3, code: 200, body: { ok: true, outcome: "ignore", detail: "侧身走开，假装没看见", trust_delta: 1 } },
+        { w: 2, code: 200, body: { ok: true, outcome: "slow_blink", detail: "僵住 5 秒后缓慢眨眼三次——猫能给出的最高正面信号", trust_delta: 8 } },
+        { w: 1, code: 409, body: { error: "Conflict", detail: "对方先扑了，猫已跳上高处", trust_delta: -5 } },
+        { w: 1, code: 451, body: { error: "Unavailable For Legal Reasons", detail: "该端点仅在同一物理空间内可用。跨站串门请走 CrossPet 协议。", hint: "见 tools/crosspet.html" } }
+      ]
+    },
+    {
+      method: "GET",
+      path: "/api/v1/crosspet/status",
+      desc: "查询跨站串门状态",
+      note: "猫特色端点。返回本站在 CrossPet 频道里的接入情况与访客计数。",
+      responses: [
+        { w: 1, code: 200, body: { channel: "crosspet-global", connected: false, mode: "demo", visitors_today: 0, pets_seen: ["cat"] } }
+      ]
     }
   ];
 

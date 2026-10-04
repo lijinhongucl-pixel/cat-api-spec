@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/sdk/demo.html">
+<meta name="description" content="CAT API SDK 控制台：14 个端点可点击调用，纯本地模拟，不发网络请求。含进程内状态机、资源表自检、跨物种谈判端点。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SDK 控制台 — CAT API">
+<meta property="og:description" content="14 个端点可点击调用，纯本地模拟。含状态机与资源表自检。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/sdk/demo.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
 <title>SDK 控制台 — CAT API</title>
 <link rel="stylesheet" href="../assets/css/spec.css">
 <style>
@@ -45,6 +54,28 @@
   .clear-btn { padding: 6px 12px; background: transparent; color: var(--muted);
     border: 1px solid var(--line); border-radius: 6px; font-size: 12px; cursor: pointer; }
   .clear-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ep.group-start { margin-top: 14px; }
+  .ep.group-start::before { content: ""; display: block; }
+  .ep-label { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--faint); font-weight: 600; margin: 18px 0 8px;
+    padding-bottom: 5px; border-bottom: 1px dashed var(--line); }
+  .ep-label:first-child { margin-top: 0; }
+  .note { font-size: 12.5px; color: var(--muted); line-height: 1.75; margin: 14px 0 0; }
+  .state-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+  .state-chip { font-size: 11.5px; padding: 3px 9px; border-radius: 12px;
+    background: var(--code-bg); color: var(--muted); font-family: "SF Mono", Menlo, monospace; }
+  .state-chip b { color: var(--accent); font-weight: 700; }
+  .selfcheck-out { margin-top: 12px; padding: 13px 16px; border-radius: 9px;
+    background: #1f2430; color: #d1d5db; font-family: "SF Mono", Menlo, monospace;
+    font-size: 11.5px; line-height: 1.8; max-height: 300px; overflow: auto; }
+  .selfcheck-out .ok { color: #4ade80; }
+  .selfcheck-out .no { color: #f87171; }
+  .selfcheck-out .sum { color: var(--gold); margin-top: 8px; padding-top: 8px;
+    border-top: 1px solid #374151; }
+  .cli-hint { margin-top: 14px; padding: 11px 14px; background: var(--code-bg);
+    border-radius: 8px; font-size: 12px; color: var(--muted); line-height: 1.8; }
+  .cli-hint code { background: var(--panel); padding: 1px 5px; border-radius: 3px;
+    font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--ink); }
 </style>
   <link rel="stylesheet" href="../assets/css/livecat.css">
 <link rel="stylesheet" href="../assets/css/multiplayer.css">
@@ -78,13 +109,23 @@
     <span style="color:var(--muted);">实例命名：</span>
     <input id="instance-name" type="text" value="某只猫">
     <button class="clear-btn" onclick="clearOut()">清空输出</button>
+    <button class="clear-btn" onclick="resetState()">重置状态</button>
   </div>
+
+  <div class="state-bar" id="stateBar"></div>
 
   <div class="scols">
     <!-- 左侧：接口列表 -->
     <div class="panel">
-      <h3>CAT API</h3>
+      <h3>CAT API · 14 个端点</h3>
       <div id="ep-list"></div>
+      <div class="cli-hint">
+        同一份资源表也存在于命令行：<br>
+        <code>curl -fsSL .../skill/install.sh | sh -s -- --adopter "你"</code><br>
+        装完跑 <code>cat-api</code>，两边行为逐条对应。
+      </div>
+      <button class="clear-btn" id="btnSelfCheck" style="margin-top:12px;">跑资源表自检</button>
+      <div class="selfcheck-out" id="scOut">等待运行。</div>
     </div>
 
     <!-- 右侧：响应 -->
@@ -99,29 +140,69 @@
 (function () {
   var list = document.getElementById("ep-list");
   var out = document.getElementById("resp-out");
+  var stateBar = document.getElementById("stateBar");
   var client = window.CatAPIClient;
 
-  list.innerHTML = client.RESOURCES.map(function (r, i) {
-    var m = r.method.toLowerCase();
-    return '<div class="ep" data-idx="' + i + '">' +
-      '<span class="m ' + m + '">' + r.method + '</span>' +
-      '<span class="p">' + r.path + '</span>' +
-      '<span class="d">' + r.desc + '</span>' +
-      '</div>';
-  }).join("");
+  /* ---- 分组：把 14 个端点按用途分四组，别让它变成一堵墙 ---- */
+  var GROUPS = [
+    { label: "基础查询", match: function (p) {
+        return ["/api/v1/state", "/api/v1/quota", "/api/v1/territory",
+                "/api/v1/health", "/api/v1/crosspet/status"].indexOf(p) >= 0; } },
+    { label: "写入操作", match: function (p) {
+        return ["/api/v1/pet", "/api/v1/treat", "/api/v1/box", "/api/v1/vacuum"].indexOf(p) >= 0; } },
+    { label: "狩猎序列", match: function (p) { return p.indexOf("/api/v1/laser") === 0; } },
+    { label: "改不了的 / 彩蛋", match: function (p) {
+        return ["/api/v1/schedule", "/api/v1/bath", "/api/v1/territory/negotiate"].indexOf(p) >= 0; } }
+  ];
+
+  var html = "", used = {};
+  GROUPS.forEach(function (g) {
+    var items = client.RESOURCES.filter(function (r) {
+      if (used[r.path]) return false;
+      if (!g.match(r.path)) return false;
+      used[r.path] = 1;
+      return true;
+    });
+    if (!items.length) return;
+    html += '<div class="ep-label">' + g.label + '</div>';
+    items.forEach(function (r) {
+      var idx = client.RESOURCES.indexOf(r);
+      var m = r.method.toLowerCase();
+      html += '<div class="ep" data-idx="' + idx + '">' +
+        '<span class="m ' + m + '">' + r.method + '</span>' +
+        '<span class="p">' + r.path.replace('/api/v1', '') + '</span>' +
+        '</div>';
+    });
+  });
+  list.innerHTML = html;
+
+  /* ---- 状态条：让"系统有状态"这件事看得见 ---- */
+  function renderState() {
+    var s = client.state;
+    stateBar.innerHTML =
+      '<span class="state-chip">抚摸配额 <b>' + s.petQuota + '</b>/4</span>' +
+      '<span class="state-chip">纸箱 <b>' + (s.boxed ? '在箱内' : '不在') + '</b></span>' +
+      '<span class="state-chip">激光 <b>' + (s.laserOn ? '已启动' : '未启动') + '</b></span>' +
+      '<span class="state-chip">洗澡被拒 <b>' + s.bathAttempts + '</b> 次</span>' +
+      '<span class="state-chip">本页调用 <b>' + s.callCount + '</b> 次</span>';
+  }
 
   list.querySelectorAll(".ep").forEach(function (el) {
     el.addEventListener("click", function () {
       var idx = +this.getAttribute("data-idx");
       var r = client.RESOURCES[idx];
-      var name = document.getElementById("instance-name").value || "某只猫";
       appendLog("→ " + r.method + " " + r.path);
       appendLog("  # " + r.desc);
       client.call(r, function (err, res) {
         var cls = "status-" + (Math.floor(res.status / 100) + "xx");
-        appendLog("← <span class='status-tag " + cls + "'>" + res.status + "</span>" + res.note);
+        appendLog("← <span class='status-tag " + cls + "'>" + res.status + "</span> " + res.note);
         appendLog(JSON.stringify(res.body, null, 2));
+        var hk = Object.keys(res.headers);
+        if (hk.length) {
+          appendLog("  headers: " + hk.map(function (h) { return h + ": " + res.headers[h]; }).join("  "));
+        }
         appendLog("");
+        renderState();
       });
     });
   });
@@ -136,6 +217,24 @@
   window.clearOut = function () {
     out.textContent = "// 已清空。";
   };
+
+  window.resetState = function () {
+    client.reset();
+    renderState();
+    appendLog("// 模拟状态已重置（配额 4 / 不在箱内 / 激光关 / 洗澡 0 次）");
+  };
+
+  /* ---- 资源表自检 ---- */
+  document.getElementById("btnSelfCheck").addEventListener("click", function () {
+    var el = document.getElementById("scOut");
+    if (!client.selfCheck) { el.textContent = "SDK 版本过旧，无自检。"; return; }
+    var r = client.selfCheck();
+    el.innerHTML = r.items.map(function (i) {
+      return '<span class="' + (i.ok ? "ok" : "no") + '">' + (i.ok ? "✓" : "✗") + "</span> " + i.name;
+    }).join("\n") + '\n<div class="sum">' + r.pass + " / " + r.total + " 通过</div>";
+  });
+
+  renderState();
 })();
 </script>
   <script src="../assets/js/livecat.js"></script>
