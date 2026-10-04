@@ -63,6 +63,158 @@
     font-family: "PingFang SC", sans-serif;
     letter-spacing: 0.08em;
   }
+  /* ===== Hero 状态机动画 ===== */
+  .hero-machine {
+    max-width: 940px;
+    margin: 36px auto 0;
+    padding: 0 28px;
+  }
+  .machine-frame {
+    position: relative;
+    background: linear-gradient(180deg, rgba(27,58,46,0.04) 0%, rgba(200,163,94,0.05) 100%);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 32px 24px 28px;
+    overflow: hidden;
+  }
+  .machine-frame::before {
+    content: "STATE MACHINE · LIVE";
+    position: absolute;
+    top: 12px;
+    left: 20px;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    font-weight: 600;
+    font-family: "SF Mono", Menlo, monospace;
+  }
+  .machine-frame::after {
+    content: "";
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gold);
+    animation: machine-blink 1.6s ease-in-out infinite;
+  }
+  @keyframes machine-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .machine-svg {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+    margin: 0 auto;
+  }
+  /* 状态节点 */
+  .m-node {
+    fill: var(--panel);
+    stroke: var(--line);
+    stroke-width: 1;
+    transition: all 0.4s ease;
+  }
+  .m-node.active {
+    fill: rgba(27, 58, 46, 0.08);
+    stroke: var(--accent);
+    stroke-width: 1.8;
+  }
+  .m-label {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    font-size: 11px;
+    fill: var(--muted);
+    text-anchor: middle;
+    dominant-baseline: central;
+    transition: fill 0.4s ease;
+    pointer-events: none;
+  }
+  .m-label.active {
+    fill: var(--accent);
+    font-weight: 600;
+  }
+  .m-time {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 9px;
+    fill: var(--faint);
+    text-anchor: middle;
+    pointer-events: none;
+  }
+  /* 转换连线 */
+  .m-link {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 0.8;
+    stroke-dasharray: 3 3;
+    opacity: 0.5;
+    transition: opacity 0.4s ease;
+  }
+  .m-link.pulse {
+    stroke: var(--gold);
+    stroke-width: 1.5;
+    stroke-dasharray: 5 3;
+    opacity: 1;
+    animation: link-dash 1.2s linear infinite;
+  }
+  @keyframes link-dash {
+    to { stroke-dashoffset: -16; }
+  }
+  /* 中心猫身体 */
+  .cat-body { fill: #2C2C2A; }
+  .cat-belly { fill: #4a4a47; }
+  .cat-ear { fill: #2C2C2A; }
+  .cat-eye {
+    fill: var(--gold);
+    transition: all 0.3s ease;
+  }
+  .cat-eye.blink {
+    transform: scaleY(0.1);
+  }
+  .cat-tail {
+    fill: none;
+    stroke: #2C2C2A;
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    transform-origin: 0 0;
+    animation: tail-sway 4s ease-in-out infinite;
+  }
+  @keyframes tail-sway {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(8deg); }
+  }
+  .cat-breath {
+    transform-origin: center;
+    animation: cat-breath 3.5s ease-in-out infinite;
+  }
+  @keyframes cat-breath {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.025); }
+  }
+  .machine-caption {
+    text-align: center;
+    margin-top: 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .machine-caption strong { color: var(--accent); font-weight: 600; }
+  .machine-caption .now-state {
+    color: var(--gold);
+    font-weight: 600;
+    font-family: var(--serif);
+    font-style: italic;
+    transition: opacity 0.3s;
+  }
+  @media (max-width: 768px) {
+    .machine-svg { max-width: 100%; }
+    .m-label { font-size: 10px; }
+    .m-time { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cat-breath, .cat-tail, .m-link.pulse, .machine-frame::after { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -95,6 +247,84 @@
     <div class="hero-stat"><div class="n">27</div><div class="l">状态</div></div>
     <div class="hero-stat"><div class="n">31</div><div class="l">猫意见</div></div>
     <div class="hero-stat featured"><div class="n">0</div><div class="l">Owner 角色</div></div>
+  </div>
+</div>
+
+<div class="hero-machine">
+  <div class="machine-frame">
+    <svg class="machine-svg" viewBox="0 0 720 240" xmlns="http://www.w3.org/2000/svg">
+      <!-- 中心猫 SVG（侧卧姿势，呼吸 + 尾巴摆动 + 眨眼） -->
+      <g class="cat-breath" transform="translate(360 120)">
+        <!-- 尾巴 -->
+        <path class="cat-tail" d="M 28,-8 Q 50,-26 64,-18 Q 72,-12 68,-4" transform="translate(-4 8)"/>
+        <!-- 主体（椭圆侧卧） -->
+        <ellipse class="cat-body" cx="0" cy="0" rx="34" ry="14"/>
+        <!-- 腹部高光 -->
+        <ellipse class="cat-belly" cx="0" cy="6" rx="26" ry="7" opacity="0.7"/>
+        <!-- 头部 -->
+        <circle class="cat-body" cx="-26" cy="-4" r="11"/>
+        <!-- 耳朵 -->
+        <path class="cat-ear" d="M -32,-12 L -30,-22 L -25,-14 Z"/>
+        <path class="cat-ear" d="M -22,-14 L -18,-22 L -18,-13 Z"/>
+        <!-- 眼睛（金色，会眨） -->
+        <ellipse class="cat-eye" id="cat-eye-l" cx="-30" cy="-5" rx="1.6" ry="2.2"/>
+        <ellipse class="cat-eye" id="cat-eye-r" cx="-24" cy="-5" rx="1.6" ry="2.2"/>
+        <!-- 鼻子 -->
+        <path d="M -28,0 L -26,0 L -27,1.5 Z" fill="#5C1A1B"/>
+        <!-- 胡须 -->
+        <line x1="-26" y1="2" x2="-18" y2="1" stroke="#888" stroke-width="0.4"/>
+        <line x1="-26" y1="3" x2="-18" y2="4" stroke="#888" stroke-width="0.4"/>
+      </g>
+
+      <!-- 6 个状态节点（环绕中心，按真实猫作息时间排列） -->
+      <!-- 02:00 凌晨疯跑 -->
+      <g class="m-group" data-state="ZOOMIES" data-next="SLEEP">
+        <circle class="m-node" cx="120" cy="50" r="28"/>
+        <text class="m-label" x="120" y="50">疯跑</text>
+        <text class="m-time" x="120" y="88">02:00</text>
+      </g>
+      <!-- 06:00 清晨进食 -->
+      <g class="m-group" data-state="EAT" data-next="GROOM">
+        <circle class="m-node" cx="280" cy="32" r="28"/>
+        <text class="m-label" x="280" y="32">进食</text>
+        <text class="m-time" x="280" y="70">06:00</text>
+      </g>
+      <!-- 09:00 理毛 -->
+      <g class="m-group" data-state="GROOM" data-next="SLEEP">
+        <circle class="m-node" cx="480" cy="32" r="28"/>
+        <text class="m-label" x="480" y="32">理毛</text>
+        <text class="m-time" x="480" y="70">09:00</text>
+      </g>
+      <!-- 13:00 深度睡眠 -->
+      <g class="m-group" data-state="SLEEP" data-next="PATROL">
+        <circle class="m-node" cx="620" cy="50" r="28"/>
+        <text class="m-label" x="620" y="50">睡觉</text>
+        <text class="m-time" x="620" y="88">13:00</text>
+      </g>
+      <!-- 17:00 巡逻 -->
+      <g class="m-group" data-state="PATROL" data-next="PLAY">
+        <circle class="m-node" cx="540" cy="200" r="28"/>
+        <text class="m-label" x="540" y="200">巡逻</text>
+        <text class="m-time" x="540" y="238">17:00</text>
+      </g>
+      <!-- 20:00 玩耍 -->
+      <g class="m-group" data-state="PLAY" data-next="ZOOMIES">
+        <circle class="m-node" cx="180" cy="200" r="28"/>
+        <text class="m-label" x="180" y="200">玩耍</text>
+        <text class="m-time" x="180" y="238">20:00</text>
+      </g>
+
+      <!-- 连线（每个状态到中心的转换路径，圆弧） -->
+      <path class="m-link" id="link-ZOOMIES" d="M 144,62 Q 260,80 348,110"/>
+      <path class="m-link" id="link-EAT" d="M 304,44 Q 330,70 350,108"/>
+      <path class="m-link" id="link-GROOM" d="M 460,44 Q 410,70 372,108"/>
+      <path class="m-link" id="link-SLEEP" d="M 596,62 Q 480,80 374,112"/>
+      <path class="m-link" id="link-PATROL" d="M 524,188 Q 460,170 376,134"/>
+      <path class="m-link" id="link-PLAY" d="M 204,188 Q 280,170 360,132"/>
+    </svg>
+    <div class="machine-caption">
+      猫是一个 <strong>不接受参数调优</strong> 的状态机。<span class="now-state" id="now-state">正在初始化</span>
+    </div>
   </div>
 </div>
 
@@ -341,6 +571,8 @@
 
 <script src="assets/js/expression.js"></script>
 <script src="assets/js/jev.js"></script>
+<!-- jev-config.js 是本地文件，不入仓（.gitignore 排除）。提供 CAT_API_CONFIG.jevKey -->
+<script src="assets/js/jev-config.js" onerror="window.CAT_API_CONFIG=null"></script>
 <script src="assets/js/jev-brain.js"></script>
 <script src="assets/js/livecat.js"></script>
 <script src="assets/js/multiplayer.js"></script>
@@ -373,60 +605,25 @@
   } catch(e) {}
 })();
 
-// Jev AI 模式开关
+// Jev AI 决策默认常开（密钥从本地 jev-config.js 读取，不暴露在站点上）
 (function() {
-  var btn = document.createElement('button');
-  btn.id = 'jev-toggle';
-  // 用 SVG 替代 emoji，跟老钱风视觉系统对齐
-  var aiIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><path d="M12 4a2.5 2.5 0 0 0-2.5 2.5v.06a3 3 0 0 0-2 2.8v.34a3 3 0 0 0 .5 1.66A3 3 0 0 0 7.5 14v.5a3 3 0 0 0 4.5 2.6V20a2.5 2.5 0 0 0 5 0v-3.4a3 3 0 0 0 2.5-2.85V13.5a3 3 0 0 0-.5-1.66A3 3 0 0 0 19.5 9.7V9.4a3 3 0 0 0-2-2.8V6.5A2.5 2.5 0 0 0 15 4"/><circle cx="9.5" cy="11" r="0.8" fill="currentColor"/><circle cx="14.5" cy="11" r="0.8" fill="currentColor"/></svg>';
-  btn.innerHTML = aiIcon + 'AI 模式';
-  btn.title = '切换活猫决策引擎：加权随机 ↔ Jev AI';
-  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:9999;padding:6px 14px;border-radius:20px;border:1px solid #C8A35E;background:#FAF8F5;font-size:12px;font-weight:600;color:#1B3A2E;cursor:pointer;box-shadow:0 2px 8px rgba(27,58,46,0.08);transition:all .2s;display:inline-flex;align-items:center;gap:4px;';
-  function updateBtn() {
-    if (window.JevBrain && JevBrain.isEnabled()) {
-      btn.innerHTML = aiIcon + 'AI 模式 ON';
-      btn.style.background = '#1B3A2E';
-      btn.style.color = '#FAF8F5';
-      btn.style.borderColor = '#C8A35E';
-    } else {
-      btn.innerHTML = aiIcon + 'AI 模式';
-      btn.style.background = '#FAF8F5';
-      btn.style.color = '#1B3A2E';
-      btn.style.borderColor = '#C8A35E';
-    }
-  }
-  btn.addEventListener('click', function() {
+  // 隐藏调试入口：URL 加 ?jev=0 可临时关闭（仅开发者用）
+  var params = new URLSearchParams(location.search);
+  if (params.get('jev') === '0') return;
+
+  function autoEnable() {
     if (!window.JevBrain) return;
-    if (JevBrain.isEnabled()) {
-      JevBrain.disable();
-    } else {
-      var key = prompt('输入 Jev API Key 开启 AI 决策模式：', localStorage.getItem('jev_api_key') || '');
-      if (key) {
-        localStorage.setItem('jev_api_key', key);
-        JevBrain.enable(key);
-      }
+    var key = (window.CAT_API_CONFIG && window.CAT_API_CONFIG.jevKey)
+           || localStorage.getItem('jev_api_key');
+    if (key) {
+      JevBrain.enable(key);
     }
-    updateBtn();
-  });
-  if (document.body) {
-    document.body.appendChild(btn);
-    updateBtn();
-  } else {
-    document.addEventListener('DOMContentLoaded', function() {
-      document.body.appendChild(btn);
-      updateBtn();
-    });
   }
-  try {
-    var params = new URLSearchParams(location.search);
-    if (params.get('jev') === '1') {
-      var savedKey = localStorage.getItem('jev_api_key');
-      if (savedKey && window.JevBrain) {
-        JevBrain.enable(savedKey);
-        updateBtn();
-      }
-    }
-  } catch(e) {}
+  if (document.readyState !== 'loading') {
+    autoEnable();
+  } else {
+    document.addEventListener('DOMContentLoaded', autoEnable);
+  }
 })();
 </script>
 

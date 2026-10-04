@@ -1,0 +1,6 @@
+# AI 决策配置（含密钥，不入仓）
+assets/js/jev-config.js
+
+# 系统
+.DS_Store
+Thumbs.db
