@@ -252,7 +252,14 @@
   }
 
   // 按权重随机选一个状态（不一定是当前状态）
+  // exclude 支持传入英文 key（"SLEEP"）或中文 label（"睡觉"），内部统一转成 key 再比较
   function pickWeightedState(exclude) {
+    // 如果 exclude 是 label，转成对应的 key
+    if (exclude && !WEIGHTS[exclude]) {
+      for (var k in STATES) {
+        if (STATES[k] && STATES[k].label === exclude) { exclude = k; break; }
+      }
+    }
     var w = currentWeights();
     var total = 0;
     var keys = [];
@@ -294,7 +301,7 @@
   }
   function consumeQuota() {
     var q = getQuota();
-    if (q <= 0) return 0;
+    if (q <= 0) return -1;  // 配额已耗尽，返回 -1 表示不可用（区别于扣完后的 0）
     setQuota(q - 1);
     return q - 1;  // 扣完后的剩余次数
   }
@@ -341,6 +348,7 @@
   var current = STATES.SLEEP;
   var currentStateName = "SLEEP";
   var stateStart = 0;
+  var stateEpoch = 0;  // 状态代际：每次状态切换 +1，用于延迟回调的过期校验
   var stateTimer = null;
   var rafId = null;
   var zoomTimer = null;
@@ -582,6 +590,16 @@
   var mouseWiggle = 0;        // 跑动时的身体摆动
   var tokenCount = 0;         // 累计抓到的 Token 数
 
+  // 跨 tab 安全的 Token 计数：每次写入前重新读 localStorage 最新值（读-改-写），
+  // 避免多 tab 各自持有旧内存值互相覆盖（lost update）。
+  function bumpTokens(delta) {
+    var latest = 0;
+    try { latest = parseInt(localStorage.getItem('catapi_tokens_caught')) || 0; } catch (e) {}
+    tokenCount = latest + delta;
+    try { localStorage.setItem('catapi_tokens_caught', String(tokenCount)); } catch (e) {}
+    return tokenCount;
+  }
+
   function svgMouse() {
     // ============================================================
     //  TOKEN MOUSE v2 — 全新手绘角色
@@ -747,8 +765,7 @@
     if (!mouse || mouseCaught) return;
     mouseCaught = true;
     mouseActive = false;
-    tokenCount += 2;  // 用户抓得比猫准——奖励翻倍
-    try { localStorage.setItem('catapi_tokens_caught', String(tokenCount)); } catch(e) {}
+    bumpTokens(2);  // 用户抓得比猫准——奖励翻倍（跨 tab 安全读写）
 
     // 双倍 Token 粒子爆裂
     spawnTokenParticles(mouseX + 30, mouseY + 20);
@@ -892,11 +909,7 @@
     if (!mouse || mouseCaught) return;
     mouseCaught = true;
     mouseActive = false;
-    tokenCount++;
-    // 存入 localStorage
-    try {
-      localStorage.setItem('catapi_tokens_caught', String(tokenCount));
-    } catch(e) {}
+    bumpTokens(1);  // 跨 tab 安全读写：写入前重新读 localStorage 最新值
 
     // 掉落金色 token 粒子
     spawnTokenParticles(mouseX + 30, mouseY + 20);
@@ -1462,11 +1475,13 @@
     var next = STATES[name];
     if (!next) return;
     var prevName = currentStateName;
+    var prevEpoch = stateEpoch;  // 捕获切换前的代际
     current = next;
     // interrupt() 用 label 作为 currentStateName，transitionTo 也应该这样
     // （否则守卫检查时要同时匹配 key 和 label，容易出错）
     currentStateName = next.label || name;
     stateStart = Date.now();
+    stateEpoch++;  // 状态代际 +1：所有捕获了旧代际的延迟回调都不再生效
     label.textContent = current.label;
     if (current.behavior) current.behavior();
 
@@ -1479,7 +1494,8 @@
     // （放在 transitionTo 主流程之后，不影响当前状态切换）
     if (prevName === "睡觉" && name !== "STRETCH" && name !== "YAWN" && Math.random() < 0.55) {
       setTimeout(function () {
-        if (currentStateName === current.label) {  // 还在同一个状态
+        // 代际校验：只有猫还停在这个状态（期间没被戳/激光/别的异步打断）才接 STRETCH
+        if (stateEpoch === prevEpoch + 1) {
           transitionTo("STRETCH");
         }
       }, 800);
@@ -1513,25 +1529,28 @@
 
       // §JEV：如果 JevBrain 已开启，让 AI 基于上下文重新决策
       // Jev 是异步的——先用加权随机兜底，Jev 返回后如果不同则覆盖
-      if (window.JevBrain && window.JevBrain.isEnabled() && window.JevCat) {
+      if (window.JevBrain && window.JevBrain.isEnabled()) {
+        var jevEpoch = stateEpoch;  // 捕获决策发起时的代际
+        var jevStateSnapshot = currentStateName;  // 同时快照当前状态名
         var jevCandidates = ["SLEEP","GROOM","PATROL","PLAY","EAT","STARE",
                              "STARE_MOUSE","STRETCH","YAWN","BOXED","ZOOMIES","MUNCH","HEADBUNT"];
         // 排除当前状态
         var filtered = jevCandidates.filter(function(k) {
           var s = STATES[k];
-          return s && s.label !== currentStateName && k !== currentStateName;
+          return s && s.label !== jevStateSnapshot && k !== jevStateSnapshot;
         });
         var mouseIdleSec = lastMouseTime > 0 ? (Date.now() - lastMouseTime) / 1000 : 999;
         window.JevBrain.think({
           hour: hour,
           mouseIdleSec: mouseIdleSec,
-          prevState: currentStateName,
+          prevState: jevStateSnapshot,
           fullness: munchFullness,
           pageTitle: document.title
         }, filtered).then(function(decision) {
+          // 代际校验：Jev 思考期间如果猫被戳/激光/别的状态切换打断，放弃本次决策
+          if (stateEpoch !== jevEpoch) return;
           if (decision && decision.state && STATES[decision.state]) {
-            // Jev 选了不同的状态——如果当前状态还在跑，就切过去
-            if (currentStateName === current.label) {
+            if (currentStateName === jevStateSnapshot) {
               transitionTo(decision.state);
             }
           }
@@ -1564,6 +1583,7 @@
     clearTimeout(stateTimer);
     current = Object.assign({}, special);
     currentStateName = special.label;
+    stateEpoch++;  // 用户交互打断 = 新代际，旧的延迟回调全部作废
     // 直接清掉脏检查标志位，下一帧会强制重写样式
     lastAppliedState = null;
     lastAppliedPose = null;
@@ -1622,7 +1642,7 @@
 
     // 行为准则 6+7：每日抚摸配额，戳一次扣一次，配额耗尽返回 429
     var remaining = consumeQuota();
-    if (remaining <= 0) {
+    if (remaining < 0) {  // -1 = 配额早已耗尽，拒绝抚摸
       speak(["429 Too Many Requests。今日配额已用完。", "配额超限。明日 0:00 重置。", "403 抚摸限流。"]);
       // 视觉反馈：猫明显不悦
       if (cat) {
@@ -1634,7 +1654,9 @@
 
     interrupt(SPECIAL.PETTED);
     // 根据剩余配额显示不同台词
-    if (remaining === 1) {
+    if (remaining === 0) {
+      setTimeout(function () { speak(["最后一次配额用完了。明日再来。"]); }, 1000);
+    } else if (remaining === 1) {
       setTimeout(function () { speak(["今天配额剩 1 次。再摸就 429。"]); }, 1000);
     } else if (remaining === 2) {
       setTimeout(function () { speak(["配额还剩 " + remaining + " 次。"]); }, 1000);

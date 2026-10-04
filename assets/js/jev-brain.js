@@ -1,19 +1,24 @@
 /*!
- * Jev Brain v1.0 — 活猫 AI 决策引擎
+ * Jev Brain v1.1 — 活猫 AI 决策引擎（接活猫大脑 systemone）
  * ---------------------------------------------------------------------------
- * 把 livecat 的状态机从「加权随机」升级为「Jev 上下文感知决策」。
+ * 把 livecat 的状态机从「加权随机」升级为「上下文感知 AI 决策」。
+ *
+ * v1.1：直连「活猫大脑」systemone 网关
+ *  - 每个候选状态各发一个 noul 打分问题，一次请求拿回全部 [0,1] 分数
+ *  - 本地按分数降序选 top，零幻觉（无生成路径）、零 choice 协议歧义
+ *  - apiKey 以 "sk-" 开头时自动走 systemone；否则回退旧 JevCat.ask(choice)
  *
  * 工作原理：
  *  1. 感知层：收集当前时间、鼠标活跃度、上一状态、饱腹值等上下文
- *  2. 决策层：打包成 Jev choice 问题，让 Jev 从候选状态中挑一个
+ *  2. 决策层：打包成 state 描述，对每个候选问 noul 打分，取最高
  *  3. 冷却层：API 失败/超时降级到加权随机；同一上下文 30s 内复用决策
- *  4. 可观测：每次 Jev 决策时显示「猫在想什么」气泡
+ *  4. 可观测：每次决策时显示「猫在想什么」气泡（含置信度百分比）
  *
  * 接入方式（livecat.js 已内置钩子）：
- *  页面加载 jev.js + jev-brain.js 后，调用：
- *    JevBrain.enable('sk-...');   // 开启 AI 决策
+ *  页面加载 jev-brain.js 后：
+ *    JevBrain.enable('sk-...');   // 直连活猫大脑
  *    JevBrain.disable();          // 关闭，回到加权随机
- *  或在 URL 加 ?jev=1&key=sk-... 自动开启
+ *  或 URL 加 ?jev=1&key=sk-... 自动开启
  * --------------------------------------------------------------------------- */
 (function (root) {
   "use strict";
@@ -23,6 +28,11 @@
   var DECISION_TIMEOUT_MS = 4000;   // Jev 4 秒不返回就降级
   var CONTEXT_CACHE_MS = 30000;     // 同一上下文 30s 内复用决策
   var BUBBLE_TTL_MS = 3500;         // 「猫在想什么」气泡显示时长
+
+  // 活猫大脑直连配置
+  var SYSTEMONE_URL = "https://tokendance.space/gateway/typesafe/v1/systemone";
+  var SYSTEMONE_MODEL = "ateve-jev-v1";
+  var apiKey = null;  // systemone 直连密钥；为 null 时回退到 JevCat.ask
 
   var enabled = false;
   var lastContextKey = null;
@@ -55,13 +65,16 @@
     else if (ctx.mouseIdleSec < 3) parts.push("用户的鼠标正在快速移动");
     else parts.push("用户的鼠标偶尔在动");
 
-    // 上一状态
+    // 上一状态（label 对齐 livecat.js STATES 的真实 label）
     if (ctx.prevState) {
       var prevMap = {
         "睡觉": "猫刚睡醒", "伸懒腰": "猫刚伸完懒腰", "打哈欠": "猫刚打完哈欠",
-        "巡逻": "猫刚巡逻完一圈", "理毛": "猫刚理完毛", "进食": "猫刚吃完东西",
-        "玩耍": "猫刚玩了一会儿", "疯跑": "猫刚疯跑完", "盯梢": "猫刚盯完什么东西",
-        "啃食内容": "猫刚啃了点页面内容", "蹭人腿": "猫刚蹭了用户的腿"
+        "巡视领地": "猫刚巡逻完一圈", "理毛": "猫刚理完毛", "吃东西": "猫刚吃完东西",
+        "玩耍": "猫刚玩了一会儿", "疯跑": "猫刚疯跑完", "凝视你": "猫刚盯完什么东西",
+        "盯着鼠标": "猫刚盯完用户的鼠标", "钻纸箱": "猫刚从纸箱里出来",
+        "追鼠标": "猫刚追过鼠标", "追激光": "猫刚追完激光点",
+        "啃食内容": "猫刚啃了点页面内容", "蹭你": "猫刚蹭了用户的腿",
+        "被摸": "猫刚被摸过", "收到零食": "猫刚收到零食", "踩奶": "猫刚踩完奶"
       };
       parts.push(prevMap[ctx.prevState] || ("猫刚才在「" + ctx.prevState + "」"));
     }
@@ -81,6 +94,70 @@
     return parts.join("。") + "。";
   }
 
+  /* ===== 活猫大脑直连（systemone 网关） ===== */
+  /**
+   * 直连 systemone：把每个候选状态各设一个 noul 问题，
+   * 一次请求拿到所有候选的 [0,1] 置信度，本地排序选 top。
+   * 比 choice 协议更确定（无幻觉）、更省 token（无生成）。
+   */
+  function thinkViaSystemone(ctx, candidates, stateDesc, criteria) {
+    // 构造 question map：每个 candidate 一个 noul 打分
+    var questions = {};
+    candidates.forEach(function (key) {
+      questions["want_" + key] = {
+        type: "noul",
+        instructions: "猫想做「" + (criteria[key] || key) + "」的渴望程度？"
+      };
+    });
+
+    var body = {
+      model: SYSTEMONE_MODEL,
+      state: stateDesc + " 作为这只猫，你现在最想做什么？",
+      questions: questions
+    };
+
+    var fetchPromise = fetch(SYSTEMONE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": apiKey
+      },
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error("systemone HTTP " + resp.status);
+      return resp.json();
+    }).then(function (data) {
+      var answers = (data && data.answers) || {};
+      // 收集 (key, noul) 对，按分数降序
+      var scored = candidates.map(function (key) {
+        var a = answers["want_" + key];
+        var score = (a && typeof a.noul === "number") ? a.noul : 0;
+        return { key: key, score: score };
+      }).filter(function (x) { return x.score > 0; })
+        .sort(function (a, b) { return b.score - a.score; });
+
+      if (scored.length === 0) throw new Error("systemone no scores");
+
+      var top = scored[0];
+      var probs = {};
+      scored.forEach(function (s) { probs[s.key] = s.score; });
+
+      return {
+        state: top.key,
+        reason: criteria[top.key] || top.key,
+        confidence: top.score,
+        probs: probs,
+        contextDesc: stateDesc
+      };
+    });
+
+    var timeoutPromise = new Promise(function (_, reject) {
+      setTimeout(function () { reject(new Error("systemone timeout")); }, DECISION_TIMEOUT_MS);
+    });
+
+    return Promise.race([fetchPromise, timeoutPromise]);
+  }
+
   /* ===== Jev 决策 ===== */
   /**
    * 问 Jev：猫接下来想干什么？
@@ -92,8 +169,9 @@
     if (!root.JevCat) return Promise.reject(new Error("JevCat not loaded"));
     if (!candidates || candidates.length === 0) return Promise.reject(new Error("no candidates"));
 
-    // 上下文缓存：30s 内同一上下文直接复用
-    var ctxKey = JSON.stringify([ctx.hour, ctx.prevState, ctx.fullness && Math.floor(ctx.fullness / 20)]);
+    // 上下文缓存：30s 内同一上下文直接复用（含鼠标活跃度分档，静止/偶尔/频繁）
+    var mouseBucket = ctx.mouseIdleSec > 60 ? 2 : (ctx.mouseIdleSec > 10 ? 1 : 0);
+    var ctxKey = JSON.stringify([ctx.hour, ctx.prevState, ctx.fullness && Math.floor(ctx.fullness / 20), mouseBucket]);
     var now = Date.now();
     if (lastContextKey === ctxKey && lastDecision && (now - lastDecisionTs) < CONTEXT_CACHE_MS) {
       return Promise.resolve(lastDecision);
@@ -123,37 +201,48 @@
       criteria[key] = CANDIDATE_DESC[key] || key;
     });
 
-    return root.JevCat.ask({
-      state: stateDesc + " 作为这只猫，你现在最想做什么？",
-      questions: {
-        next_action: {
-          type: "choice",
-          instructions: "猫接下来最可能做什么？根据猫的生物节律、当前状态和上下文判断。",
-          criteria: criteria
+    // 分流：有 apiKey 直连 systemone（多 noul），否则走旧 JevCat.ask(choice)
+    var decisionPromise;
+    if (apiKey) {
+      decisionPromise = thinkViaSystemone(ctx, candidates, stateDesc, criteria);
+    } else {
+      decisionPromise = root.JevCat.ask({
+        state: stateDesc + " 作为这只猫，你现在最想做什么？",
+        questions: {
+          next_action: {
+            type: "choice",
+            instructions: "猫接下来最可能做什么？根据猫的生物节律、当前状态和上下文判断。",
+            criteria: criteria
+          }
         }
-      }
-    }).then(function (data) {
-      var choice = data.answers && data.answers.next_action;
-      if (!choice || !choice.choice) throw new Error("no choice returned");
+      }).then(function (data) {
+        var choice = data.answers && data.answers.next_action;
+        if (!choice || !choice.choice) throw new Error("no choice returned");
+        var picked = choice.choice;
+        return {
+          state: picked,
+          reason: criteria[picked] || picked,
+          confidence: choice.confidence || 0,
+          probs: choice.probabilities || {},
+          contextDesc: stateDesc
+        };
+      });
+    }
 
-      var picked = choice.choice;
-      var reason = criteria[picked] || picked;
+    var timeoutPromise = new Promise(function (resolve, reject) {
+      setTimeout(function () {
+        reject(new Error("Jev timeout"));
+      }, DECISION_TIMEOUT_MS);
+    });
 
-      var result = {
-        state: picked,
-        reason: reason,
-        probs: choice.probabilities || {},
-        confidence: choice.confidence || 0,
-        contextDesc: stateDesc
-      };
-
+    return Promise.race([decisionPromise, timeoutPromise]).then(function (result) {
       // 缓存
       lastContextKey = ctxKey;
       lastDecision = result;
       lastDecisionTs = Date.now();
 
       // 显示「猫在想什么」气泡
-      showThoughtBubble(picked, reason, choice.confidence);
+      showThoughtBubble(result.state, result.reason, result.confidence);
 
       return result;
     });
@@ -238,13 +327,19 @@
   }
 
   /* ===== 开关 ===== */
-  function enable(apiKey) {
-    if (apiKey && root.JevCat) {
-      root.JevCat.configure({ apiKey: apiKey });
+  function enable(apiKeyArg) {
+    // 优先把字符串当 systemone 密钥；对象视为旧式 JevCat.configure 入参
+    if (typeof apiKeyArg === "string" && apiKeyArg.indexOf("sk-") === 0) {
+      apiKey = apiKeyArg;
+    } else if (apiKeyArg && typeof apiKeyArg === "object" && root.JevCat) {
+      root.JevCat.configure(apiKeyArg);
+    } else if (apiKeyArg && root.JevCat) {
+      root.JevCat.configure({ apiKey: apiKeyArg });
     }
     enabled = true;
     injectStyles();
-    console.log("[JevBrain] AI 决策模式已开启 🧠");
+    var mode = apiKey ? "systemone 直连" : "JevCat 兼容";
+    console.log("[JevBrain] AI 决策模式已开启 🧠 (" + mode + ")");
   }
 
   function disable() {
@@ -275,7 +370,7 @@
     isEnabled: isEnabled,
     think: think,
     buildStateDescription: buildStateDescription,
-    version: "1.0"
+    version: "1.1"
   };
 
   // DOM ready 后自动检查 URL 参数
