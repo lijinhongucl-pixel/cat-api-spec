@@ -502,79 +502,158 @@ var PARAMS = {
   SIT_AFTER: 5,
 };
 
-// 构建/重建猫
+// 构建/重建猫 —— 几何体组合（不是体素方块）
 function buildCat() {
-  // 清空旧 voxel
+  // 清空旧模型
   [parts.head, parts.body, parts.tail].concat(legs).forEach(function(g) {
     while (g.children.length) g.remove(g.children[0]);
   });
 
-  var rig = rigCat(GRID);
-  if (!rig) return;
-  
-  var cells = rig.cells;
-  var bw = rig.bw, bh = rig.bh;
-  
-  // 翻转处理：如果 facing=right，需要 x → bw - 1 - x
-  var flipX = (rig.facing === 'right') ? -1 : 1;
-  state.facing = (rig.facing === 'right') ? -1 : 1;
-  
-  // 中心化：让猫的中心在原点
-  var cx = (Math.min.apply(null, cells.map(function(c){return c.x;})) + Math.max.apply(null, cells.map(function(c){return c.x;}))) / 2;
-  var cy = (Math.min.apply(null, cells.map(function(c){return c.y;})) + Math.max.apply(null, cells.map(function(c){return c.y;}))) / 2;
-  
-  // 把网格格子分配到部位（按 y 划分）
-  // 网格的 y 是从上到下 0-10；映射到 3D 的水平面 + 垂直
-  // 我们让网格的 y → 3D 的 z（猫的左右方向），x → 3D 的 x（猫的前后方向）
-  // 网格顶部（y=0）对应猫的背部
-  
-  cells.forEach(function(c) {
-    var localX = (c.x - cx) * voxelSize * flipX;
-    var localY = (cy - c.y) * voxelSize; // 上方为正（背部）
-    var localZ = 0; // 单层猫（薄），稍后给厚度
-    
-    // 加深度（z 方向 ±0.5 体素）让猫不是平的
-    for (var dz = -1; dz <= 1; dz += 2) {
-      var vox = new THREE.Mesh(voxelGeom, catMat);
-      vox.position.set(localX, localY + 1.2, localZ + dz * voxelSize * 0.5);
-      vox.castShadow = true;
-      vox.receiveShadow = true;
-      
-      // 部位分配：按 x 划分（猫是横向的）
-      // 头部 = 一端，尾部 = 另一端，中间 = 身体
-      var normX = (c.x - cx) / bw;
-      if (flipX === 1) normX = -normX;
-      
-      if (normX > 0.32) parts.head.add(vox);
-      else if (normX < -0.32) parts.tail.add(vox);
-      else parts.body.add(vox);
-    }
-  });
-  
-  // 把腿部加在 body 下方（简化：4 条短立方体）
-  var legGeom = new THREE.BoxGeometry(voxelSize * 1.5, voxelSize * 3, voxelSize * 1.5);
-  var legMat = catMat;
+  // 猫的身体比例（世界单位）
+  var bodyLen = 2.2;   // 躯干长度
+  var bodyW = 0.85;    // 躯干宽度
+  var bodyH = 0.75;    // 躯干高度
+  var legH = 0.9;      // 腿高
+  var legR = 0.14;     // 腿半径
+  var headR = 0.55;    // 头半径
+  var earH = 0.35;     // 耳朵高度
+  var earW = 0.22;     // 耳朵底部宽度
+  var tailLen = 2.0;   // 尾巴长度
+  var tailR = 0.1;     // 尾巴半径
+
+  // 材质
+  var furMat = new THREE.MeshStandardMaterial({ color: 0x3A3530, roughness: 0.72, metalness: 0.03 });
+  var darkFurMat = new THREE.MeshStandardMaterial({ color: 0x2A2520, roughness: 0.75, metalness: 0.03 });
+  var earMat = new THREE.MeshStandardMaterial({ color: 0x4A3028, roughness: 0.6 });
+  var noseMat = new THREE.MeshStandardMaterial({ color: 0xC47880, roughness: 0.4 });
+  var eyeMat = new THREE.MeshStandardMaterial({ color: 0xC8A35E, roughness: 0.25, metalness: 0.1, emissive: 0x4A3020, emissiveIntensity: 0.15 });
+  var padMat = new THREE.MeshStandardMaterial({ color: 0x5C3A35, roughness: 0.5 });
+
+  // ---- 躯干（拉长的椭球，用 Scale 变形的 SphereGeometry）----
+  var bodyGeom = new THREE.SphereGeometry(0.5, 24, 16);
+  var body = new THREE.Mesh(bodyGeom, furMat);
+  body.scale.set(bodyLen / 1.0, bodyH / 1.0, bodyW / 1.0);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  parts.body.add(body);
+  // 躯干底部偏白（猫腹毛）
+  var bellyGeom = new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45);
+  var belly = new THREE.Mesh(bellyGeom, new THREE.MeshStandardMaterial({ color: 0xD5CCC0, roughness: 0.8 }));
+  belly.scale.set(bodyLen / 1.0 * 0.95, bodyH / 1.0 * 0.9, bodyW / 1.0 * 0.9);
+  belly.castShadow = true;
+  parts.body.add(belly);
+
+  // ---- 头部（圆球 + 尖耳朵）----
+  // 头放在身体前端
+  var headOffset = bodyLen / 2 + headR * 0.5;
+  parts.head.position.set(headOffset, 0.15, 0);
+
+  var head = new THREE.Mesh(new THREE.SphereGeometry(headR, 24, 18), furMat);
+  head.castShadow = true;
+  head.receiveShadow = true;
+  parts.head.add(head);
+
+  // 两只尖耳朵（猫的三角形耳尖是最明显的视觉特征）
+  var earGeom = new THREE.ConeGeometry(earW * 0.6, earH, 4);
+  function addEar(z) {
+    var ear = new THREE.Mesh(earGeom, earMat);
+    ear.position.set(0, headR * 0.85, z);
+    ear.rotation.y = Math.PI / 4;
+    ear.castShadow = true;
+    parts.head.add(ear);
+    // 耳内粉红
+    var inner = new THREE.Mesh(
+      new THREE.ConeGeometry(earW * 0.35, earH * 0.7, 4),
+      new THREE.MeshStandardMaterial({ color: 0xC47880, roughness: 0.5 })
+    );
+    inner.position.set(0, headR * 0.85, z);
+    inner.rotation.y = Math.PI / 4;
+    parts.head.add(inner);
+  }
+  addEar(headR * 0.55);
+  addEar(-headR * 0.55);
+
+  // 眼睛（金色，猫眼是竖瞳但我们简化为球体）
+  var eyeGeom = new THREE.SphereGeometry(0.07, 12, 10);
+  var eyeL = new THREE.Mesh(eyeGeom, eyeMat);
+  eyeL.position.set(headR * 0.6, headR * 0.15, headR * 0.45);
+  parts.head.add(eyeL);
+  var eyeR = new THREE.Mesh(eyeGeom, eyeMat);
+  eyeR.position.set(headR * 0.6, headR * 0.15, -headR * 0.45);
+  parts.head.add(eyeR);
+
+  // 鼻子（粉色小三角）
+  var nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), noseMat);
+  nose.position.set(headR * 0.95, -headR * 0.15, 0);
+  nose.scale.set(1.3, 0.8, 1);
+  parts.head.add(nose);
+
+  // 嘴下白色区
+  var muzzle = new THREE.Mesh(
+    new THREE.SphereGeometry(headR * 0.35, 12, 8),
+    new THREE.MeshStandardMaterial({ color: 0xD5CCC0, roughness: 0.85 })
+  );
+  muzzle.position.set(headR * 0.75, -headR * 0.3, 0);
+  muzzle.scale.set(1.2, 0.8, 1);
+  parts.head.add(muzzle);
+
+  // ---- 尾巴（弯曲锥形，用多段圆柱拼）----
+  parts.tail.position.set(-bodyLen / 2 + 0.05, 0.15, 0);
+  var tailSegs = 5;
+  for (var i = 0; i < tailSegs; i++) {
+    var t1 = i / tailSegs;
+    var t2 = (i + 1) / tailSegs;
+    var segR = tailR * (1 - t1 * 0.7);
+    var segGeom = new THREE.CylinderGeometry(segR * (1 - 1/tailSegs * 0.7), segR, tailLen / tailSegs, 8);
+    var seg = new THREE.Mesh(segGeom, i < 2 ? furMat : darkFurMat);
+    // 尾巴向上弯曲
+    var angle = t1 * 1.2; // 弯曲角度
+    var prevAngle = (i > 0 ? (i - 1) / tailSegs : 0) * 1.2;
+    seg.position.set(
+      -Math.sin(angle) * tailLen * t1 * 0.4 - i * (tailLen / tailSegs) * 0.7,
+      Math.cos(angle - Math.PI / 2) * tailLen * 0.15 + i * 0.08,
+      0
+    );
+    seg.rotation.z = -Math.PI / 2 + angle * 0.7;
+    seg.castShadow = true;
+    parts.tail.add(seg);
+  }
+
+  // ---- 4 条腿（圆柱 + 脚掌）----
+  var legGeom = new THREE.CylinderGeometry(legR, legR * 1.15, legH, 10);
+  var pawGeom = new THREE.SphereGeometry(legR * 1.4, 10, 6);
   var legPositions = [
-    [voxelSize * 3.5, -voxelSize * 1.4, voxelSize * 0.5],   // 前左
-    [voxelSize * 3.5, -voxelSize * 1.4, -voxelSize * 0.5],  // 前右
-    [-voxelSize * 3.5, -voxelSize * 1.4, voxelSize * 0.5],  // 后左
-    [-voxelSize * 3.5, -voxelSize * 1.4, -voxelSize * 0.5], // 后右
+    [bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, bodyW * 0.45],   // 前左
+    [bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, -bodyW * 0.45],  // 前右
+    [-bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, bodyW * 0.45],  // 后左
+    [-bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, -bodyW * 0.45], // 后右
   ];
   legPositions.forEach(function(pos, i) {
-    var leg = new THREE.Mesh(legGeom, legMat);
-    leg.position.set(pos[0] * state.facing, pos[1], pos[2]);
+    var leg = new THREE.Mesh(legGeom, furMat);
+    leg.position.set(pos[0], pos[1], pos[2]);
     leg.castShadow = true;
     leg.receiveShadow = true;
+    // 脚掌
+    var paw = new THREE.Mesh(pawGeom, padMat);
+    paw.position.set(pos[0], pos[1] - legH / 2, pos[2]);
+    paw.scale.set(1, 0.5, 1.3);
+    paw.castShadow = true;
+    // 腿的 pivot 在顶部（髋关节位置），这样旋转时腿像摆锤
+    legs[i].position.set(0, -bodyH / 2 + 0.05, 0);
     legs[i].add(leg);
-    legs[i].position.y = 1.2;
+    legs[i].add(paw);
+    // 把腿和脚的局部坐标偏移，使 pivot 在腿顶
+    leg.position.y = -legH / 2;
+    leg.position.x = pos[0];
+    leg.position.z = pos[2];
+    paw.position.y = -legH + 0.05;
+    paw.position.x = pos[0];
+    paw.position.z = pos[2];
   });
-  
-  // 各部位子组的初始位置（让旋转中心合理）
-  // 这里简化：每个部位 Group 绕自己中心转
-  
-  // 调整整体的 y 使脚踩地面
-  catGroup.position.y = voxelSize * 1.6;
-  
+
+  // 整体 y 调整：让脚掌底面贴地面
+  catGroup.position.y = legH + bodyH / 2;
+
   state.loaded = true;
   hint.style.display = 'none';
 }
