@@ -226,6 +226,43 @@
     line-height: 1.75;
   }
   .source-note code { background: var(--panel); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; }
+
+  .param-tbl {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 4px;
+    font-size: 12.5px;
+  }
+  .param-tbl th {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .param-tbl td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .param-tbl td:nth-child(4) { color: var(--ink); }
+  .param-tbl tr:last-child td { border-bottom: none; }
+
+  .sc-line { font-size: 13px; margin-bottom: 8px; }
+  .sc-line strong { color: var(--ink); }
+  .sc-row {
+    padding: 6px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .sc-row.ok span { color: #2a8a3a; font-weight: 600; margin-right: 6px; }
+  .sc-row.fail span { color: #b03a3a; font-weight: 600; margin-right: 6px; }
+  .sc-row:last-child { border-bottom: none; }
 </style>
 </head>
 <body>
@@ -343,6 +380,32 @@
       <span class="num">4</span>
       <h5>路径</h5>
       <div>部件组合成 SVG 路径输出。静态导出当前帧；动态导出 SMIL 动画循环。</div>
+    </div>
+  </div>
+
+  <div class="limits">
+    <h3>自检</h3>
+    <div id="selfcheck-out"></div>
+  </div>
+
+  <div class="limits">
+    <h3>参数 —— 全部 HEURISTIC</h3>
+    <table class="param-tbl">
+      <thead>
+        <tr><th>参数</th><th>默认</th><th>范围</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>网格宽度</td><td>64</td><td>16 – 128</td><td>栅格化粒度。越大越细，但渲染开销线性上升</td></tr>
+        <tr><td>背景剔除阈值</td><td>28</td><td>0 – 100</td><td>按亮度剥背景。纯白背景推荐 28，杂背景调到 50 以上</td></tr>
+        <tr><td>单元填充判定</td><td>0.45</td><td>0.05 – 0.95</td><td>格子里多少比例被原图覆盖才算「有猫」</td></tr>
+        <tr><td>牵引绳长</td><td>2.03</td><td>固定</td><td>单位是「体长」。附录 R 明确排除伸缩配置——不许调</td></tr>
+        <tr><td>摆动相位差</td><td>0.35</td><td>固定</td><td>左右摆动的相位差，模拟猫步</td></tr>
+        <tr><td>速度上限</td><td>1.4</td><td>固定</td><td>单位是「体长/秒」。绳绷直时取这个</td></tr>
+      </tbody>
+    </table>
+    <div class="source-note" style="margin-top:8px;">
+      本页每一个数字都是 HEURISTIC：没有一条来自公开信源。
+      调速三条（网格、阈值、填充）会改动管线；其余在源码顶部一处定义。
     </div>
   </div>
 
@@ -872,6 +935,20 @@
   }
   window.cyberStrollSelfCheck = selfCheck;
   window.cyberStrollState = state;
+
+  // 渲染自检结果
+  (function() {
+    var out = document.getElementById('selfcheck-out');
+    if (!out) return;
+    var checks = selfCheck();
+    var pass = checks.filter(function(c) { return c[1]; }).length;
+    var html = '<div class="sc-line"><strong>' + pass + ' / ' + checks.length + ' 通过</strong></div>';
+    checks.forEach(function(c) {
+      var ok = c[1];
+      html += '<div class="sc-row ' + (ok ? 'ok' : 'fail') + '"><span>' + (ok ? '✓' : '✗') + '</span> ' + c[0] + '</div>';
+    });
+    out.innerHTML = html;
+  })();
 })();
 </script>
 
