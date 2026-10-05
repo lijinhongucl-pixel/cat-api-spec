@@ -133,12 +133,16 @@
 
     return {
       accept: true,
+      reason: 'ok',
       visitor: {
         petType: type,
         petName: name,
+        petSVG: svg,
         fromSite: String(payload.fromSite || '').slice(0, 80),
         fromSiteId: payload.fromSiteId || '',
+        direction: (typeof payload.direction === 'string') ? payload.direction : 'right',
         ts: Number(payload.ts) || Date.now(),
+        // 兼容字段：老页面可能读 .svg
         svg: svg,
         // 标记：造型是他站送的还是内置兜底的
         svgFallback: !payload.petSVG
