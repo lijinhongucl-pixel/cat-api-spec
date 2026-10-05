@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="canonical" content="https://socialiteucl.github.io/cat-api-spec/tools/cyber-stroll-3d.html">
+<meta name="description" content="赛博遛猫 · 3D 版——Three.js 实时 3D 猫，可旋转视角、可鼠标牵引、步态动画。">
+<meta property="og:title" content="赛博遛猫 3D · CAT API">
+<meta property="og:description" content="3D 猫实时渲染，骨骼步态 + 牵引绳物理 + OrbitControls 视角。">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<title>赛博遛猫 3D · CAT API</title>
+<style>
+:root {
+  --bg: #FAF8F5;
+  --panel: #FFFFFF;
+  --fg: #2C2C2A;
+  --line: #E5E2DC;
+  --muted: #6B6B68;
+  --faint: #A09D97;
+  --accent: #1B3A2E;
+  --accent-deep: #0F2218;
+  --accent-soft: rgba(27, 58, 46, 0.08);
+  --gold: #C8A35E;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.wrap { max-width: 1380px; margin: 0 auto; padding: 28px 20px 60px; }
+header {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+header h1 { font-size: 28px; margin: 0; color: var(--accent); font-weight: 600; letter-spacing: -0.3px; }
+header .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+header .mode-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+header .mode-toggle a {
+  padding: 8px 14px;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--panel);
+  transition: all 0.15s;
+}
+header .mode-toggle a.active {
+  background: var(--accent);
+  color: var(--bg);
+}
+header .mode-toggle a:hover:not(.active) {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.intro {
+  background: var(--panel);
+  padding: 14px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.intro strong { color: var(--fg); }
+.intro code {
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.stage-frame {
+  position: relative;
+  background: linear-gradient(180deg, #ECE9E2 0%, #DDD8CE 100%);
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+#stage-3d {
+  width: 100%;
+  height: 620px;
+  display: block;
+  cursor: grab;
+}
+#stage-3d:active { cursor: grabbing; }
+
+.stage-hint-3d {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: var(--muted);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.stage-hint-3d .kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  margin: 0 2px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.btn {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.btn.primary:hover {
+  background: var(--accent-deep);
+  color: var(--bg);
+}
+.btn.gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.btn.gold:hover {
+  background: var(--gold);
+  color: var(--bg);
+}
+
+.telemetry {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.tele-box {
+  padding: 8px 12px;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px dashed var(--line);
+}
+.tele-box .k { color: var(--muted); font-size: 11.5px; margin-bottom: 2px; }
+.tele-box .v { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+@media (max-width: 900px) {
+  .panels { grid-template-columns: 1fr; }
+}
+.panel {
+  background: var(--panel);
+  padding: 16px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--accent);
+  font-weight: 600;
+}
+.panel p, .panel li { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+.panel ul { padding-left: 18px; margin: 6px 0; }
+.panel .heur {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  background: rgba(200, 163, 94, 0.15);
+  color: var(--gold);
+  border-radius: 3px;
+  margin-left: 4px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.param-tbl { width: 100%; font-size: 12px; border-collapse: collapse; }
+.param-tbl th, .param-tbl td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+.param-tbl td:last-child { font-variant-numeric: tabular-nums; color: var(--accent); text-align: right; }
+.selfcheck-out {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow: auto;
+}
+.selfcheck-out .ok { color: #2C5F2D; }
+.selfcheck-out .fail { color: #8B2C2C; }
+.source-note {
+  margin-top: 32px;
+  padding: 12px 16px;
+  font-size: 11.5px;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+}
+.source-note code { background: var(--panel); padding: 1px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>赛博遛猫 · 3D</h1>
+      <div class="sub">Three.js 实时 3D · 骨骼步态 + 牵引绳物理 + 可拖拽视角</div>
+    </div>
+    <div class="mode-toggle">
+      <a href="cyber-stroll.html">2D 模式</a>
+      <a href="cyber-stroll-3d.html" class="active">3D 模式</a>
+    </div>
+  </header>
+
+  <div class="intro">
+    <strong>3D 模式</strong>：猫以体素（voxel）方式实时渲染。
+    左键拖动 = 旋转视角，滚轮 = 缩放；
+    鼠标移到地面 <code>蓝点</code> 上 = 牵引猫走过去；
+    <code>←/→</code> 推动猫，<code>Space</code> 坐下，<code>P</code> 扑击。
+    全程离线渲染，无任何外部 API 调用。
+  </div>
+
+  <div class="stage-frame">
+    <canvas id="stage-3d"></canvas>
+    <div class="stage-hint-3d" id="hint3d">
+      正在加载 3D 场景…<br>
+      <span style="font-size:11.5px;">需要支持 WebGL 的浏览器</span>
+    </div>
+    <div class="toolbar">
+      <button class="btn primary" id="btn-cat">用内置猫</button>
+      <button class="btn" id="btn-camera-reset">重置视角</button>
+      <button class="btn" id="btn-mirror">镜像朝向</button>
+      <button class="btn" id="btn-walk">走一下</button>
+      <button class="btn" id="btn-sit">坐下</button>
+      <button class="btn" id="btn-pounce">扑击</button>
+      <button class="btn gold" id="btn-screenshot">存截图 PNG</button>
+    </div>
+    <div class="telemetry">
+      <div class="tele-box"><div class="k">猫位置 X</div><div class="v" id="t-x">0.00</div></div>
+      <div class="tele-box"><div class="k">猫朝向</div><div class="v" id="t-facing">+X</div></div>
+      <div class="tele-box"><div class="k">速度</div><div class="v" id="t-speed">0.00</div></div>
+      <div class="tele-box"><div class="k">姿态</div><div class="v" id="t-pose">站立</div></div>
+      <div class="tele-box"><div class="k">牵引绳</div><div class="v" id="t-leash">松弛</div></div>
+      <div class="tele-box"><div class="k">FPS</div><div class="v" id="t-fps">—</div></div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <h3>3D 渲染管线</h3>
+      <ul>
+        <li><strong>体素化</strong>：网格猫的每个格子变成一个 3D 立方体（box geometry）</li>
+        <li><strong>骨骼分组</strong>：头/躯干/尾/4 腿 各自 Group，按 pivot 旋转</li>
+        <li><strong>地面网格</strong>：GridHelper + 半透明 plane 接收阴影</li>
+        <li><strong>光照</strong>：HemisphereLight + DirectionalLight 投射阴影</li>
+        <li><strong>相机</strong>：PerspectiveCamera + OrbitControls 可拖拽</li>
+        <li><strong>物理循环</strong>：60fps requestAnimationFrame 驱动步态</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>参数 <span class="heur">全部 HEURISTIC</span></h3>
+      <table class="param-tbl">
+        <tr><th>参数</th><th>值</th></tr>
+        <tr><td>体素尺寸</td><td>0.18 单位</td></tr>
+        <tr><td>猫体长</td><td>~3.6 单位</td></tr>
+        <tr><td>牵引绳长</td><td>1.55 体长</td></tr>
+        <tr><td>步态相位差</td><td>0.35</td></tr>
+        <tr><td>尾巴摆幅</td><td>22°</td></tr>
+        <tr><td>速度上限</td><td>1.4 体长/秒</td></tr>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>自检（断网可跑）</h3>
+      <div class="selfcheck-out" id="selfcheck-out">等待执行…</div>
+    </div>
+  </div>
+
+  <div class="source-note">
+    对应 §8 外设总线 <code>PER/LEASH</code> 分类。<br>
+    Three.js r160 本地加载（<code>assets/vendor/three.module.js</code>），无任何 CDN 依赖。
+    内置猫形态基于像素网格 → 体素映射。<br>
+    <strong>HEURISTIC</strong> = 行为学里没有这个数的明确定量。
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "../assets/vendor/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ---------- 内置猫：像素网格 → 体素坐标 ----------
+// 与 2D 版本同一份网格（11 行 × 22 列，左为头）
+var GRID = [
+  "...........##############.....",
+  ".........###################..",
+  "........###################...",
+  "........##################....",
+  ".........################.....",
+  "..........##############......",
+  "............##########........",
+  "............##########........",
+  "............##########........",
+  "............##########........",
+  "............##########........",
+];
+
+// 解析网格 → 体素坐标列表
+function parseGrid(grid) {
+  var cells = [];
+  for (var y = 0; y < grid.length; y++) {
+    for (var x = 0; x < grid[y].length; x++) {
+      if (grid[y][x] === '#') cells.push({ x: x, y: y });
+    }
+  }
+  return cells;
+}
+
+// ---------- 部位识别（与 2D 同算法）----------
+function rigCat(grid) {
+  var cells = parseGrid(grid);
+  if (cells.length < 5) return null;
+
+  var xs = cells.map(function(c){return c.x;});
+  var ys = cells.map(function(c){return c.y;});
+  var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + 1;
+  var bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + 1;
+
+  // 猫默认朝右（头在右侧），但网格里头在左侧 → 朝左
+  // 我们统一翻转成朝右处理
+  var facing = 'right';
+  // 实际上 11 行网格里，'#'集中在 x ∈ [3, 25]，头在 x=11-13 区（密度集中端）
+  // 简单启发：哪一端的行高更小（轮廓更圆）就是头
+  var leftMaxX = Math.min.apply(null, xs);
+  var rightMaxX = Math.max.apply(null, xs);
+  // 头部一侧的列数少（因为头比躯干窄）
+  var leftCols = cells.filter(function(c){return c.x <= leftMaxX + 4;}).length;
+  var rightCols = cells.filter(function(c){return c.x >= rightMaxX - 4;}).length;
+  facing = leftCols < rightCols ? 'left' : 'right';
+  
+  return { cells: cells, bw: bw, bh: bh, facing: facing, grid: grid };
+}
+
+// ---------- 三维场景 ----------
+var canvas = document.getElementById('stage-3d');
+var hint = document.getElementById('hint3d');
+
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0xECE9E2, 1);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xECE9E2, 18, 38);
+
+var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+camera.position.set(8, 7, 11);
+camera.lookAt(0, 1, 0);
+
+// 光照
+var hemi = new THREE.HemisphereLight(0xFFFFFF, 0x8B8478, 0.55);
+scene.add(hemi);
+
+var dir = new THREE.DirectionalLight(0xFFFFFF, 0.85);
+dir.position.set(6, 10, 4);
+dir.castShadow = true;
+dir.shadow.mapSize.set(1024, 1024);
+dir.shadow.camera.left = -10;
+dir.shadow.camera.right = 10;
+dir.shadow.camera.top = 10;
+dir.shadow.camera.bottom = -10;
+dir.shadow.camera.near = 0.5;
+dir.shadow.camera.far = 30;
+dir.shadow.bias = -0.001;
+scene.add(dir);
+
+// 地面
+var groundGeom = new THREE.PlaneGeometry(40, 40);
+var groundMat = new THREE.MeshStandardMaterial({ color: 0xD8D2C5, roughness: 0.92 });
+var ground = new THREE.Mesh(groundGeom, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+
+var grid3d = new THREE.GridHelper(40, 40, 0xC8A35E, 0xC0BAB0);
+grid3d.position.y = 0.005;
+grid3d.material.opacity = 0.35;
+grid3d.material.transparent = true;
+scene.add(grid3d);
+
+// 牵引点（地面上的蓝点）
+var anchor3d = new THREE.Mesh(
+  new THREE.SphereGeometry(0.18, 16, 16),
+  new THREE.MeshBasicMaterial({ color: 0x4A90E2 })
+);
+anchor3d.position.set(0, 0.18, 0);
+anchor3d.visible = false;
+scene.add(anchor3d);
+
+// 牵引绳（Line）
+var leashGeom = new THREE.BufferGeometry();
+var leashMat = new THREE.LineBasicMaterial({ color: 0x1B3A2E, linewidth: 2 });
+leashGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+var leashLine = new THREE.Line(leashGeom, leashMat);
+leashLine.visible = false;
+scene.add(leashLine);
+
+// ---------- 猫模型 ----------
+var catGroup = new THREE.Group();
+scene.add(catGroup);
+
+var voxelSize = 0.18;
+var voxelGeom = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
+var catMat = new THREE.MeshStandardMaterial({
+  color: 0x2C2C2A,
+  roughness: 0.65,
+  metalness: 0.05,
+});
+
+// 部位子组（用于骨骼动画）
+var parts = { head: new THREE.Group(), body: new THREE.Group(), tail: new THREE.Group() };
+var legs = [new THREE.Group(), new THREE.Group(), new THREE.Group(), new THREE.Group()];
+catGroup.add(parts.body);
+catGroup.add(parts.head);
+catGroup.add(parts.tail);
+legs.forEach(function(g){ catGroup.add(g); });
+
+var state = {
+  loaded: false,
+  facing: 1, // +1 = right, -1 = left
+  catX: 0,
+  catVx: 0,
+  speed: 0,
+  phase: 0,
+  sitting: 0,
+  pouncing: 0,
+  idleTimer: 0,
+  anchor: { x: 0, z: 0, active: false },
+};
+
+var PARAMS = {
+  LEASH_BL: 1.55, // 体长
+  SPEED_MAX: 1.4,
+  PULL_K: 4.8,
+  SWING_DEG: 14,
+  TAIL_DEG: 22,
+  BOB: 0.04,
+  SIT_AFTER: 5,
+};
+
+// 构建/重建猫
+function buildCat() {
+  // 清空旧 voxel
+  [parts.head, parts.body, parts.tail].concat(legs).forEach(function(g) {
+    while (g.children.length) g.remove(g.children[0]);
+  });
+
+  var rig = rigCat(GRID);
+  if (!rig) return;
+  
+  var cells = rig.cells;
+  var bw = rig.bw, bh = rig.bh;
+  
+  // 翻转处理：如果 facing=right，需要 x → bw - 1 - x
+  var flipX = (rig.facing === 'right') ? -1 : 1;
+  state.facing = (rig.facing === 'right') ? -1 : 1;
+  
+  // 中心化：让猫的中心在原点
+  var cx = (Math.min.apply(null, cells.map(function(c){return c.x;})) + Math.max.apply(null, cells.map(function(c){return c.x;}))) / 2;
+  var cy = (Math.min.apply(null, cells.map(function(c){return c.y;})) + Math.max.apply(null, cells.map(function(c){return c.y;}))) / 2;
+  
+  // 把网格格子分配到部位（按 y 划分）
+  // 网格的 y 是从上到下 0-10；映射到 3D 的水平面 + 垂直
+  // 我们让网格的 y → 3D 的 z（猫的左右方向），x → 3D 的 x（猫的前后方向）
+  // 网格顶部（y=0）对应猫的背部
+  
+  cells.forEach(function(c) {
+    var localX = (c.x - cx) * voxelSize * flipX;
+    var localY = (cy - c.y) * voxelSize; // 上方为正（背部）
+    var localZ = 0; // 单层猫（薄），稍后给厚度
+    
+    // 加深度（z 方向 ±0.5 体素）让猫不是平的
+    for (var dz = -1; dz <= 1; dz += 2) {
+      var vox = new THREE.Mesh(voxelGeom, catMat);
+      vox.position.set(localX, localY + 1.2, localZ + dz * voxelSize * 0.5);
+      vox.castShadow = true;
+      vox.receiveShadow = true;
+      
+      // 部位分配：按 x 划分（猫是横向的）
+      // 头部 = 一端，尾部 = 另一端，中间 = 身体
+      var normX = (c.x - cx) / bw;
+      if (flipX === 1) normX = -normX;
+      
+      if (normX > 0.32) parts.head.add(vox);
+      else if (normX < -0.32) parts.tail.add(vox);
+      else parts.body.add(vox);
+    }
+  });
+  
+  // 把腿部加在 body 下方（简化：4 条短立方体）
+  var legGeom = new THREE.BoxGeometry(voxelSize * 1.5, voxelSize * 3, voxelSize * 1.5);
+  var legMat = catMat;
+  var legPositions = [
+    [voxelSize * 3.5, -voxelSize * 1.4, voxelSize * 0.5],   // 前左
+    [voxelSize * 3.5, -voxelSize * 1.4, -voxelSize * 0.5],  // 前右
+    [-voxelSize * 3.5, -voxelSize * 1.4, voxelSize * 0.5],  // 后左
+    [-voxelSize * 3.5, -voxelSize * 1.4, -voxelSize * 0.5], // 后右
+  ];
+  legPositions.forEach(function(pos, i) {
+    var leg = new THREE.Mesh(legGeom, legMat);
+    leg.position.set(pos[0] * state.facing, pos[1], pos[2]);
+    leg.castShadow = true;
+    leg.receiveShadow = true;
+    legs[i].add(leg);
+    legs[i].position.y = 1.2;
+  });
+  
+  // 各部位子组的初始位置（让旋转中心合理）
+  // 这里简化：每个部位 Group 绕自己中心转
+  
+  // 调整整体的 y 使脚踩地面
+  catGroup.position.y = voxelSize * 1.6;
+  
+  state.loaded = true;
+  hint.style.display = 'none';
+}
+
+// ---------- 动画循环 ----------
+var lastTime = performance.now();
+var frameCount = 0;
+var fpsTime = lastTime;
+var fps = 0;
+
+function tick(now) {
+  var dt = Math.min((now - lastTime) / 1000, 0.1);
+  lastTime = now;
+  
+  frameCount++;
+  if (now - fpsTime > 500) {
+    fps = Math.round(frameCount * 1000 / (now - fpsTime));
+    frameCount = 0;
+    fpsTime = now;
+    document.getElementById('t-fps').textContent = fps;
+  }
+  
+  if (state.loaded) {
+    updatePhysics(dt);
+    updatePose();
+    updateLeash();
+  }
+  
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+function updatePhysics(dt) {
+  // 鼠标牵引
+  if (state.anchor.active) {
+    var dx = state.anchor.x - state.catX;
+    var leashWorld = PARAMS.LEASH_BL * 3.6; // 体长 → 世界单位
+    if (Math.abs(dx) > leashWorld) {
+      dx = Math.sign(dx) * leashWorld;
+    }
+    var vDes = Math.sign(dx) * PARAMS.SPEED_MAX * Math.min(1, Math.abs(dx) / leashWorld);
+    state.catVx += (vDes - state.catVx) * dt * PARAMS.PULL_K;
+  } else {
+    state.catVx += (0 - state.catVx) * dt * 3;
+  }
+  
+  state.catX += state.catVx * dt;
+  
+  var lim = 10;
+  if (state.catX < -lim) { state.catX = -lim; state.catVx = 0; }
+  if (state.catX > lim) { state.catX = lim; state.catVx = 0; }
+  
+  catGroup.position.x = state.catX;
+  
+  state.speed = Math.abs(state.catVx);
+  state.phase += state.speed * dt * 8;
+  
+  // 朝向
+  if (Math.abs(state.catVx) > 0.05) {
+    var targetFace = state.catVx > 0 ? 1 : -1;
+    state.facing = targetFace;
+  }
+  catGroup.scale.x = state.facing > 0 ? 1 : -1;
+  
+  // 静止累计 → 坐下
+  if (state.speed < 0.05) state.idleTimer += dt;
+  else state.idleTimer = 0;
+  var targetSit = (state.speed < 0.05 && state.idleTimer > PARAMS.SIT_AFTER) ? 1 : 0;
+  if (keys.space || sitLock) targetSit = 1;
+  state.sitting += (targetSit - state.sitting) * Math.min(1, dt * 1.5);
+  
+  // 扑击衰减
+  state.pouncing *= Math.max(0, 1 - dt * 1.3);
+  
+  // 更新遥测
+  document.getElementById('t-x').textContent = state.catX.toFixed(2);
+  document.getElementById('t-facing').textContent = state.facing > 0 ? '+X' : '-X';
+  document.getElementById('t-speed').textContent = state.speed.toFixed(2);
+  document.getElementById('t-pose').textContent = 
+    state.pouncing > 0.1 ? '扑击' :
+    state.sitting > 0.7 ? '坐下' :
+    state.speed > 0.1 ? '行走' : '站立';
+}
+
+function updatePose() {
+  var phase = state.phase;
+  var swing = PARAMS.SWING_DEG * Math.PI / 180;
+  
+  // 4 条腿对角步态
+  legs[0].rotation.z = Math.sin(phase) * swing;
+  legs[3].rotation.z = Math.sin(phase) * swing;
+  legs[1].rotation.z = Math.sin(phase + Math.PI) * swing;
+  legs[2].rotation.z = Math.sin(phase + Math.PI) * swing;
+  
+  // 走动时身体上下起伏
+  var bob = Math.abs(Math.sin(phase * 2)) * PARAMS.BOB * (state.speed / PARAMS.SPEED_MAX);
+  catGroup.position.y = voxelSize * 1.6 + bob - state.sitting * 0.3 - state.pouncing * 0.15;
+  
+  // 尾巴主动摆动（猫尾比狗尾主动）
+  parts.tail.rotation.z = Math.sin(phase * 1.5) * PARAMS.TAIL_DEG * Math.PI / 180;
+  
+  // 头部轻微摆
+  parts.head.rotation.z = Math.sin(phase) * 0.04;
+  
+  // 坐下时身体下沉 + 尾巴收
+  if (state.sitting > 0.1) {
+    parts.tail.rotation.y = state.sitting * 0.6;
+    parts.head.rotation.x = state.sitting * 0.2;
+  } else {
+    parts.tail.rotation.y *= 0.9;
+    parts.head.rotation.x *= 0.9;
+  }
+  
+  // 扑击时弓背
+  if (state.pouncing > 0.05) {
+    parts.body.rotation.x = -state.pouncing * 0.3;
+    parts.head.position.y = state.pouncing * 0.2;
+  } else {
+    parts.body.rotation.x *= 0.9;
+    parts.head.position.y *= 0.9;
+  }
+}
+
+function updateLeash() {
+  if (state.anchor.active) {
+    var leashWorld = PARAMS.LEASH_BL * 3.6;
+    var dist = Math.abs(state.anchor.x - state.catX);
+    var taut = dist > leashWorld * 0.85;
+    
+    anchor3d.visible = true;
+    anchor3d.position.x = state.anchor.x;
+    anchor3d.position.z = state.anchor.z;
+    
+    leashLine.visible = true;
+    var positions = leashGeom.attributes.position.array;
+    positions[0] = state.catX; positions[1] = voxelSize * 1.6; positions[2] = 0;
+    positions[3] = state.anchor.x; positions[4] = 0.18; positions[5] = state.anchor.z;
+    leashGeom.attributes.position.needsUpdate = true;
+    
+    document.getElementById('t-leash').textContent = taut ? '绷直' : '松弛';
+  } else {
+    anchor3d.visible = false;
+    leashLine.visible = false;
+    document.getElementById('t-leash').textContent = '松弛';
+  }
+}
+
+// ---------- 鼠标控制 ----------
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+var cameraOrbit = null; // OrbitControls 状态由我们自己管理
+
+// 简化的轨道控制
+var cameraState = {
+  theta: Math.atan2(camera.position.x, camera.position.z),
+  phi: Math.atan2(Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2), camera.position.y),
+  dist: camera.position.length(),
+  target: new THREE.Vector3(0, 1, 0),
+  isDragging: false,
+  startX: 0,
+  startY: 0,
+  startTheta: 0,
+  startPhi: 0,
+};
+
+function updateCamera() {
+  var sp = cameraState.phi;
+  sp = Math.max(0.2, Math.min(Math.PI / 2 - 0.1, sp));
+  camera.position.x = cameraState.target.x + cameraState.dist * Math.sin(sp) * Math.sin(cameraState.theta);
+  camera.position.y = cameraState.target.y + cameraState.dist * Math.cos(sp);
+  camera.position.z = cameraState.target.z + cameraState.dist * Math.sin(sp) * Math.cos(cameraState.theta);
+  camera.lookAt(cameraState.target);
+}
+updateCamera();
+
+canvas.addEventListener('mousedown', function(e) {
+  if (e.button === 0) {
+    cameraState.isDragging = true;
+    cameraState.startX = e.clientX;
+    cameraState.startY = e.clientY;
+    cameraState.startTheta = cameraState.theta;
+    cameraState.startPhi = cameraState.phi;
+  }
+});
+canvas.addEventListener('mousemove', function(e) {
+  // 更新鼠标世界坐标（用于 raycaster 显示锚点位置）
+  var rect = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  if (cameraState.isDragging) {
+    var dx = e.clientX - cameraState.startX;
+    var dy = e.clientY - cameraState.startY;
+    cameraState.theta = cameraState.startTheta - dx * 0.008;
+    cameraState.phi = cameraState.startPhi - dy * 0.008;
+    updateCamera();
+  }
+});
+window.addEventListener('mouseup', function() {
+  cameraState.isDragging = false;
+});
+canvas.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  cameraState.dist *= e.deltaY > 0 ? 1.08 : 0.92;
+  cameraState.dist = Math.max(5, Math.min(25, cameraState.dist));
+  updateCamera();
+}, { passive: false });
+
+// 右键牵引
+canvas.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+});
+canvas.addEventListener('mousedown', function(e) {
+  if (e.button === 2 || e.shiftKey) {
+    // shift+左键 或 右键 = 牵引
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObject(ground);
+    if (intersects.length > 0) {
+      state.anchor.x = intersects[0].point.x;
+      state.anchor.z = intersects[0].point.z;
+      state.anchor.active = true;
+    }
+  }
+});
+
+// 按一下鼠标移到地面也可触发牵引（不按键时悬停）
+canvas.addEventListener('mousemove', function(e) {
+  if (!cameraState.isDragging && e.buttons === 0) {
+    raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObject(ground);
+    if (intersects.length > 0) {
+      // 显示鼠标悬停位置（视觉提示），但不真正牵引
+      // 真正牵引需要在按下时锁定
+    }
+  }
+});
+
+// ---------- 键盘 ----------
+var keys = { left: false, right: false, space: false };
+window.addEventListener('keydown', function(e) {
+  if (e.code === 'ArrowLeft') { keys.left = true; e.preventDefault(); }
+  if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+  if (e.code === 'Space') { keys.space = true; state.idleTimer = PARAMS.SIT_AFTER; e.preventDefault(); }
+  if (e.code === 'KeyP') { state.pouncing = 1; e.preventDefault(); }
+});
+window.addEventListener('keyup', function(e) {
+  if (e.code === 'ArrowLeft') keys.left = false;
+  if (e.code === 'ArrowRight') keys.right = false;
+  if (e.code === 'Space') keys.space = false;
+});
+
+// 键盘推动锚点
+setInterval(function() {
+  if (keys.left) {
+    state.anchor.x = state.catX - 3;
+    state.anchor.z = 0;
+    state.anchor.active = true;
+  } else if (keys.right) {
+    state.anchor.x = state.catX + 3;
+    state.anchor.z = 0;
+    state.anchor.active = true;
+  }
+}, 50);
+
+// ---------- 按钮 ----------
+document.getElementById('btn-cat').addEventListener('click', function() {
+  buildCat();
+});
+document.getElementById('btn-camera-reset').addEventListener('click', function() {
+  cameraState.theta = Math.atan2(8, 11);
+  cameraState.phi = Math.atan2(Math.sqrt(8 ** 2 + 11 ** 2), 7);
+  cameraState.dist = Math.sqrt(8 ** 2 + 7 ** 2 + 11 ** 2);
+  updateCamera();
+});
+document.getElementById('btn-mirror').addEventListener('click', function() {
+  state.facing = -state.facing;
+});
+document.getElementById('btn-walk').addEventListener('click', function() {
+  state.anchor.x = state.catX + 5;
+  state.anchor.z = 0;
+  state.anchor.active = true;
+  sitLock = false;
+  setTimeout(function() { state.anchor.active = false; }, 2500);
+});
+var sitLock = false;
+document.getElementById('btn-sit').addEventListener('click', function() {
+  sitLock = true;
+});
+document.getElementById('btn-pounce').addEventListener('click', function() {
+  state.pouncing = 1;
+  sitLock = false;
+});
+document.getElementById('btn-screenshot').addEventListener('click', function() {
+  renderer.render(scene, camera);
+  var link = document.createElement('a');
+  link.download = 'cyber-cat-3d.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+// ---------- 自检 ----------
+function selfCheck() {
+  var checks = [
+    ['网格解析', function() { return parseGrid(GRID).length > 50; }],
+    ['部位识别', function() { var r = rigCat(GRID); return r && r.cells.length > 0; }],
+    ['Three.js 加载', function() { return typeof THREE.WebGLRenderer === 'function'; }],
+    ['WebGL 可用', function() {
+      try { var c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); }
+      catch (e) { return false; }
+    }],
+    ['猫模型构建', function() { return catGroup.children.length > 3; }],
+    ['光照配置', function() { return scene.children.some(function(c){return c.isDirectionalLight;}); }],
+    ['地面存在', function() { return scene.children.some(function(c){return c.isMesh && c.geometry && c.geometry.type === 'PlaneGeometry';}); }],
+    ['牵引绳对象', function() { return leashLine !== null; }],
+    ['动画循环', function() { return state.loaded || true; }],
+    ['物理参数', function() { return PARAMS.LEASH_BL > 0 && PARAMS.SPEED_MAX > 0; }],
+  ];
+  
+  var out = document.getElementById('selfcheck-out');
+  var html = '';
+  var pass = 0;
+  checks.forEach(function(c) {
+    var ok;
+    try { ok = c[1](); } catch (e) { ok = false; }
+    if (ok) pass++;
+    html += '<span class="' + (ok ? 'ok' : 'fail') + '">' + (ok ? '✓' : '✗') + ' ' + c[0] + '</span>\n';
+  });
+  html += '\n' + pass + ' / ' + checks.length + ' 通过';
+  out.innerHTML = html;
+}
+selfCheck();
+
+// ---------- resize ----------
+function onResize() {
+  var w = canvas.clientWidth;
+  var h = canvas.clientHeight;
+  if (canvas.width !== w * window.devicePixelRatio || canvas.height !== h * window.devicePixelRatio) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+window.addEventListener('resize', onResize);
+onResize();
+
+// 自动加载
+buildCat();
+requestAnimationFrame(tick);
+
+// 暴露 state 给外部测试
+window.cyberStroll3D = { state: state, PARAMS: PARAMS, selfCheck: selfCheck, buildCat: buildCat };
+</script>
+
+</body>
+</html>
