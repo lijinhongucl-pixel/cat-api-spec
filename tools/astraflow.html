@@ -156,6 +156,23 @@
   }
   .bubble-out .msg { margin-bottom: 12px; }
   .bubble-out .msg.assistant { background: rgba(27,58,46,0.04); border-radius: 6px; padding: 8px 10px; }
+  .usage-box {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    background: var(--panel);
+    font-size: 12.5px;
+  }
+  .usage-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto 1fr auto 1fr;
+    gap: 6px 10px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .usage-row > span:nth-child(odd) { color: var(--muted); }
+  .usage-row > span:nth-child(even) { font-weight: 600; font-variant-numeric: tabular-nums; }
   textarea {
     width: 100%;
     min-height: 90px;
@@ -355,6 +372,21 @@
         </div>
         <div class="bubble-out" id="chat-out">
           <div style="color:var(--faint);font-size:12.5px;">对话还没开始。猫在等你说话。</div>
+        </div>
+        <div id="usage-panel" class="usage-box">
+          <div class="usage-row">
+            <span>本轮</span><span id="u-last">—</span>
+            <span>累计调用</span><span id="u-calls">0</span>
+          </div>
+          <div class="usage-row">
+            <span>累计 input</span><span id="u-in">0</span>
+            <span>累计 output</span><span id="u-out">0</span>
+            <span>估算成本</span><span id="u-cost">$0.0000</span>
+          </div>
+          <div style="font-size:11px;color:var(--faint);margin-top:4px;">
+            成本估算 HEURISTIC：按通用模型均价 $0.002 / 1K output token，仅作数量级参考。
+            上下文超 12 条自动裁剪到最新 6 轮。
+          </div>
         </div>
       </div>
 
@@ -661,9 +693,25 @@
     if (state.history.length === 1 && sysPrompt.value.trim()) {
       state.history.unshift({ role: 'system', content: sysPrompt.value.trim() });
     }
+
+    // 上下文裁剪：超过 8 轮（约 16 条）时只保留系统 + 最新 6 轮
+    // 硬上限——超过的话老对话丢掉，避免 token 爆掉
+    var MAX_HISTORY = 12;
+    var trimmed = state.history.length > MAX_HISTORY
+      ? state.history.slice(-MAX_HISTORY)
+      : state.history.slice();
+    // 若裁剪后首条不是 system 且原 history 有 system，把 system 重新塞回前面
+    if (state.history[0] && state.history[0].role === 'system' && trimmed[0].role !== 'system') {
+      trimmed.unshift(state.history[0]);
+    }
+
+    // 粗估输入 token（中文经验值 1.5 字符/token）
+    var inText = trimmed.map(function(m) { return m.content; }).join('');
+    var inTokens = Math.ceil(inText.length / 1.5);
+
     var body = {
       model: chatModel.value.trim(),
-      messages: state.history,
+      messages: trimmed,
       temperature: parseFloat(temperature.value) || 0.7,
       stream: stream.checked,
     };
@@ -720,11 +768,32 @@
         var reply = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || JSON.stringify(data);
         appendBubble('assistant', reply);
         state.history.push({ role: 'assistant', content: reply });
+        updateUsage(data.usage || {}, inTokens, startTs);
       }
     } catch (e) {
-      if (e.name === 'AbortError') appendBubble('assistant', '（已中止）');
+      if (e.name === 'AbortError') { appendBubble('assistant', '（已中止）'); updateUsage({}, inTokens, startTs, true); }
       else appendBubble('assistant', '✗ ' + e.message);
     }
+  }
+
+  // ---------- 用量统计 ----------
+  // 成本估算 HEURISTIC：按通用模型均价 0.002 美元/1K output token 估算
+  // 不同模型实际价格差很大，这只是数量级参考
+  var COST_PER_1K_USD = 0.002;
+  function updateUsage(usage, inTokens, startTs, aborted) {
+    state.usage = state.usage || { calls: 0, inTokens: 0, outTokens: 0, costUSD: 0 };
+    state.usage.calls += 1;
+    state.usage.inTokens += (usage.prompt_tokens || inTokens);
+    state.usage.outTokens += (usage.completion_tokens || Math.ceil(((aborted ? 0 : 0)) / 1.5));
+    state.usage.costUSD = state.usage.outTokens * COST_PER_1K_USD / 1000;
+    var elapsed = ((Date.now() - startTs) / 1000).toFixed(1);
+    var el = document.getElementById('usage-panel');
+    if (!el) return;
+    el.querySelector('#u-calls').textContent = state.usage.calls;
+    el.querySelector('#u-in').textContent = state.usage.inTokens;
+    el.querySelector('#u-out').textContent = state.usage.outTokens;
+    el.querySelector('#u-cost').textContent = '$' + state.usage.costUSD.toFixed(4);
+    el.querySelector('#u-last').textContent = elapsed + 's' + (aborted ? '（已中止）' : '');
   }
 
   $('btn-abort').addEventListener('click', function() {
