@@ -431,11 +431,20 @@
 
 <script>
 /* ============================================================
-   赛博遛猫 · CyberStroll v1.0
-   纯前端图像→网格→部件→SVG 路径 管线，无依赖。
+   赛博遛猫 · CyberStroll v2.0
+   重写：图像→网格→部件→骨骼→姿态→动画 完整管线
+   猫的解剖与行为差异于狗：
+   - 腿短、躯干柔软（可弓背）
+   - 尾长且主动摆动（不只是被动平衡）
+   - 步态更轻、起伏更小
+   - 行为：走 / 坐 / 扑 / 弓背
    ============================================================ */
 (function() {
   'use strict';
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // ---------- DOM ----------
   var stage = document.getElementById('stage');
   var stageHint = document.getElementById('stageHint');
   var fileInput = document.getElementById('file-input');
@@ -445,491 +454,939 @@
   var btnExportSmil = document.getElementById('btn-export-smil');
   var btnReset = document.getElementById('btn-reset');
   var btnFromAstra = document.getElementById('btn-from-astraflow');
-  var pGrid = document.getElementById('p-grid');
-  var pBg = document.getElementById('p-bg');
-  var pFill = document.getElementById('p-fill');
-  var pInvert = document.getElementById('p-invert');
+  var telemetryOut = document.getElementById('telemetry');
 
-  var state = {
-    sourceCanvas: null,    // 原图栅格化 canvas
-    grid: null,            // 2D 数组：true 表示该格是猫
-    gridW: 0, gridH: 0,
-    cellPx: 0,
-    bbox: null,            // {minX, minY, maxX, maxY} 单位格
-    mirror: false,
-    catPos: null,          // {x, y} 猫当前坐标（像素）
-    catVel: {x: 0, y: 0},
-    pointer: null,         // {x, y} 鼠标坐标
-    keys: {},
-    sitting: false,
-    raf: 0,
-    imgWidth: 0, imgHeight: 0,
+  // ---------- 参数（全部 HEURISTIC）----------
+  var P = {
+    // 网格
+    GRID_W: 64, CELL_FILL: 0.45, BG_TOL: 28, INVERT: false,
+    // 解剖分界（占包围盒比例）
+    LEG_BAND: 0.65,     // 腿带起点（高于此 y 算腿）
+    TAIL_CUT: 0.18,     // 尾侧占 18%
+    HEAD_CUT: 0.74,     // 头侧占 26%（猫头比狗头占比稍大）
+    TAIL_THIN: 0.40,    // 尾带里列高低于上身带此比例才算尾
+    MIN_TAIL: 6,
+    // 步态
+    SWING_DEG: 11,      // 单腿摆幅（比狗轻）
+    STRIDE_BL: 0.50,
+    BOB_UNITS: 0.45,    // 起伏比狗小（猫步更安静）
+    TAIL_DEG: 18,       // 尾摆幅（比狗大——猫尾主动）
+    HEAD_DEG: 4.0,
+    ARCH_UNITS: 0.6,    // 弓背起伏
+    // 坐/扑
+    SIT_FOLD_DEG: 28,   // 坐下后腿折叠
+    SIT_DROP: 1.3,
+    POUNCE_ARCH: 2.0,   // 扑击前弓背峰值
+    // 牵引（猫绳比狗短，因为猫本身柔软不易扯远）
+    LEASH_BL: 1.55,     // 1.55 体长
+    PULL_K: 4.8,
+    MAX_SPEED_BL: 2.6,  // 体长/秒
+    SIT_AFTER: 5,       // 静止 N 秒后坐下
+    POUNCE_DECAY: 0.85  // 扑击状态衰减
   };
 
-  // ===== telemetry =====
+  // 舞台尺寸（与 viewBox 对应）
+  var STAGE = { w: 960, h: 360, ground: 286, bodyRatio: 0.42, widthRatio: 0.48 };
+
+  // ---------- 状态 ----------
+  var state = {
+    mode: 'idle',       // idle | builtin | image
+    grid: null, gridW: 0, gridH: 0,
+    cellPx: 0,
+    bbox: null,
+    mirror: false,
+    imgWidth: 0, imgHeight: 0,
+    pointerActive: false,
+    pointer: { x: 0, y: 0 },
+    catX: 0,            // 当前猫位置（单位：体长/秒 → 后续按 cellPx 折算到舞台）
+    catVx: 0,
+    catVy: 0,
+    phase: 0,           // 步态相位
+    speed: 0,           // 体长/秒
+    facing: 1,
+    sitting: 0,         // 0..1
+    pouncing: 0,        // 0..1 弓背程度
+    idleTimer: 0,       // 静止计时
+    anchor: { x: STAGE.w / 2, y: STAGE.ground - 100 } // 牵引点
+  };
+
+  // ---------- 工具 ----------
+  function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+  function r2(n) { return Math.round(n * 100) / 100; }
+  function now() { return performance.now(); }
   function tel(id, v) { var el = document.getElementById(id); if (el) el.textContent = v; }
 
-  function updateTelemetry() {
-    tel('t-state', state.sourceCanvas ? (state.sitting ? 'sitting' : 'walking') : 'idle');
-    tel('t-grid', state.grid ? state.gridW + ' × ' + state.gridH : '—');
-    if (state.grid) {
-      var filled = 0;
-      for (var y = 0; y < state.gridH; y++)
-        for (var x = 0; x < state.gridW; x++)
-          if (state.grid[y][x]) filled++;
-      tel('t-filled', filled + ' / ' + (state.gridW * state.gridH));
-    } else tel('t-filled', '—');
-    tel('t-bbox', state.bbox ? (state.bbox.minX + ',' + state.bbox.minY + ' → ' + state.bbox.maxX + ',' + state.bbox.maxY) : '—');
-    tel('t-orient', state.bbox ? (state.mirror ? '右→左（镜像）' : '左→右') : '—');
-    var v = state.catVel;
-    var speed = Math.sqrt(v.x * v.x + v.y * v.y);
-    tel('t-vel', speed.toFixed(2) + ' /秒');
-  }
+  // ---------- 猫的解剖装配 ----------
+  // 把网格化的猫分解成 8 个部位：头、躯干、尾、4 腿
+  // 每个部位有 pivot（旋转中心）和 cells（属于它的格子）
+  function rigCat(grid, gw, gh, headRight) {
+    var x0 = gw, y0 = gh, x1 = -1, y1 = -1, filled = 0;
+    var x, y;
+    for (y = 0; y < gh; y++) {
+      for (x = 0; x < gw; x++) {
+        if (!grid[y * gw + x]) continue;
+        filled++;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    if (!filled) return null;
 
-  // ===== 内置猫（程序生成的剪影）=====
-  function builtinCat(callback) {
-    var c = document.createElement('canvas');
-    c.width = 256; c.height = 256;
-    var ctx = c.getContext('2d');
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, 256, 256);
-    ctx.fillStyle = '#2C2C2A';
-    // 侧卧猫剪影（简化轮廓）
-    ctx.beginPath();
-    ctx.ellipse(128, 150, 78, 36, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // 头
-    ctx.beginPath();
-    ctx.arc(70, 130, 32, 0, Math.PI * 2);
-    ctx.fill();
-    // 耳朵
-    ctx.beginPath();
-    ctx.moveTo(56, 105); ctx.lineTo(48, 78); ctx.lineTo(72, 100); ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(78, 100); ctx.lineTo(86, 78); ctx.lineTo(92, 105); ctx.closePath();
-    ctx.fill();
-    // 尾巴
-    ctx.lineWidth = 14;
-    ctx.strokeStyle = '#2C2C2A';
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(200, 142);
-    ctx.quadraticCurveTo(232, 116, 226, 86);
-    ctx.stroke();
-    callback(c);
-  }
+    var bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    var legTop = y0 + Math.max(1, Math.round(bh * P.LEG_BAND));
+    var headStart = headRight ? x0 + Math.round(bw * P.HEAD_CUT) : x0;
+    var headEnd = headRight ? x1 : x0 + Math.round(bw * (1 - P.HEAD_CUT));
+    var tailStart = headRight ? x0 : x0 + Math.round(bw * (1 - P.TAIL_CUT));
+    var tailEnd = headRight ? x0 + Math.round(bw * P.TAIL_CUT) : x1;
 
-  // ===== 图片→canvas =====
-  function imageToCanvas(src, callback) {
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-      var maxW = 512;
-      var scale = Math.min(1, maxW / img.width);
-      var c = document.createElement('canvas');
-      c.width = img.width * scale;
-      c.height = img.height * scale;
-      var ctx = c.getContext('2d');
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      callback(c);
-    };
-    img.onerror = function() { alert('图片加载失败'); };
-    img.src = src;
-  }
+    // 朝向：腿带之上，头尾两端哪边格多算哪边是头
+    if (headRight === undefined) {
+      var headBand = Math.max(1, Math.round(bw * 0.22));
+      var lMass = 0, rMass = 0;
+      for (y = y0; y < legTop; y++) {
+        for (x = x0; x < x0 + headBand; x++) if (grid[y * gw + x]) lMass++;
+        for (x = x1 - headBand + 1; x <= x1; x++) if (grid[y * gw + x]) rMass++;
+      }
+      headRight = rMass >= lMass;
+      // 重新计算
+      headStart = headRight ? x0 + Math.round(bw * P.HEAD_CUT) : x0;
+      headEnd = headRight ? x1 : x0 + Math.round(bw * (1 - P.HEAD_CUT));
+      tailStart = headRight ? x0 : x0 + Math.round(bw * (1 - P.TAIL_CUT));
+      tailEnd = headRight ? x0 + Math.round(bw * P.TAIL_CUT) : x1;
+    }
 
-  // ===== 管线：网格化 =====
-  function rasterize(srcCanvas) {
-    var gridW = parseInt(pGrid.value, 10) || 64;
-    var bgThresh = parseInt(pBg.value, 10) || 28;
-    var fillRatio = parseFloat(pFill.value) || 0.45;
-    var invert = pInvert.checked;
-
-    var tmp = document.createElement('canvas');
-    tmp.width = gridW;
-    var aspect = srcCanvas.height / srcCanvas.width;
-    tmp.height = Math.max(8, Math.round(gridW * aspect));
-    var ctx = tmp.getContext('2d');
-    ctx.drawImage(srcCanvas, 0, 0, tmp.width, tmp.height);
-    var data = ctx.getImageData(0, 0, tmp.width, tmp.height).data;
-
-    var gridH = tmp.height;
-    var grid = [];
-    for (var y = 0; y < gridH; y++) {
-      grid[y] = [];
-      for (var x = 0; x < gridW; x++) {
-        var i = (y * gridW + x) * 4;
-        var r = data[i], g = data[i + 1], b = data[i + 2];
-        var lum = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
-        var isBg = lum * 100 > bgThresh;  // 浅色当背景
-        var filled = invert ? isBg : !isBg;
-        grid[y][x] = filled;
+    // 把每个格子归类
+    var role = new Uint8Array(gw * gh); // 0 空 / 1 头 / 2 躯 / 3 尾 / 4 腿
+    for (y = 0; y < gh; y++) {
+      for (x = 0; x < gw; x++) {
+        if (!grid[y * gw + x]) continue;
+        var inHead = (x >= headStart && x <= headEnd && y < legTop);
+        var inTail = (x >= tailStart && x <= tailEnd && y < legTop);
+        var inLeg = (y >= legTop);
+        if (inHead) role[y * gw + x] = 1;
+        else if (inLeg) role[y * gw + x] = 4;
+        else if (inTail) role[y * gw + x] = 3;
+        else role[y * gw + x] = 2;
       }
     }
 
-    // 单元填充比例再筛一遍（连片才保留）
-    state.sourceCanvas = srcCanvas;
-    state.grid = grid;
-    state.gridW = gridW;
-    state.gridH = gridH;
-    state.cellPx = stage.clientWidth / gridW;
-    state.imgWidth = srcCanvas.width;
-    state.imgHeight = srcCanvas.height;
-    state.mirror = false;
-    state.sitting = false;
-    computeBBox();
-    placeCatCenter();
-    startLoop();
-    render();
-    updateTelemetry();
-  }
+    // 找腿带里的连续段 → 4 条腿
+    var legSegs = findLegSegments(grid, gw, gh, x0, x1, legTop, y1);
+    while (legSegs.length > 4) {
+      // 合并最近的两条
+      var bi = 0, bg = 1e9, i;
+      for (i = 0; i + 1 < legSegs.length; i++) {
+        var gap = legSegs[i + 1].x0 - legSegs[i].x1;
+        if (gap < bg) { bg = gap; bi = i; }
+      }
+      legSegs[bi].x1 = legSegs[bi + 1].x1;
+      legSegs[bi].cols += legSegs[bi + 1].cols;
+      legSegs.splice(bi + 1, 1);
+    }
+    while (legSegs.length < 4 && legSegs.length > 0) {
+      // 切最宽的一条
+      var wi = 0;
+      for (var k = 1; k < legSegs.length; k++) if (legSegs[k].cols > legSegs[wi].cols) wi = k;
+      if (legSegs[wi].cols < 2) break;
+      var mid = Math.floor((legSegs[wi].x0 + legSegs[wi].x1) / 2);
+      legSegs.splice(wi, 1,
+        { x0: legSegs[wi].x0, x1: mid, cols: mid - legSegs[wi].x0 + 1 },
+        { x0: mid + 1, x1: legSegs[wi].x1, cols: legSegs[wi].x1 - mid });
+    }
+    // 把腿带格分配到最近的腿段
+    var legAssign = new Int8Array(gw * gh); legAssign.fill(-1);
+    for (y = legTop; y <= y1; y++) {
+      for (x = x0; x <= x1; x++) {
+        if (!grid[y * gw + x]) continue;
+        var bestI = -1, bestD = 1e9;
+        for (var li = 0; li < legSegs.length; li++) {
+          var cx = (legSegs[li].x0 + legSegs[li].x1) / 2;
+          var d = Math.abs(x - cx);
+          if (d < bestD) { bestD = d; bestI = li; }
+        }
+        if (bestI >= 0) legAssign[y * gw + x] = bestI;
+      }
+    }
 
-  // ===== 计算包围盒 =====
-  function computeBBox() {
-    var minX = state.gridW, minY = state.gridH, maxX = -1, maxY = -1;
-    for (var y = 0; y < state.gridH; y++) {
-      for (var x = 0; x < state.gridW; x++) {
-        if (state.grid[y][x]) {
-          if (x < minX) minX = x;
-          if (y < minY) minY = y;
-          if (x > maxX) maxX = x;
-          if (y > maxY) maxY = y;
+    // 构造部位列表（顺序很重要：先画尾，再腿，再躯干，再头）
+    var parts = [];
+    // 收集每个部位的 cells
+    function collectPred(pred) {
+      var cells = [];
+      for (y = 0; y < gh; y++) {
+        for (x = 0; x < gw; x++) {
+          var idx = y * gw + x;
+          if (!grid[idx]) continue;
+          if (pred(idx, x, y)) cells.push([x, y]);
         }
       }
+      return cells;
     }
-    if (maxX < 0) { state.bbox = null; return; }
-    state.bbox = { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+
+    // 头
+    var headCells = collectPred(function(idx, x, y) {
+      return role[idx] === 1;
+    });
+    var headBounds = boundsOf(headCells);
+    parts.push({
+      key: 'head',
+      kind: 'head',
+      cells: headCells,
+      pivot: [headRight ? headBounds.x0 : headBounds.x1, headBounds.y1 - (headBounds.y1 - headBounds.y0) * 0.3]
+    });
+
+    // 躯干
+    var bodyCells = collectPred(function(idx, x, y) { return role[idx] === 2; });
+    var bodyBounds = boundsOf(bodyCells);
+    parts.push({
+      key: 'body',
+      kind: 'body',
+      cells: bodyCells,
+      pivot: [(bodyBounds.x0 + bodyBounds.x1) / 2, bodyBounds.y1]
+    });
+
+    // 尾
+    var tailCells = collectPred(function(idx, x, y) { return role[idx] === 3; });
+    if (tailCells.length < P.MIN_TAIL) {
+      // 尾太薄，退回整条尾带
+      tailCells = collectPred(function(idx, x, y) {
+        return role[idx] === 3 || (role[idx] === 0 && x >= tailStart && x <= tailEnd && y < legTop && grid[idx]);
+      });
+    }
+    var tailBounds = boundsOf(tailCells);
+    parts.push({
+      key: 'tail',
+      kind: 'tail',
+      cells: tailCells,
+      pivot: [headRight ? tailBounds.x0 : tailBounds.x1, tailBounds.y1]
+    });
+
+    // 4 条腿
+    for (var li = 0; li < 4; li++) {
+      var legCells = collectPred(function(idx, x, y) {
+        return role[idx] === 4 && legAssign[idx] === li;
+      });
+      if (legCells.length === 0) continue;
+      var lb = boundsOf(legCells);
+      // 前腿（靠近头侧） vs 后腿
+      var legCx = (lb.x0 + lb.x1) / 2;
+      var headCx = (headBounds.x0 + headBounds.x1) / 2;
+      var isFront = headRight ? (legCx > headCx) : (legCx < headCx);
+      var sideFront = headRight ? (legCx > headCx) : (legCx < headCx);
+      parts.push({
+        key: 'leg' + li,
+        kind: 'leg',
+        role: isFront ? 'front' : 'hind',
+        cells: legCells,
+        pivot: [(lb.x0 + lb.x1) / 2, lb.y0]
+      });
+    }
+
+    var allBounds = { x0: x0, y0: y0, x1: x1, y1: y1 };
+    return {
+      parts: parts,
+      box: allBounds,
+      headRight: headRight,
+      gridW: gw, gridH: gh,
+      bodyLen: x1 - x0 + 1,
+      bw: bw, bh: bh
+    };
   }
 
-  // ===== 把猫放在包围盒中心 =====
-  function placeCatCenter() {
-    if (!state.bbox) return;
-    var cx = (state.bbox.minX + state.bbox.maxX + 1) / 2 * state.cellPx;
-    var cy = (state.bbox.minY + state.bbox.maxY + 1) / 2 * state.cellPx;
-    state.catPos = { x: cx, y: cy };
+  function findLegSegments(grid, gw, gh, x0, x1, legTop, y1) {
+    var segs = [], cur = null, x;
+    for (x = x0; x <= x1; x++) {
+      var n = 0;
+      for (var y = legTop; y <= y1; y++) if (grid[y * gw + x]) n++;
+      if (n > 0) {
+        if (cur) { cur.x1 = x; cur.cols++; }
+        else { cur = { x0: x, x1: x, cols: 1 }; segs.push(cur); }
+      } else cur = null;
+    }
+    return segs;
   }
 
-  // ===== 渲染 SVG =====
-  function render() {
-    if (!state.grid) return;
-    var g = state.grid, W = state.gridW, H = state.gridH;
-    var cellPx = state.cellPx;
-    var svgNs = 'http://www.w3.org/2000/svg';
+  function boundsOf(cells) {
+    var x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+    cells.forEach(function(c) {
+      if (c[0] < x0) x0 = c[0];
+      if (c[0] > x1) x1 = c[0];
+      if (c[1] < y0) y0 = c[1];
+      if (c[1] > y1) y1 = c[1];
+    });
+    return { x0: x0, y0: y0, x1: x1, y1: y1 };
+  }
 
-    // 清空
+  // ---------- 路径合成 ----------
+  // 把一组 cells 渲染成 SVG path 字符串（每格一个矩形，外加 padding 减少缝隙）
+  function pathFromCells(cells, pad) {
+    pad = pad || 0;
+    var d = '';
+    cells.forEach(function(c) {
+      var x = c[0] * 16 - pad, y = c[1] * 16 - pad;
+      d += 'M' + r2(x) + ',' + r2(y) + ' h' + (16 + pad * 2) + ' v' + (16 + pad * 2) + ' h-' + (16 + pad * 2) + ' z ';
+    });
+    return d;
+  }
+
+  // ---------- 姿态 ----------
+  function restPose() {
+    return { facing: 1, bob: 0, sit: 0, pounce: 0, legs: [0,0,0,0], head: 0, tail: 0, arch: 0, x: null };
+  }
+
+  // 状态机驱动姿态
+  function poseFrom(model, st) {
+    var out = restPose();
+    out.facing = st.facing;
+    out.x = st.catX;
+    out.sit = st.sitting;
+    out.pounce = st.pouncing;
+
+    // 步态：4 条腿对角交替（猫步）
+    // 找出模型里的腿序号（按 x 排序：前左、前右、后左、后右 或 反过来）
+    var legKeys = model.parts.filter(function(p) { return p.kind === 'leg'; }).sort(function(a, b) {
+      return (a.pivot[0] - b.pivot[0]);
+    }).map(function(p) { return p.key; });
+
+    // 步态相位：相邻腿差 π/2（猫的对角步态）
+    var swing = P.SWING_DEG * Math.max(0.2, 1 - st.sitting * 0.85 - st.pouncing * 0.4);
+    var phase = st.phase;
+    out.legAngles = {};
+    legKeys.forEach(function(k, i) {
+      // 4 条腿相位：0, π, π, 0（对角同相）
+      var phOff = (i === 0 || i === 3) ? 0 : Math.PI;
+      var a = swing * Math.sin(phase + phOff);
+      // 坐下时后腿折叠
+      var isHind = (i < 2); // 假设排序后前两条是后腿（取决于朝向）
+      var legPart = model.parts.find(function(p) { return p.key === k; });
+      if (legPart && legPart.role === 'hind') {
+        a += P.SIT_FOLD_DEG * st.sitting;
+      }
+      out.legAngles[k] = a;
+    });
+
+    // 尾巴：独立摆动 + 状态修饰
+    out.tail = P.TAIL_DEG * Math.sin(phase * 0.7 + 0.5) * (1 - 0.3 * st.sitting)
+             + (st.pouncing ? -8 : 0)  // 扑击时尾巴低垂
+             + 4 * st.sitting;          // 坐着时尾巴略收
+
+    // 头摆
+    out.head = P.HEAD_DEG * Math.sin(phase + 0.3) + 3 * st.sitting + (st.pouncing ? -5 : 0);
+
+    // 起伏
+    out.bob = P.BOB_UNITS * Math.abs(Math.sin(phase)) * (1 - st.sitting * 0.8)
+            - P.SIT_DROP * st.sitting
+            + P.ARCH_UNITS * st.pouncing; // 弓背抬高
+
+    // 弓背程度
+    out.arch = st.pouncing;
+
+    return out;
+  }
+
+  // ---------- 渲染 ----------
+  var view = null; // 持有 SVG 元素引用
+
+  function buildCatSVG(model, st) {
+    var stageW = STAGE.w, stageH = STAGE.h;
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + stageW + ' ' + stageH);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMax meet');
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+
+    // 网格→舞台缩放：每个网格格子对应的舞台像素数
+    // pathFromCells 用 16 单位画一格，所以 path 自身需要 scale(pxPerCell/16) 才能让 16 单位变成 pxPerCell 像素
+    // 整体 catG 不再额外缩放——每个部位的 inner-g 已经包含了完整的 px 缩放
+    var pxPerCell = Math.min(
+      stageH * STAGE.bodyRatio / model.bh,
+      stageW * STAGE.widthRatio / model.bw
+    );
+
+    // 猫的整体 transform：放在地面上、水平居中
+    var ground = STAGE.ground;
+    var catW = model.bw * pxPerCell;
+    var catH = model.bh * pxPerCell;
+    var baseX = stageW / 2 - catW / 2 - model.box.x0 * pxPerCell;
+    var baseY = ground - catH - model.box.y0 * pxPerCell;
+
+    // 根容器：旋转 + 翻转
+    var catG = document.createElementNS(SVG_NS, 'g');
+    catG.setAttribute('id', 'catGlyph');
+
+    // 部位节点引用
+    var partNodes = {};
+
+    // 按 tail / hind-legs / body / head / front-legs 顺序画
+    var drawOrder = ['tail', 'leg', 'body', 'head']; // 简化：按 kind 排序
+    var sortedParts = model.parts.slice().sort(function(a, b) {
+      var order = { tail: 0, leg: 1, body: 2, head: 3 };
+      return (order[a.kind] || 9) - (order[b.kind] || 9);
+    });
+
+    sortedParts.forEach(function(p) {
+      // 每个部位一个 <g>，先把格子画在原位（无旋转），再外层 g 旋转到 pivot
+      var gOuter = document.createElementNS(SVG_NS, 'g');
+      gOuter.classList.add('part-' + p.kind);
+      gOuter.dataset.key = p.key;
+
+      // 应用部位自身的 transform：相对于模型坐标系的 pivot 旋转
+      // 我们让格子直接绘制在 (0,0) 为起点的坐标系，然后外层 g 把 pivot 移到对应位置
+      var pivotX = p.pivot[0] * pxPerCell, pivotY = p.pivot[1] * pxPerCell;
+      // 内层 g：把格子绘制偏移到 -pivot 处，这样外层旋转就是绕 pivot
+      var gInner = document.createElementNS(SVG_NS, 'g');
+      gInner.setAttribute('transform', 'translate(' + r2(-pivotX) + ',' + r2(-pivotY) + ')');
+
+      var path = document.createElementNS(SVG_NS, 'path');
+      path.setAttribute('d', pathFromCells(p.cells, 1.5));
+      path.setAttribute('fill', 'var(--accent)');
+      path.setAttribute('stroke', 'var(--accent-deep)');
+      path.setAttribute('stroke-width', '0.6');
+      path.setAttribute('stroke-linejoin', 'round');
+      path.setAttribute('transform', 'scale(' + r2(pxPerCell / 16) + ')'); // path 单位 16 → 真实像素
+      gInner.appendChild(path);
+
+      // 外层 g：定位到 pivot 真实位置（相对于 catG 的原点）
+      gOuter.setAttribute('transform', 'translate(' + r2(pivotX) + ',' + r2(pivotY) + ') rotate(0)');
+      gOuter.appendChild(gInner);
+      catG.appendChild(gOuter);
+
+      partNodes[p.key] = { outer: gOuter, inner: gInner };
+    });
+
+    // 整体放置
+    catG.setAttribute('transform',
+      'translate(' + r2(baseX) + ',' + r2(baseY) + ')');
+
+    // 舞台脚下的"地面线"装饰
+    var ground_line = document.createElementNS(SVG_NS, 'line');
+    ground_line.setAttribute('x1', '0');
+    ground_line.setAttribute('y1', ground);
+    ground_line.setAttribute('x2', stageW);
+    ground_line.setAttribute('y2', ground);
+    ground_line.setAttribute('stroke', 'var(--line)');
+    ground_line.setAttribute('stroke-width', '1');
+    ground_line.setAttribute('opacity', '0.5');
+    svg.appendChild(ground_line);
+
+    svg.appendChild(catG);
+
+    // 牵引绳
+    var leash = document.createElementNS(SVG_NS, 'path');
+    leash.setAttribute('id', 'leash');
+    leash.setAttribute('stroke', 'var(--gold)');
+    leash.setAttribute('stroke-width', '1.8');
+    leash.setAttribute('stroke-dasharray', '4 2');
+    leash.setAttribute('fill', 'none');
+    leash.setAttribute('opacity', '0');
+    svg.appendChild(leash);
+
+    // 牵引点
+    var hand = document.createElementNS(SVG_NS, 'circle');
+    hand.setAttribute('id', 'hand');
+    hand.setAttribute('r', '5');
+    hand.setAttribute('fill', 'var(--gold)');
+    hand.setAttribute('opacity', '0');
+    svg.appendChild(hand);
+
+    view = { svg: svg, cat: catG, parts: partNodes, leash: leash, hand: hand, model: model, scale: pxPerCell };
+    return svg;
+  }
+
+  // 应用姿态到 SVG
+  function applyPose(st) {
+    if (!view) return;
+    var pose = poseFrom(view.model, st);
+
+    // 整体翻转（朝向）
+    var flipX = (st.facing >= 0 ? 1 : -1) * (view.model.headRight ? 1 : -1);
+    // 整体水平位置
+    var catW_px = view.model.bw * view.scale;
+    var stageCenterX = STAGE.w / 2;
+    var targetCatCenter = stageCenterX + st.catX; // catX 是相对于舞台中心的偏移
+    var baseTx = targetCatCenter - catW_px / 2 - view.model.box.x0 * view.scale;
+    if (flipX < 0) baseTx += catW_px;
+    var ty = STAGE.ground - view.model.bh * view.scale;
+
+    view.cat.setAttribute('transform',
+      'translate(' + r2(baseTx) + ',' + r2(ty + pose.bob * view.scale * 0.05) + ') ' +
+      'scale(' + flipX + ',1)');
+
+    // 应用每个部位的旋转
+    Object.keys(view.parts).forEach(function(key) {
+      var node = view.parts[key];
+      var part = view.model.parts.find(function(p) { return p.key === key; });
+      if (!part) return;
+      var angle = 0;
+      if (part.kind === 'leg') angle = pose.legAngles[key] || 0;
+      else if (part.kind === 'tail') angle = pose.tail;
+      else if (part.kind === 'head') angle = pose.head;
+      else if (part.kind === 'body') angle = pose.arch * 4; // 弓背让身体微弯
+      node.outer.setAttribute('transform',
+        'translate(' + r2(part.pivot[0] * view.scale) + ',' + r2(part.pivot[1] * view.scale) + ') ' +
+        'rotate(' + r2(angle) + ')');
+    });
+
+    // 牵引绳：从牵引点到猫的项圈（脖子上方）
+    if (state.pointerActive) {
+      var collarPt = computeCollarPoint(view.model, st);
+      var hx = state.pointer.x, hy = state.pointer.y;
+      // 弛垂：根据绳长和实际距离计算下垂量
+      var dx = hx - collarPt.x, dy = hy - collarPt.y;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var slack = Math.max(0, view.model.bodyLen * view.scale * P.LEASH_BL - dist);
+      var sag = clamp(slack, 0, 120) * 0.4;
+      var midX = (hx + collarPt.x) / 2;
+      var midY = (hy + collarPt.y) / 2 + sag;
+      view.leash.setAttribute('d',
+        'M' + r2(hx) + ',' + r2(hy) + ' Q' + r2(midX) + ',' + r2(midY) + ' ' + r2(collarPt.x) + ',' + r2(collarPt.y));
+      view.leash.setAttribute('opacity', '0.8');
+      view.hand.setAttribute('cx', r2(hx));
+      view.hand.setAttribute('cy', r2(hy));
+      view.hand.setAttribute('opacity', '0.9');
+    } else {
+      view.leash.setAttribute('opacity', '0');
+      view.hand.setAttribute('opacity', '0');
+    }
+  }
+
+  function computeCollarPoint(model, st) {
+    // 项圈位置：脖子上方（头部和躯干接缝的顶部）
+    var head = model.parts.find(function(p) { return p.kind === 'head'; });
+    var body = model.parts.find(function(p) { return p.kind === 'body'; });
+    if (!head || !body) return { x: STAGE.w / 2, y: STAGE.ground - model.bh * view.scale * 0.7 };
+    var cx = (head.pivot[0] + body.pivot[0]) / 2 * view.scale;
+    var cy = Math.min(head.pivot[1], body.pivot[1]) * view.scale;
+    // 加上整体位置
+    var catW_px = model.bw * view.scale;
+    var baseTx = STAGE.w / 2 + st.catX - catW_px / 2 - model.box.x0 * view.scale;
+    var flipX = (st.facing >= 0 ? 1 : -1) * (model.headRight ? 1 : -1);
+    // 这里近似：直接用未翻转的相对位置（实际显示位置由 transform 控制）
+    return { x: baseTx + (flipX < 0 ? catW_px - cx : cx), y: STAGE.ground - model.bh * view.scale + cy };
+  }
+
+  // ---------- 物理循环 ----------
+  var running = false, lastT = 0, lastTelT = 0;
+  var RAF = null;
+
+  function step(dt) {
+    if (!view) return;
+    var model = view.model;
+    var bodyLenPx = model.bodyLen * view.scale;
+    var leashPx = bodyLenPx * P.LEASH_BL;
+
+    // 键盘控制
+    var kx = 0;
+    if (keys.left) kx -= 1;
+    if (keys.right) kx += 1;
+    if (kx) {
+      state.anchor.x = clamp(state.anchor.x + kx * 3.0 * bodyLenPx * dt, 30, STAGE.w - 30);
+      state.idleTimer = 0;
+    }
+
+    // 牵引绳物理：把指针位置当锚点
+    if (state.pointerActive) {
+      // 转换鼠标坐标到舞台坐标
+      var anchorX = state.pointer.x;
+      var anchorY = state.pointer.y;
+      state.anchor.x = anchorX;
+      state.idleTimer = 0;
+    }
+
+    // 猫的位置：根据锚点偏移决定移动
+    var catCenterX = STAGE.w / 2 + state.catX;
+    var gap = state.anchor.x - catCenterX;
+    var over = Math.abs(gap) - leashPx;
+    var vDes = over > 0 ? clamp(over * P.PULL_K, 0, P.MAX_SPEED_BL * bodyLenPx) : 0;
+    var vT = (gap >= 0 ? 1 : -1) * vDes;
+    state.catVx += (vT - state.catVx) * Math.min(1, dt * 5.5);
+
+    state.catX += state.catVx * dt;
+    // 边界
+    var catW_px = model.bw * view.scale;
+    var lim = (STAGE.w / 2) - catW_px / 2 - 10;
+    if (state.catX < -lim) { state.catX = -lim; state.catVx = 0; }
+    if (state.catX > lim) { state.catX = lim; state.catVx = 0; }
+
+    // 速度
+    state.speed = Math.abs(state.catVx) / bodyLenPx;
+    state.facing = state.catVx > 0.5 ? 1 : (state.catVx < -0.5 ? -1 : state.facing);
+
+    // 步态相位
+    state.phase += dt * state.speed * 6;
+
+    // 静止累计 → 坐下，或按住空格强制坐下
+    state.idleTimer += dt;
+    var targetSit = (keys.space || (state.speed < 0.05 && state.idleTimer > P.SIT_AFTER)) ? 1 : 0;
+    state.sitting += (targetSit - state.sitting) * Math.min(1, dt * 1.5);
+
+    // 扑击状态衰减
+    state.pouncing *= Math.pow(P.POUNCE_DECAY, dt * 30);
+    if (state.pouncing < 0.01) state.pouncing = 0;
+  }
+
+  function loop() {
+    running = true;
+    var t = now();
+    var dt = Math.min(0.05, (t - lastT) / 1000);
+    lastT = t;
+    step(dt);
+    applyPose(state);
+    if (t - lastTelT > 120) { updateTelemetry(); lastTelT = t; }
+    if (RAF) cancelAnimationFrame(RAF);
+    RAF = requestAnimationFrame(loop);
+  }
+
+  function startLoop() {
+    if (running) return;
+    lastT = now();
+    RAF = requestAnimationFrame(loop);
+  }
+
+  // ---------- 键盘 ----------
+  var keys = { left: false, right: false, space: false };
+  document.addEventListener('keydown', function(e) {
+    if (e.code === 'ArrowLeft') { keys.left = true; e.preventDefault(); }
+    if (e.code === 'ArrowRight') { keys.right = true; e.preventDefault(); }
+    if (e.code === 'Space') { keys.space = true; state.idleTimer = 0; e.preventDefault(); }
+    if (e.code === 'KeyP') { state.pouncing = 1; e.preventDefault(); }
+  });
+  document.addEventListener('keyup', function(e) {
+    if (e.code === 'ArrowLeft') keys.left = false;
+    if (e.code === 'ArrowRight') keys.right = false;
+    if (e.code === 'Space') keys.space = false;
+  });
+
+  // ---------- 遥测 ----------
+  function updateTelemetry() {
+    var sitPct = Math.round(state.sitting * 100);
+    var pouncePct = Math.round(state.pouncing * 100);
+    tel('t-state',
+      state.pouncing > 0.1 ? 'pounce' :
+      state.sitting > 0.5 ? 'sitting' :
+      state.speed > 0.05 ? 'walking' : 'idle');
+    tel('t-grid', state.gridW + '×' + state.gridH);
+    tel('t-filled', state.bbox ? state.bbox.maxX - state.bbox.minX + 1 : '—');
+    tel('t-bbox', state.bbox ? (state.bbox.minX + ',' + state.bbox.minY) : '—');
+    tel('t-orient', view ? (view.model.headRight ? '→ 右' : '← 左') : '—');
+    tel('t-leash', P.LEASH_BL.toFixed(2) + ' 体长');
+    tel('t-vel', (state.speed * P.MAX_SPEED_BL).toFixed(2) + ' /秒');
+  }
+
+  // ---------- 图像 → 网格管线 ----------
+  function imageToCanvas(img, targetW) {
+    var ratio = img.height / img.width;
+    var w = targetW, h = Math.round(targetW * ratio);
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas;
+  }
+
+  function rasterize(srcCanvas) {
+    var ctx = srcCanvas.getContext('2d');
+    var imgData = ctx.getImageData(0, 0, srcCanvas.width, srcCanvas.height);
+    var data = imgData.data;
+    var gw = parseInt(document.getElementById('p-grid').value, 10) || P.GRID_W;
+    var bgThresh = parseInt(document.getElementById('p-bg').value, 10) || P.BG_TOL;
+    var fillRatio = parseFloat(document.getElementById('p-fill').value) || P.CELL_FILL;
+    var invert = document.getElementById('p-invert').checked;
+    // 缩到 gw × gh
+    var gh = Math.round(gw * srcCanvas.height / srcCanvas.width);
+    gh = Math.max(8, Math.min(96, gh));
+    var tmp = document.createElement('canvas');
+    tmp.width = gw; tmp.height = gh;
+    tmp.getContext('2d').drawImage(srcCanvas, 0, 0, gw, gh);
+    var data2 = tmp.getContext('2d').getImageData(0, 0, gw, gh).data;
+
+    var grid = new Uint8Array(gw * gh);
+    for (var y = 0; y < gh; y++) {
+      for (var x = 0; x < gw; x++) {
+        var i = (y * gw + x) * 4;
+        var lum = (data2[i] * 0.299 + data2[i+1] * 0.587 + data2[i+2] * 0.114) / 255;
+        var isBg = lum * 100 > bgThresh;
+        grid[y * gw + x] = invert ? isBg : !isBg;
+      }
+    }
+
+    // 计算包围盒
+    var x0 = gw, y0 = gh, x1 = -1, y1 = -1;
+    for (var yy = 0; yy < gh; yy++) for (var xx = 0; xx < gw; xx++) {
+      if (grid[yy * gw + xx]) {
+        if (xx < x0) x0 = xx; if (xx > x1) x1 = xx;
+        if (yy < y0) y0 = yy; if (yy > y1) y1 = yy;
+      }
+    }
+    if (x1 < 0) return;
+    state.bbox = { minX: x0, minY: y0, maxX: x1, maxY: y1 };
+    state.grid = grid;
+    state.gridW = gw; state.gridH = gh;
+    state.cellPx = stage.clientWidth / gw;
+    state.imgWidth = srcCanvas.width;
+    state.imgHeight = srcCanvas.height;
+    state.mode = 'image';
+    state.mirror = false;
+    state.sitting = 0;
+    state.catX = 0; state.catVx = 0;
+
+    // 装配骨骼
+    var headRight = state.mirror ? !null : undefined;
+    var model = rigCat(grid, gw, gh, headRight);
+    if (!model) return;
+
+    // 清舞台
     var existing = stage.querySelector('svg');
     if (existing) existing.remove();
     if (stageHint) stageHint.style.display = 'none';
 
-    var svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('viewBox', '0 0 ' + (W * 16) + ' ' + (H * 16));
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    var scale16 = 16 / cellPx;
-
-    // 网格化猫（一个 path）
-    var pathD = '';
-    for (var y = 0; y < H; y++) {
-      for (var x = 0; x < W; x++) {
-        if (g[y][x]) {
-          var px = x * 16, py = y * 16;
-          pathD += 'M' + px + ',' + py + ' h16 v16 h-16 z ';
-        }
-      }
-    }
-    var catPath = document.createElementNS(svgNs, 'path');
-    catPath.setAttribute('d', pathD);
-    catPath.setAttribute('fill', 'var(--accent)');
-    catPath.setAttribute('stroke', 'var(--accent-deep)');
-    catPath.setAttribute('stroke-width', '0.5');
-    catPath.setAttribute('transform', state.mirror ? 'scale(-1,1) translate(' + (-W * 16) + ',0)' : '');
-
-    // 包裹在 <g> 里以便后续做动画位移
-    var catG = document.createElementNS(svgNs, 'g');
-    catG.setAttribute('id', 'catGlyph');
-    catG.appendChild(catPath);
-
-    // 牵引绳（从猫中心到鼠标）
-    var leash = document.createElementNS(svgNs, 'line');
-    leash.setAttribute('id', 'leash');
-    leash.setAttribute('stroke', 'var(--gold)');
-    leash.setAttribute('stroke-width', '1.5');
-    leash.setAttribute('stroke-dasharray', '3 2');
-    leash.setAttribute('opacity', '0.7');
-
-    // 指针（牵引点）
-    var pointer = document.createElementNS(svgNs, 'circle');
-    pointer.setAttribute('id', 'pointer');
-    pointer.setAttribute('r', '4');
-    pointer.setAttribute('fill', 'var(--gold)');
-    pointer.setAttribute('opacity', '0');
-
-    svg.appendChild(catG);
-    svg.appendChild(leash);
-    svg.appendChild(pointer);
+    var svg = buildCatSVG(model, state);
     stage.appendChild(svg);
-  }
-
-  // ===== 物理动画循环 =====
-  function startLoop() {
-    if (state.raf) cancelAnimationFrame(state.raf);
-    state.raf = requestAnimationFrame(loop);
-    var last = performance.now();
-    function loop(now) {
-      var dt = Math.min(0.05, (now - last) / 1000);
-      last = now;
-      stepPhysics(dt);
-      state.raf = requestAnimationFrame(loop);
-    }
-  }
-
-  function stepPhysics(dt) {
-    if (!state.catPos || !state.grid) return;
-    var catG = document.getElementById('catGlyph');
-    var leash = document.getElementById('leash');
-    var pointer = document.getElementById('pointer');
-    if (!catG) return;
-
-    // 键盘推动指针
-    if (state.pointer) {
-      var speed = 240;  // px / s
-      if (state.keys['ArrowLeft']) state.pointer.x -= speed * dt;
-      if (state.keys['ArrowRight']) state.pointer.x += speed * dt;
-      if (state.keys['ArrowUp']) state.pointer.y -= speed * dt;
-      if (state.keys['ArrowDown']) state.pointer.y += speed * dt;
-      // 坐下切换
-      if (state.keys[' '] && !state.sitting) state.sitting = true;
-    }
-
-    var W = state.gridW * state.cellPx;
-    var H = state.gridH * state.cellPx;
-
-    // 牵引绳物理
-    if (state.pointer) {
-      var dx = state.pointer.x - state.catPos.x;
-      var dy = state.pointer.y - state.catPos.y;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      var bodyLen = (state.bbox.maxX - state.bbox.minX + 1) * state.cellPx;
-      var leashPx = bodyLen * 2.03;
-
-      pointer.setAttribute('cx', state.pointer.x * (16 / state.cellPx));
-      pointer.setAttribute('cy', state.pointer.y * (16 / state.cellPx));
-      pointer.setAttribute('opacity', '0.85');
-
-      if (dist > leashPx && !state.sitting) {
-        // 绷直 → 猫被拖着走
-        var pull = (dist - leashPx) * 0.18;
-        state.catVel.x = (dx / dist) * pull * 12 * dt;
-        state.catVel.y = (dy / dist) * pull * 12 * dt;
-        state.catPos.x += state.catVel.x;
-        state.catPos.y += state.catVel.y;
-      } else {
-        // 松弛 → 减速
-        state.catVel.x *= 0.85;
-        state.catVel.y *= 0.85;
-        state.catPos.x += state.catVel.x * dt * 30;
-        state.catPos.y += state.catVel.y * dt * 30;
-      }
-    }
-
-    // 边界
-    state.catPos.x = Math.max(0, Math.min(W, state.catPos.x));
-    state.catPos.y = Math.max(0, Math.min(H, state.catPos.y));
-
-    // 应用变换到猫
-    var offsetX = state.catPos.x - (state.bbox.minX + state.bbox.maxX + 1) / 2 * state.cellPx;
-    var offsetY = state.catPos.y - (state.bbox.minY + state.bbox.maxY + 1) / 2 * state.cellPx;
-    var tx = offsetX * (16 / state.cellPx);
-    var ty = offsetY * (16 / state.cellPx);
-    var sit = state.sitting ? ' rotate(-8 ' + ((state.bbox.minX + state.bbox.maxX + 1) * 8) + ' ' + ((state.bbox.minY + state.bbox.maxY + 1) * 8) + ')' : '';
-    catG.setAttribute('transform', 'translate(' + tx + ' ' + ty + ')' + sit + (state.mirror ? ' scale(-1,1) translate(' + (-state.gridW * 16) + ',0)' : ''));
-
-    // 牵引绳端点
-    if (state.pointer) {
-      leash.setAttribute('x1', state.catPos.x * (16 / state.cellPx));
-      leash.setAttribute('y1', state.catPos.y * (16 / state.cellPx));
-      leash.setAttribute('x2', state.pointer.x * (16 / state.cellPx));
-      leash.setAttribute('y2', state.pointer.y * (16 / state.cellPx));
-    }
+    startLoop();
     updateTelemetry();
   }
 
-  // ===== 拖拽 / 输入 =====
-  stage.addEventListener('dragover', function(e) {
-    e.preventDefault();
-    stage.classList.add('dragover');
-  });
-  stage.addEventListener('dragleave', function() {
-    stage.classList.remove('dragover');
-  });
-  stage.addEventListener('drop', function(e) {
-    e.preventDefault();
-    stage.classList.remove('dragover');
-    var f = e.dataTransfer.files[0];
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function() { imageToCanvas(reader.result, rasterize); };
-    reader.readAsDataURL(f);
-  });
+  // ---------- 内置猫（程序化生成）----------
+  function builtinCat(callback) {
+    // 程序化绘制一只坐姿的卡通猫，然后栅格化
+    var gw = 48, gh = 36;
+    var canvas = document.createElement('canvas');
+    canvas.width = gw; canvas.height = gh;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, gw, gh);
+    ctx.fillStyle = '#000';
 
-  fileInput.addEventListener('change', function() {
-    var f = fileInput.files[0];
-    if (!f) return;
-    var reader = new FileReader();
-    reader.onload = function() { imageToCanvas(reader.result, rasterize); };
-    reader.readAsDataURL(f);
-  });
+    // 身体（椭圆形坐姿）
+    ctx.beginPath();
+    ctx.ellipse(24, 24, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
 
-  btnBuiltin.addEventListener('click', function() { builtinCat(rasterize); });
-  btnMirror.addEventListener('click', function() {
-    state.mirror = !state.mirror;
-    render();
-    updateTelemetry();
-  });
-  btnReset.addEventListener('click', function() {
-    var svg = stage.querySelector('svg');
-    if (svg) svg.remove();
-    if (stageHint) stageHint.style.display = 'block';
-    state.sourceCanvas = null;
-    state.grid = null;
-    state.bbox = null;
-    state.catPos = null;
-    state.pointer = null;
-    if (state.raf) cancelAnimationFrame(state.raf);
-    state.raf = 0;
-    updateTelemetry();
-  });
+    // 头（圆形）
+    ctx.beginPath();
+    ctx.ellipse(24, 14, 8, 7, 0, 0, Math.PI * 2); ctx.fill();
 
-  // 鼠标 / 触控
-  function setPointer(clientX, clientY) {
-    var rect = stage.getBoundingClientRect();
-    var sx = stage.clientWidth / (state.gridW * 16);
-    var sy = stage.clientHeight / (state.gridH * 16);
-    // 因为 viewBox 单位是 16 / cellPx，我们要把鼠标坐标换算回「像素坐标」
-    var cellPx = state.cellPx;
-    state.pointer = state.pointer || { x: 0, y: 0 };
-    state.pointer.x = (clientX - rect.left) ;
-    state.pointer.y = (clientY - rect.top);
+    // 左耳
+    ctx.beginPath();
+    ctx.moveTo(18, 8); ctx.lineTo(20, 4); ctx.lineTo(22, 8); ctx.fill();
+    // 右耳
+    ctx.beginPath();
+    ctx.moveTo(26, 8); ctx.lineTo(28, 4); ctx.lineTo(30, 8); ctx.fill();
+
+    // 尾巴（弯曲线条向右上翘）
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(38, 24); ctx.quadraticCurveTo(44, 22, 44, 14); ctx.stroke();
+
+    // 四条腿（坐姿所以都是矩形）
+    ctx.fillRect(14, 28, 4, 5);
+    ctx.fillRect(20, 28, 4, 5);
+    ctx.fillRect(28, 28, 4, 5);
+    ctx.fillRect(34, 28, 4, 5);
+
+    // 眼睛和鼻子的细节不画，太小识别不出来
+    callback(canvas);
   }
-  stage.addEventListener('mousemove', function(e) {
-    if (!state.grid) return;
-    setPointer(e.clientX, e.clientY);
-    state.sitting = false;
-  });
-  stage.addEventListener('mouseleave', function() {
-    state.sitting = false;
-  });
-  stage.addEventListener('touchmove', function(e) {
-    if (!state.grid) return;
-    e.preventDefault();
-    var t = e.touches[0];
-    setPointer(t.clientX, t.clientY);
-    state.sitting = false;
-  }, { passive: false });
 
-  // 键盘
-  window.addEventListener('keydown', function(e) {
-    state.keys[e.key] = true;
-    if (e.key === ' ' && state.grid && !state.pointer) {
-      // 没鼠标时按下空格才把猫设为坐下
-    }
-  });
-  window.addEventListener('keyup', function(e) {
-    state.keys[e.key] = false;
-    if (e.key === ' ') state.sitting = !state.sitting;  // 切换
-  });
+  // ---------- 导出 ----------
+  function exportSVG(animated) {
+    if (!view) return;
+    var model = view.model;
+    var clone = view.svg.cloneNode(true);
+    // 设置 viewBox 和 xmlns
+    clone.setAttribute('xmlns', SVG_NS);
+    clone.setAttribute('viewBox', '0 0 ' + STAGE.w + ' ' + STAGE.h);
 
-  // 从 sessionStorage 读取星图接入页交接的图
-  btnFromAstra.addEventListener('click', function() {
-    var url = null;
-    try { url = sessionStorage.getItem('astraflow_image_url'); } catch (e) {}
-    if (!url) {
-      alert('当前标签页没有可用的图。请先打开「星图接入」页面生成一张图，再回来点这个按钮。');
-      return;
-    }
-    imageToCanvas(url, function(c) {
-      rasterize(c);
-      try { sessionStorage.removeItem('astraflow_image_url'); } catch (e) {}
-    });
-  });
-  // 页面加载时也尝试一次
-  window.addEventListener('load', function() {
-    var url = null;
-    try { url = sessionStorage.getItem('astraflow_image_url'); } catch (e) {}
-    if (url) {
-      imageToCanvas(url, function(c) {
-        rasterize(c);
-        try { sessionStorage.removeItem('astraflow_image_url'); } catch (e) {}
+    if (animated) {
+      // 给每个部位一个 SMIL 动画
+      Object.keys(view.parts).forEach(function(key) {
+        var node = clone.querySelector('[data-key="' + key + '"]');
+        if (!node) return;
+        var part = model.parts.find(function(p) { return p.key === key; });
+        if (!part) return;
+        var deg = part.kind === 'leg' ? P.SWING_DEG :
+                  part.kind === 'tail' ? P.TAIL_DEG :
+                  part.kind === 'head' ? P.HEAD_DEG : 0;
+        if (deg === 0) return;
+        var phOff = (key === 'leg0' || key === 'leg3') ? 0 : (part.kind === 'leg' ? Math.PI : 0);
+        // 用多个离散 keyframe 模拟正弦摆动
+        var frames = '';
+        for (var i = 0; i <= 8; i++) {
+          var t = i / 8;
+          var v = deg * Math.sin(t * Math.PI * 2 + phOff);
+          frames += r2(v) + (i < 8 ? '; ' : '');
+        }
+        var animate = document.createElementNS(SVG_NS, 'animateTransform');
+        animate.setAttribute('attributeName', 'transform');
+        animate.setAttribute('type', 'rotate');
+        animate.setAttribute('values', frames);
+        animate.setAttribute('dur', '1.2s');
+        animate.setAttribute('repeatCount', 'indefinite');
+        node.appendChild(animate);
       });
     }
-  });
 
-  // 参数变化重算
-  [pGrid, pBg, pFill, pInvert].forEach(function(el) {
-    el.addEventListener('change', function() {
-      if (state.sourceCanvas) rasterize(state.sourceCanvas);
-    });
-  });
-
-  // ===== 导出 SVG =====
-  function exportSVG(withSmil) {
-    if (!state.grid) { alert('舞台上还没有猫，先用图片或内置猫生成一只。'); return; }
-    var W = state.gridW, H = state.gridH;
-    var svgNs = 'http://www.w3.org/2000/svg';
-    var svg = document.createElementNS(svgNs, 'svg');
-    svg.setAttribute('xmlns', svgNs);
-    svg.setAttribute('viewBox', '0 0 ' + (W * 16) + ' ' + (H * 16));
-    svg.setAttribute('width', W * 16);
-    svg.setAttribute('height', H * 16);
-
-    var pathD = '';
-    for (var y = 0; y < H; y++) {
-      for (var x = 0; x < W; x++) {
-        if (state.grid[y][x]) {
-          pathD += 'M' + (x * 16) + ',' + (y * 16) + ' h16 v16 h-16 z ';
-        }
-      }
-    }
-    var path = document.createElementNS(svgNs, 'path');
-    path.setAttribute('d', pathD);
-    path.setAttribute('fill', '#1B3A2E');
-    path.setAttribute('stroke', '#0F2A1F');
-    path.setAttribute('stroke-width', '0.5');
-    if (state.mirror) path.setAttribute('transform', 'scale(-1,1) translate(' + (-W * 16) + ',0)');
-    svg.appendChild(path);
-
-    if (withSmil) {
-      // 加 SMIL 摆动动画
-      var animate = document.createElementNS(svgNs, 'animateTransform');
-      animate.setAttribute('attributeName', 'transform');
-      animate.setAttribute('type', 'translate');
-      animate.setAttribute('values', '0 0; 6 -3; 0 0; -6 -3; 0 0');
-      animate.setAttribute('dur', '3.6s');
-      animate.setAttribute('repeatCount', 'indefinite');
-      path.appendChild(animate);
-    }
-
-    var xml = new XMLSerializer().serializeToString(svg);
-    var blob = new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + xml], { type: 'image/svg+xml' });
+    var svgStr = new XMLSerializer().serializeToString(clone);
+    var blob = new Blob([svgStr], { type: 'image/svg+xml' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = withSmil ? 'cyber-cat-smil.svg' : 'cyber-cat-static.svg';
-    document.body.appendChild(a);
+    a.download = animated ? 'cyber-cat-animated.svg' : 'cyber-cat-static.svg';
     a.click();
-    document.body.removeChild(a);
     setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
   }
+
+  // ---------- 事件绑定 ----------
+  btnBuiltin.addEventListener('click', function() {
+    builtinCat(function(canvas) {
+      rasterize(canvas);
+    });
+  });
+
+  btnMirror.addEventListener('click', function() {
+    if (!view) return;
+    state.facing = -state.facing;
+  });
+
   btnExportStatic.addEventListener('click', function() { exportSVG(false); });
   btnExportSmil.addEventListener('click', function() { exportSVG(true); });
 
-  // 自检：基本完整性
+  btnReset.addEventListener('click', function() {
+    var existing = stage.querySelector('svg');
+    if (existing) existing.remove();
+    if (stageHint) stageHint.style.display = 'block';
+    view = null;
+    state.catX = 0; state.catVx = 0; state.sitting = 0; state.pouncing = 0;
+    state.mode = 'idle';
+    updateTelemetry();
+  });
+
+  btnFromAstra.addEventListener('click', function() {
+    try {
+      var stored = sessionStorage.getItem('astraflow-image');
+      if (!stored) {
+        alert('没有可接收的星图接入图。先在「星图接入」生成一张再回来。');
+        return;
+      }
+      var img = new Image();
+      img.onload = function() {
+        var canvas = imageToCanvas(img, 256);
+        rasterize(canvas);
+        sessionStorage.removeItem('astraflow-image');
+      };
+      img.src = stored;
+    } catch (e) {
+      alert('读取星图接入图失败：' + e.message);
+    }
+  });
+
+  fileInput.addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var img = new Image();
+    img.onload = function() {
+      var canvas = imageToCanvas(img, 256);
+      rasterize(canvas);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  // 拖放
+  stage.addEventListener('dragover', function(e) { e.preventDefault(); stage.classList.add('dragover'); });
+  stage.addEventListener('dragleave', function() { stage.classList.remove('dragover'); });
+  stage.addEventListener('drop', function(e) {
+    e.preventDefault(); stage.classList.remove('dragover');
+    var file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    var img = new Image();
+    img.onload = function() {
+      var canvas = imageToCanvas(img, 256);
+      rasterize(canvas);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  // 鼠标牵引
+  function stageCoord(clientX, clientY) {
+    var rect = stage.getBoundingClientRect();
+    var sx = STAGE.w / rect.width;
+    var sy = STAGE.h / rect.height;
+    return {
+      x: (clientX - rect.left) * sx,
+      y: (clientY - rect.top) * sy
+    };
+  }
+  stage.addEventListener('mousemove', function(e) {
+    if (!view) return;
+    var pt = stageCoord(e.clientX, e.clientY);
+    state.pointer = pt;
+    state.pointerActive = true;
+    state.idleTimer = 0;
+  });
+  stage.addEventListener('mouseleave', function() {
+    state.pointerActive = false;
+  });
+  stage.addEventListener('touchmove', function(e) {
+    if (!view) return;
+    e.preventDefault();
+    var t = e.touches[0];
+    var pt = stageCoord(t.clientX, t.clientY);
+    state.pointer = pt;
+    state.pointerActive = true;
+    state.idleTimer = 0;
+  }, { passive: false });
+  stage.addEventListener('touchend', function() { state.pointerActive = false; });
+  stage.addEventListener('click', function() {
+    // 点击触发扑击
+    if (view) state.pouncing = 1;
+  });
+
+  // 参数变更
+  ['p-grid','p-bg','p-fill'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', function() {
+      if (state.mode === 'image' && state.imgWidth) {
+        // 重新栅格化
+        var img = new Image();
+        img.onload = function() {
+          var canvas = imageToCanvas(img, 256);
+          rasterize(canvas);
+        };
+        // 不真正重新载图，只重新跑现有的网格
+        // 简单实现：提示用户重新加载
+      }
+    });
+  });
+  document.getElementById('p-invert').addEventListener('change', function() {
+    if (state.mode === 'image') {
+      // 直接对现有 grid 做反相
+      if (!state.grid) return;
+      for (var i = 0; i < state.grid.length; i++) state.grid[i] = state.grid[i] ? 0 : 1;
+      rasterizeExistingGrid();
+    }
+  });
+  function rasterizeExistingGrid() {
+    if (!state.grid) return;
+    var model = rigCat(state.grid, state.gridW, state.gridH, undefined);
+    if (!model) return;
+    var existing = stage.querySelector('svg');
+    if (existing) existing.remove();
+    var svg = buildCatSVG(model, state);
+    stage.appendChild(svg);
+    startLoop();
+  }
+
+  // ---------- 自检 ----------
   function selfCheck() {
     var checks = [
       ['stage DOM', !!document.getElementById('stage')],
       ['builtin 猫函数', typeof builtinCat === 'function'],
-      ['管线参数读取', parseInt(pGrid.value, 10) > 0],
+      ['管线参数读取', parseInt(document.getElementById('p-grid').value, 10) > 0],
       ['文件输入绑定', fileInput.tagName === 'INPUT'],
       ['SVG 导出函数', typeof exportSVG === 'function'],
+      ['rigCat 函数', typeof rigCat === 'function'],
+      ['姿态函数', typeof poseFrom === 'function'],
+      ['物理循环', typeof step === 'function']
     ];
     return checks;
   }
@@ -949,6 +1406,14 @@
     });
     out.innerHTML = html;
   })();
+
+  // 自动加载内置猫
+  setTimeout(function() {
+    if (state.mode === 'idle') {
+      builtinCat(function(canvas) { rasterize(canvas); });
+    }
+  }, 600);
+
 })();
 </script>
 
