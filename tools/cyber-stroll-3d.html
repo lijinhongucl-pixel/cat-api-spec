@@ -533,9 +533,9 @@ function buildCat() {
         }
       });
 
-      // 模型原始尺寸是米单位（真实猫大小），需要放大让它在场景里看得清
-      // 真实猫约 0.5m，场景目标是约 3 单位高 → 放大约 6 倍
-      var scale = 6.0;
+      // 模型原始尺寸是厘米/单位很小，需要放大让它在场景里看得清
+      // Toon Cat 模型约 2 单位高，场景目标约 3 单位高 → 放大约 12 倍
+      var scale = 12.0;
       catModel.scale.set(scale, scale, scale);
 
       // 让模型底部贴地面：模型坐标原点在身体中心，脚距离原点约 -0.24m × 6 = -1.44
@@ -545,33 +545,52 @@ function buildCat() {
       // 把整个模型加到 catGroup
       catGroup.add(catModel);
 
-      // 找部位的子对象用于动画
-      // v2 模型：头/身/腿融合为一个 Body，但有独立的 Paw（脚掌）、Tail、Eye、Nose 等
+      // v3 模型（Toon Cat FREE）使用骨骼系统（Armature + 36 bones）
+      // 找 SkinnedMesh 和骨骼，建立骨骼引用
+      var skinnedMesh = null;
+      catModel.traverse(function(obj) { if (obj.isSkinnedMesh) skinnedMesh = obj; });
+
+      var bones = {};  // 名字 → Bone 引用
+      if (skinnedMesh && skinnedMesh.skeleton) {
+        skinnedMesh.skeleton.bones.forEach(function(b) {
+          // 去掉名字末尾的 _NNN 后缀（_017 等），保留语义部分
+          var cleanName = b.name.replace(/_\d+$/, '');
+          // 进一步规范化
+          cleanName = cleanName
+            .replace('legupper', 'upperLeg')
+            .replace('leglower', 'lowerLeg')
+            .replace('thighB', 'thighBack')
+            .replace('thighF', 'thighFront');
+          bones[cleanName] = b;
+        });
+        // 保存引用供 updatePose 使用
+        state.bones = bones;
+        state.skinnedMesh = skinnedMesh;
+        // 计算各腿的休息姿态四元数（保留初始旋转，以便叠加摆动）
+        state.restQuats = {};
+        ['upperLegFL', 'lowerLegFL', 'upperLegFR', 'lowerLegFR',
+         'upperLegBL', 'lowerLegBL', 'upperLegBR', 'lowerLegBR',
+         'tail', 'tail01', 'tail02', 'tail03', 'tailend',
+         'head', 'neck', 'spine01', 'spine02', 'torso'].forEach(function(n) {
+          if (bones[n]) state.restQuats[n] = bones[n].quaternion.clone();
+        });
+      }
+
+      // 兼容旧版无骨骼模型——保留 mesh 引用机制
       var found = {};
       catModel.traverse(function(obj) {
         var name = obj.name;
-        // 主要部位
-        if (name === 'Body' || name === 'Belly') found.body = true;
-        if (name === 'Tail') { found.tail = true; parts.tailRef = obj; }
-        // 脚掌（v2 用 Paw 命名）
-        if (name === 'PawFL') { found.pawFL = obj; }
-        if (name === 'PawFR') { found.pawFR = obj; }
-        if (name === 'PawBL') { found.pawBL = obj; }
-        if (name === 'PawBR') { found.pawBR = obj; }
-        // 兼容 v1 命名
-        if (name === 'LegFL') { found.legFL = obj; }
-        if (name === 'LegFR') { found.legFR = obj; }
-        if (name === 'LegBL') { found.legBL = obj; }
-        if (name === 'LegBR') { found.legBR = obj; }
-        if (name === 'Head') { found.head = true; parts.headRef = obj; }
+        if (name === 'PawFL') found.pawFL = obj;
+        if (name === 'PawFR') found.pawFR = obj;
+        if (name === 'PawBL') found.pawBL = obj;
+        if (name === 'PawBR') found.pawBR = obj;
+        if (name === 'Tail') parts.tailRef = obj;
+        if (name === 'Head') parts.headRef = obj;
       });
-
-      // 把找到的部位引用保存到 legs 数组（顺序：前左/前右/后左/后右）
-      // 优先用整条腿（v1），没有则用脚掌（v2）
-      legs[0].ref = found.legFL || found.pawFL;
-      legs[1].ref = found.legFR || found.pawFR;
-      legs[2].ref = found.legBL || found.pawBL;
-      legs[3].ref = found.legBR || found.pawBR;
+      legs[0].ref = found.pawFL;
+      legs[1].ref = found.pawFR;
+      legs[2].ref = found.pawBL;
+      legs[3].ref = found.pawBR;
       if (parts.headRef) parts.head.ref = parts.headRef;
       if (parts.tailRef) parts.tail.ref = parts.tailRef;
 
@@ -675,53 +694,116 @@ function updatePhysics(dt) {
 function updatePose() {
   var phase = state.phase;
   var swing = PARAMS.SWING_DEG * Math.PI / 180;
+  var bones = state.bones;
+  var restQuats = state.restQuats || {};
 
-  // 4 条腿对角步态（操作 GLB 子对象引用）
-  // v2 里是脚掌（Paw），绕自身中心小幅度前后摆；v1 里是整条腿
-  var isPaw = legs[0].ref && legs[0].ref.name && legs[0].ref.name.indexOf('Paw') === 0;
-  var pawSwing = isPaw ? swing * 0.45 : swing;  // 脚掌幅度小，整腿幅度大
-  if (legs[0].ref) legs[0].ref.rotation.x = Math.sin(phase) * pawSwing;
-  if (legs[3].ref) legs[3].ref.rotation.x = Math.sin(phase) * pawSwing;
-  if (legs[1].ref) legs[1].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
-  if (legs[2].ref) legs[2].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
+  // ---------- 优先用骨骼动画 ----------
+  if (bones) {
+    // 工具：在 rest quaternion 上叠加欧拉角旋转
+    function boneEuler(name, x, y, z) {
+      var b = bones[name];
+      if (!b || !restQuats[name]) return;
+      b.quaternion.copy(restQuats[name]);
+      var e = new THREE.Euler(x, y, z);
+      b.quaternion.multiply(new THREE.Quaternion().setFromEuler(e));
+    }
 
-  // 走动时整体上下起伏（catGroup）
+    var moving = state.speed > 0.1 ? 1 : 0;
+    var speedFactor = Math.min(1, state.speed / PARAMS.SPEED_MAX);
+
+    // ---- 4 条腿对角步态（髋 + 膝关节协同）----
+    // 前腿对（FL+BR 同相），后腿对（FR+BL 同相）
+    var phaseA = Math.sin(phase);              // 主对角
+    var phaseB = Math.sin(phase + Math.PI);    // 反对角
+    // 步态幅度：站立时小摆动，走动时大摆动
+    var ampHip = 0.15 + 0.45 * speedFactor;
+    var ampKnee = 0.20 + 0.60 * speedFactor;
+
+    // 前左 / 前右
+    boneEuler('upperLegFL', phaseA * ampHip, 0, 0);
+    boneEuler('lowerLegFL', Math.max(0, -phaseA) * ampKnee, 0, 0);  // 膝盖只向后弯
+    boneEuler('upperLegFR', phaseB * ampHip, 0, 0);
+    boneEuler('lowerLegFR', Math.max(0, -phaseB) * ampKnee, 0, 0);
+    // 后左 / 后右
+    boneEuler('upperLegBL', phaseB * ampHip * 0.9, 0, 0);
+    boneEuler('lowerLegBL', Math.max(0, phaseB) * ampKnee, 0, 0);
+    boneEuler('upperLegBR', phaseA * ampHip * 0.9, 0, 0);
+    boneEuler('lowerLegBR', Math.max(0, phaseA) * ampKnee, 0, 0);
+
+    // ---- 尾巴：5 段流畅摆动 ----
+    var tailWave = Math.sin(phase * 1.8) * 0.4 * (0.3 + speedFactor);
+    var tailSit = state.sitting * 0.6;
+    ['tail', 'tail01', 'tail02', 'tail03', 'tailend'].forEach(function(name, i) {
+      var seg = i + 1;
+      // 从根到尖逐渐放大弯曲
+      boneEuler(name, tailSit * 0.3, 0, Math.sin(phase * 1.8 + i * 0.5) * 0.2 * seg);
+    });
+
+    // ---- 头部：呼吸节奏 + 朝向 ----
+    var headBreath = Math.sin(phase * 0.7) * 0.03;
+    var headSit = state.sitting * 0.3;        // 坐下时低头
+    var headPounce = state.pouncing * 0.2;    // 扑击时抬头
+    boneEuler('head', headBreath + headSit - headPounce, 0, 0);
+    boneEuler('neck', headSit * 0.5, 0, 0);
+
+    // ---- 脊柱：扑击时弓背 ----
+    if (state.pouncing > 0.05) {
+      boneEuler('spine01', -state.pouncing * 0.3, 0, 0);
+      boneEuler('spine02', -state.pouncing * 0.4, 0, 0);
+      boneEuler('torso', -state.pouncing * 0.2, 0, 0);
+    } else {
+      boneEuler('spine01', 0, 0, 0);
+      boneEuler('spine02', 0, 0, 0);
+      boneEuler('torso', 0, 0, 0);
+    }
+
+    // ---- 坐下姿态：后腿折叠，前腿伸直 ----
+    if (state.sitting > 0.1) {
+      var sit = state.sitting;
+      // 后腿髋部向前向上抬，膝盖深弯
+      boneEuler('upperLegBL', -sit * 1.2, 0, 0);
+      boneEuler('lowerLegBL', sit * 1.8, 0, 0);
+      boneEuler('upperLegBR', -sit * 1.2, 0, 0);
+      boneEuler('lowerLegBR', sit * 1.8, 0, 0);
+      // 前腿略伸直（站立前倾姿态）
+      boneEuler('upperLegFL', sit * 0.2, 0, 0);
+      boneEuler('upperLegFR', sit * 0.2, 0, 0);
+    }
+
+    // 通知 SkinnedMesh 更新骨骼
+    if (state.skinnedMesh) {
+      state.skinnedMesh.skeleton.bones.forEach(function(b) { b.updateMatrixWorld(); });
+    }
+  } else {
+    // ---------- 兼容无骨骼的旧模型 ----------
+    var isPaw = legs[0].ref && legs[0].ref.name && legs[0].ref.name.indexOf('Paw') === 0;
+    var pawSwing = isPaw ? swing * 0.45 : swing;
+    if (legs[0].ref) legs[0].ref.rotation.x = Math.sin(phase) * pawSwing;
+    if (legs[3].ref) legs[3].ref.rotation.x = Math.sin(phase) * pawSwing;
+    if (legs[1].ref) legs[1].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
+    if (legs[2].ref) legs[2].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
+
+    if (parts.tail.ref) {
+      parts.tail.ref.rotation.z = Math.sin(phase * 1.5) * PARAMS.TAIL_DEG * Math.PI / 180;
+      if (state.sitting > 0.1) parts.tail.ref.rotation.y = state.sitting * 0.5;
+      else parts.tail.ref.rotation.y *= 0.9;
+    }
+
+    if (parts.head.ref) {
+      parts.head.ref.rotation.z = Math.sin(phase) * 0.04;
+      if (state.sitting > 0.1) parts.head.ref.rotation.x = state.sitting * 0.15;
+      else parts.head.ref.rotation.x *= 0.9;
+      if (state.pouncing > 0.05) parts.head.ref.position.y = state.pouncing * 0.04;
+      else parts.head.ref.position.y *= 0.9;
+    }
+
+    if (state.pouncing > 0.05 && catModel) catModel.rotation.x = -state.pouncing * 0.08;
+    else if (catModel) catModel.rotation.x *= 0.9;
+  }
+
+  // ---------- 整体上下起伏（catGroup.position.y）----------
   var bob = Math.abs(Math.sin(phase * 2)) * PARAMS.BOB * (state.speed / PARAMS.SPEED_MAX);
   catGroup.position.y = 1.5 + bob - state.sitting * 0.45 - state.pouncing * 0.25;
-
-  // 尾巴摆动（猫尾主动）—— 操作 GLB 的 Tail 子对象
-  if (parts.tail.ref) {
-    // tail 的局部坐标可能不在根，我们旋转它的「骨骼」近似：
-    // 把尾巴绕 z 轴轻摆
-    parts.tail.ref.rotation.z = Math.sin(phase * 1.5) * PARAMS.TAIL_DEG * Math.PI / 180;
-    if (state.sitting > 0.1) {
-      parts.tail.ref.rotation.y = state.sitting * 0.5;
-    } else {
-      parts.tail.ref.rotation.y *= 0.9;
-    }
-  }
-
-  // 头部摆动（轻摆，让猫有生气）
-  if (parts.head.ref) {
-    parts.head.ref.rotation.z = Math.sin(phase) * 0.04;
-    if (state.sitting > 0.1) {
-      parts.head.ref.rotation.x = state.sitting * 0.15;
-    } else {
-      parts.head.ref.rotation.x *= 0.9;
-    }
-    if (state.pouncing > 0.05) {
-      parts.head.ref.position.y = state.pouncing * 0.04;
-    } else {
-      parts.head.ref.position.y *= 0.9;
-    }
-  }
-
-  // 扑击时整体微微低头弓背
-  if (state.pouncing > 0.05) {
-    catModel && catModel.rotation && (catModel.rotation.x = -state.pouncing * 0.08);
-  } else if (catModel) {
-    catModel.rotation.x *= 0.9;
-  }
 }
 
 function updateLeash() {
