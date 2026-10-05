@@ -62,6 +62,16 @@
   .copy-btn:hover { background: var(--accent-deep); }
   .advice-box { background: var(--accent-soft); border-left: 3px solid var(--accent);
     padding: 12px 16px; border-radius: 0 6px 6px 0; font-size: 13.5px; margin-top: 8px; }
+  .triage-list { font-size: 13px; line-height: 1.7; padding-left: 4px; }
+  .triage-list .item { padding: 4px 0; border-bottom: 1px dashed var(--line); }
+  .triage-list .item:last-child { border-bottom: none; }
+  .triage-list .item .tag { display: inline-block; padding: 1px 6px; border-radius: 3px;
+    font-size: 11px; margin-right: 6px; font-weight: 600; letter-spacing: 0.04em; }
+  .triage-list .item .tag.p0 { background: #fee2e2; color: #991b1b; }
+  .triage-list .item .tag.p1 { background: #fef3c7; color: #92400e; }
+  .triage-list .item .tag.p2 { background: #fef9c3; color: #854d0e; }
+  .triage-list .item .tag.p3 { background: var(--accent-soft); color: var(--accent-deep); }
+  .triage-list .empty { color: var(--faint); font-style: italic; padding: 4px 0; }
   .disclaimer { font-size: 12px; color: var(--faint); margin-top: 24px; padding: 12px;
     border: 1px dashed var(--line); border-radius: 6px; }
 </style>
@@ -158,10 +168,47 @@
         <div class="chk"><input type="checkbox" id="f-fast"> <label for="f-fast">空腹到院，以零食换强化</label></div>
         <div class="chk"><input type="checkbox" id="f-carwait"> <label for="f-carwait">车内等待，避开候诊区</label></div>
       </div>
+
+      <div class="panel">
+        <h3>⑤ 体况 · BCS & 因子</h3>
+        <div class="fld"><label>体况评分 BCS（1–9）<br><span style="font-size:11.5px;color:var(--faint);">5 标准，6 起超重，3 以下偏瘦</span></label><input id="f-bcs" type="number" min="1" max="9" step="1" value="5"></div>
+        <div class="fld">
+          <label>既往状况</label>
+          <select id="f-cond">
+            <option value="healthy">健康无特殊</option>
+            <option value="ckd">慢性肾病（CKD 期）</option>
+            <option value="hyperT">甲亢</option>
+            <option value="diabetes">糖尿病</option>
+            <option value="obese">肥胖 / 减重管理</option>
+            <option value="arth">骨关节炎</option>
+            <option value="fhs">猫感觉过敏综合征（FHS）</option>
+            <option value="flutd">泌尿道综合征（FLUTD）</option>
+          </select>
+        </div>
+        <div class="chk"><input type="checkbox" id="f-brachy"> <label for="f-brachy">短鼻品种（波斯 / 加菲 / 异短）</label></div>
+        <div class="chk"><input type="checkbox" id="f-longhair"> <label for="f-longhair">长毛（热风险升一级）</label></div>
+        <div class="chk"><input type="checkbox" id="f-outdoor"> <label for="f-outdoor">近 7 日有户外活动</label></div>
+      </div>
     </div>
 
     <!-- 右侧：输出 -->
     <div>
+      <div class="out-section">
+        <h3>分诊标记 · Triage</h3>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 8px;">
+          按当前档案 / 环境 / 就诊条件推断的紧急程度。<strong>这不是诊断</strong>——是
+          帮你判断「要不要现在就走」的辅助工具。
+        </p>
+        <div class="subhead" style="font-size:12px;color:#b91c1c;font-weight:600;letter-spacing:0.04em;">P0 · 立即（分钟级 · 急诊）</div>
+        <div id="tri-p0" class="triage-list"></div>
+        <div class="subhead" style="font-size:12px;color:#c97a1c;font-weight:600;letter-spacing:0.04em;margin-top:10px;">P1 · 当日（小时级 · 当日门诊）</div>
+        <div id="tri-p1" class="triage-list"></div>
+        <div class="subhead" style="font-size:12px;color:#7a7a1c;font-weight:600;letter-spacing:0.04em;margin-top:10px;">P2 · 72 小时内 · 常规检查</div>
+        <div id="tri-p2" class="triage-list"></div>
+        <div class="subhead" style="font-size:12px;color:var(--muted);font-weight:600;letter-spacing:0.04em;margin-top:10px;">P3 · 健康基线 · 维持现状</div>
+        <div id="tri-p3" class="triage-list"></div>
+      </div>
+
       <div class="out-section">
         <h3>派生指标</h3>
         <div class="metric-grid" id="m-derived"></div>
@@ -218,6 +265,8 @@
       coat: document.getElementById("f-coat").value,
       indoor: document.getElementById("f-indoor").checked,
       monthlyHeartworm: document.getElementById("f-hw").checked,
+      bcs: +(document.getElementById("f-bcs") ? document.getElementById("f-bcs").value : 5),
+      cond: document.getElementById("f-cond") ? document.getElementById("f-cond").value : "healthy",
       activity: {
         playMin: +document.getElementById("f-play").value,
         sniffMin: +document.getElementById("f-sniff").value,
@@ -238,13 +287,80 @@
         happyVisit: document.getElementById("f-happy").checked,
         fastSwap: document.getElementById("f-fast").checked,
         carWait: document.getElementById("f-carwait").checked
+      },
+      profile: {
+        bcs: +(document.getElementById("f-bcs") ? document.getElementById("f-bcs").value : 5),
+        cond: document.getElementById("f-cond") ? document.getElementById("f-cond").value : "healthy",
       }
     };
   }
 
+  // ---------- 分诊标记 ----------
+  // 基于档案 / 环境 / 就诊条件推断紧急程度
+  // 这不是诊断——是「要不要现在就走」的辅助判断
+  function renderTriage(input) {
+    var p0 = [], p1 = [], p2 = [], p3 = [];
+
+    var temp = input.env.temp;
+    var humid = input.env.humid;
+    var bcs = input.profile.bcs || 5;
+    var cond = input.profile.cond || 'healthy';
+    var longhair = document.getElementById('f-longhair') && document.getElementById('f-longhair').checked;
+    var brachy = document.getElementById('f-brachy') && document.getElementById('f-brachy').checked;
+    var outdoor = document.getElementById('f-outdoor') && document.getElementById('f-outdoor').checked;
+
+    // P0 · 急诊
+    if (temp >= 32) p0.push({ tag: '气温 ' + temp + '°C', desc: '已超猫的散热临界。立即降温、补水、就医。' });
+    if (temp >= 25 && humid >= 75) p0.push({ tag: '湿气阻塞散热', desc: '湿度让蒸发失效，热风险非线性上升。' });
+    if (temp >= 30 && longhair) p0.push({ tag: '长毛 + 高温', desc: '长毛猫的散热效率比短毛低 40%。' });
+    if (brachy && temp >= 28) p0.push({ tag: '短鼻品种高温', desc: '波斯 / 加菲的气道更难散热。' });
+    if (cond === 'ckd' && bcs <= 3) p0.push({ tag: 'CKD + 极瘦', desc: '慢性肾病 + BCS≤3 = 急性恶化风险。' });
+    if (cond === 'flutd') p0.push({ tag: 'FLUTD 史', desc: '泌尿道梗阻超过 24h 即急性肾衰。' });
+
+    // P1 · 当日
+    if (temp >= 28 && temp < 32) p1.push({ tag: '气温 ' + temp + '°C', desc: '接近临界。限制活动，补水。' });
+    if (cond === 'diabetes') p1.push({ tag: '糖尿病', desc: '当日血糖监测与胰岛素调整。' });
+    if (cond === 'hyperT') p1.push({ tag: '甲亢', desc: '心率 / 体重监测，预约门诊。' });
+    if (bcs >= 7) p1.push({ tag: 'BCS=' + bcs, desc: '超重 → 当日开始减重管理。' });
+    if (bcs <= 3 && cond !== 'ckd') p1.push({ tag: 'BCS=' + bcs, desc: '过瘦 → 当日排查消耗性病因。' });
+
+    // P2 · 72h
+    if (cond === 'arth') p2.push({ tag: '骨关节炎', desc: '镇痛评估，环境改造（阶梯 / 跳台）。' });
+    if (cond === 'fhs') p2.push({ tag: 'FHS', desc: '感觉过敏综合征发作频率记录。' });
+    if (cond === 'obese') p2.push({ tag: '肥胖', desc: '制定 12 周减重计划。' });
+    if (bcs === 6) p2.push({ tag: 'BCS=6', desc: '轻微超重 → 调整 DER 系数。' });
+    if (!outdoor && temp < 28) p2.push({ tag: '纯室内', desc: '常规免疫 / 驱虫 / 牙周检查。' });
+
+    // P3 · 维持
+    if (cond === 'healthy' && bcs === 5 && temp < 26) {
+      p3.push({ tag: '健康基线', desc: '档案 / 环境 / 行为均在理想区间。维持现状即可。' });
+    }
+    p3.push({ tag: '日常', desc: '每日刷牙、每周梳毛、每月体重记录、每年体检。' });
+
+    function render(items, level) {
+      if (!items.length) return '<div class="empty">无</div>';
+      return items.map(function(i) {
+        return '<div class="item"><span class="tag ' + level + '">' + i.tag + '</span>' + i.desc + '</div>';
+      }).join('');
+    }
+
+    var elP0 = document.getElementById('tri-p0');
+    var elP1 = document.getElementById('tri-p1');
+    var elP2 = document.getElementById('tri-p2');
+    var elP3 = document.getElementById('tri-p3');
+    if (elP0) elP0.innerHTML = render(p0, 'p0');
+    if (elP1) elP1.innerHTML = render(p1, 'p1');
+    if (elP2) elP2.innerHTML = render(p2, 'p2');
+    if (elP3) elP3.innerHTML = render(p3, 'p3');
+  }
+
   function render() {
     var Q = window.CatQuantify;
-    var r = Q.evaluate(read());
+    var input = read();
+    var r = Q.evaluate(input);
+
+    // 渲染分诊标记
+    renderTriage(input);
 
     // 派生指标
     var derived = [
