@@ -333,13 +333,15 @@ header .mode-toggle a:hover:not(.active) {
 <script type="importmap">
 {
   "imports": {
-    "three": "../assets/vendor/three.module.js"
+    "three": "../assets/vendor/three.module.js",
+    "three/addons/loaders/GLTFLoader.js": "../assets/vendor/GLTFLoader.js"
   }
 }
 </script>
 
 <script type="module">
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ---------- 内置猫：像素网格 → 体素坐标 ----------
 // 与 2D 版本同一份网格（11 行 × 22 列，左为头）
@@ -502,160 +504,92 @@ var PARAMS = {
   SIT_AFTER: 5,
 };
 
-// 构建/重建猫 —— 几何体组合（不是体素方块）
+// 构建/重建猫 —— 加载 Blender 导出的 GLB 模型
+var catModel = null;
+var gltfLoader = new GLTFLoader();
+
 function buildCat() {
   // 清空旧模型
   [parts.head, parts.body, parts.tail].concat(legs).forEach(function(g) {
     while (g.children.length) g.remove(g.children[0]);
   });
-
-  // 猫的身体比例（世界单位）
-  var bodyLen = 2.2;   // 躯干长度
-  var bodyW = 0.85;    // 躯干宽度
-  var bodyH = 0.75;    // 躯干高度
-  var legH = 0.9;      // 腿高
-  var legR = 0.14;     // 腿半径
-  var headR = 0.55;    // 头半径
-  var earH = 0.35;     // 耳朵高度
-  var earW = 0.22;     // 耳朵底部宽度
-  var tailLen = 2.0;   // 尾巴长度
-  var tailR = 0.1;     // 尾巴半径
-
-  // 材质
-  var furMat = new THREE.MeshStandardMaterial({ color: 0x3A3530, roughness: 0.72, metalness: 0.03 });
-  var darkFurMat = new THREE.MeshStandardMaterial({ color: 0x2A2520, roughness: 0.75, metalness: 0.03 });
-  var earMat = new THREE.MeshStandardMaterial({ color: 0x4A3028, roughness: 0.6 });
-  var noseMat = new THREE.MeshStandardMaterial({ color: 0xC47880, roughness: 0.4 });
-  var eyeMat = new THREE.MeshStandardMaterial({ color: 0xC8A35E, roughness: 0.25, metalness: 0.1, emissive: 0x4A3020, emissiveIntensity: 0.15 });
-  var padMat = new THREE.MeshStandardMaterial({ color: 0x5C3A35, roughness: 0.5 });
-
-  // ---- 躯干（拉长的椭球，用 Scale 变形的 SphereGeometry）----
-  var bodyGeom = new THREE.SphereGeometry(0.5, 24, 16);
-  var body = new THREE.Mesh(bodyGeom, furMat);
-  body.scale.set(bodyLen / 1.0, bodyH / 1.0, bodyW / 1.0);
-  body.castShadow = true;
-  body.receiveShadow = true;
-  parts.body.add(body);
-  // 躯干底部偏白（猫腹毛）
-  var bellyGeom = new THREE.SphereGeometry(0.5, 16, 12, 0, Math.PI * 2, Math.PI * 0.55, Math.PI * 0.45);
-  var belly = new THREE.Mesh(bellyGeom, new THREE.MeshStandardMaterial({ color: 0xD5CCC0, roughness: 0.8 }));
-  belly.scale.set(bodyLen / 1.0 * 0.95, bodyH / 1.0 * 0.9, bodyW / 1.0 * 0.9);
-  belly.castShadow = true;
-  parts.body.add(belly);
-
-  // ---- 头部（圆球 + 尖耳朵）----
-  // 头放在身体前端
-  var headOffset = bodyLen / 2 + headR * 0.5;
-  parts.head.position.set(headOffset, 0.15, 0);
-
-  var head = new THREE.Mesh(new THREE.SphereGeometry(headR, 24, 18), furMat);
-  head.castShadow = true;
-  head.receiveShadow = true;
-  parts.head.add(head);
-
-  // 两只尖耳朵（猫的三角形耳尖是最明显的视觉特征）
-  var earGeom = new THREE.ConeGeometry(earW * 0.6, earH, 4);
-  function addEar(z) {
-    var ear = new THREE.Mesh(earGeom, earMat);
-    ear.position.set(0, headR * 0.85, z);
-    ear.rotation.y = Math.PI / 4;
-    ear.castShadow = true;
-    parts.head.add(ear);
-    // 耳内粉红
-    var inner = new THREE.Mesh(
-      new THREE.ConeGeometry(earW * 0.35, earH * 0.7, 4),
-      new THREE.MeshStandardMaterial({ color: 0xC47880, roughness: 0.5 })
-    );
-    inner.position.set(0, headR * 0.85, z);
-    inner.rotation.y = Math.PI / 4;
-    parts.head.add(inner);
+  if (catModel) {
+    catGroup.remove(catModel);
+    catModel = null;
   }
-  addEar(headR * 0.55);
-  addEar(-headR * 0.55);
 
-  // 眼睛（金色，猫眼是竖瞳但我们简化为球体）
-  var eyeGeom = new THREE.SphereGeometry(0.07, 12, 10);
-  var eyeL = new THREE.Mesh(eyeGeom, eyeMat);
-  eyeL.position.set(headR * 0.6, headR * 0.15, headR * 0.45);
-  parts.head.add(eyeL);
-  var eyeR = new THREE.Mesh(eyeGeom, eyeMat);
-  eyeR.position.set(headR * 0.6, headR * 0.15, -headR * 0.45);
-  parts.head.add(eyeR);
+  hint.textContent = '正在加载 Blender 猫模型…';
+  hint.style.display = 'block';
 
-  // 鼻子（粉色小三角）
-  var nose = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), noseMat);
-  nose.position.set(headR * 0.95, -headR * 0.15, 0);
-  nose.scale.set(1.3, 0.8, 1);
-  parts.head.add(nose);
+  gltfLoader.load(
+    '../assets/models/cat.glb',
+    function(gltf) {
+      catModel = gltf.scene;
+      // 启用阴影
+      catModel.traverse(function(obj) {
+        if (obj.isMesh) {
+          obj.castShadow = true;
+          obj.receiveShadow = true;
+        }
+      });
 
-  // 嘴下白色区
-  var muzzle = new THREE.Mesh(
-    new THREE.SphereGeometry(headR * 0.35, 12, 8),
-    new THREE.MeshStandardMaterial({ color: 0xD5CCC0, roughness: 0.85 })
+      // 模型原始尺寸是米单位（真实猫大小），需要放大让它在场景里看得清
+      // 真实猫约 0.5m，场景目标是约 3 单位高 → 放大约 6 倍
+      var scale = 6.0;
+      catModel.scale.set(scale, scale, scale);
+
+      // 让模型底部贴地面：模型坐标原点在身体中心，脚距离原点约 -0.24m × 6 = -1.44
+      // 我们让 catGroup 的 y = 1.44 即可
+      catGroup.position.y = 1.5;
+
+      // 把整个模型加到 catGroup
+      catGroup.add(catModel);
+
+      // 找部位的子对象用于动画
+      // v2 模型：头/身/腿融合为一个 Body，但有独立的 Paw（脚掌）、Tail、Eye、Nose 等
+      var found = {};
+      catModel.traverse(function(obj) {
+        var name = obj.name;
+        // 主要部位
+        if (name === 'Body' || name === 'Belly') found.body = true;
+        if (name === 'Tail') { found.tail = true; parts.tailRef = obj; }
+        // 脚掌（v2 用 Paw 命名）
+        if (name === 'PawFL') { found.pawFL = obj; }
+        if (name === 'PawFR') { found.pawFR = obj; }
+        if (name === 'PawBL') { found.pawBL = obj; }
+        if (name === 'PawBR') { found.pawBR = obj; }
+        // 兼容 v1 命名
+        if (name === 'LegFL') { found.legFL = obj; }
+        if (name === 'LegFR') { found.legFR = obj; }
+        if (name === 'LegBL') { found.legBL = obj; }
+        if (name === 'LegBR') { found.legBR = obj; }
+        if (name === 'Head') { found.head = true; parts.headRef = obj; }
+      });
+
+      // 把找到的部位引用保存到 legs 数组（顺序：前左/前右/后左/后右）
+      // 优先用整条腿（v1），没有则用脚掌（v2）
+      legs[0].ref = found.legFL || found.pawFL;
+      legs[1].ref = found.legFR || found.pawFR;
+      legs[2].ref = found.legBL || found.pawBL;
+      legs[3].ref = found.legBR || found.pawBR;
+      if (parts.headRef) parts.head.ref = parts.headRef;
+      if (parts.tailRef) parts.tail.ref = parts.tailRef;
+
+      state.loaded = true;
+      hint.style.display = 'none';
+      console.log('[cyber-stroll-3d] 猫模型加载完成，部位:', Object.keys(found).join(', '));
+    },
+    function(progress) {
+      if (progress.total) {
+        var pct = Math.round((progress.loaded / progress.total) * 100);
+        hint.textContent = '加载中 ' + pct + '%';
+      }
+    },
+    function(error) {
+      hint.textContent = '模型加载失败：' + (error && error.message ? error.message : '未知错误');
+      console.error('[cyber-stroll-3d] 模型加载失败', error);
+    }
   );
-  muzzle.position.set(headR * 0.75, -headR * 0.3, 0);
-  muzzle.scale.set(1.2, 0.8, 1);
-  parts.head.add(muzzle);
-
-  // ---- 尾巴（弯曲锥形，用多段圆柱拼）----
-  parts.tail.position.set(-bodyLen / 2 + 0.05, 0.15, 0);
-  var tailSegs = 5;
-  for (var i = 0; i < tailSegs; i++) {
-    var t1 = i / tailSegs;
-    var t2 = (i + 1) / tailSegs;
-    var segR = tailR * (1 - t1 * 0.7);
-    var segGeom = new THREE.CylinderGeometry(segR * (1 - 1/tailSegs * 0.7), segR, tailLen / tailSegs, 8);
-    var seg = new THREE.Mesh(segGeom, i < 2 ? furMat : darkFurMat);
-    // 尾巴向上弯曲
-    var angle = t1 * 1.2; // 弯曲角度
-    var prevAngle = (i > 0 ? (i - 1) / tailSegs : 0) * 1.2;
-    seg.position.set(
-      -Math.sin(angle) * tailLen * t1 * 0.4 - i * (tailLen / tailSegs) * 0.7,
-      Math.cos(angle - Math.PI / 2) * tailLen * 0.15 + i * 0.08,
-      0
-    );
-    seg.rotation.z = -Math.PI / 2 + angle * 0.7;
-    seg.castShadow = true;
-    parts.tail.add(seg);
-  }
-
-  // ---- 4 条腿（圆柱 + 脚掌）----
-  var legGeom = new THREE.CylinderGeometry(legR, legR * 1.15, legH, 10);
-  var pawGeom = new THREE.SphereGeometry(legR * 1.4, 10, 6);
-  var legPositions = [
-    [bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, bodyW * 0.45],   // 前左
-    [bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, -bodyW * 0.45],  // 前右
-    [-bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, bodyW * 0.45],  // 后左
-    [-bodyLen * 0.3, -bodyH / 2 - legH / 2 + 0.05, -bodyW * 0.45], // 后右
-  ];
-  legPositions.forEach(function(pos, i) {
-    var leg = new THREE.Mesh(legGeom, furMat);
-    leg.position.set(pos[0], pos[1], pos[2]);
-    leg.castShadow = true;
-    leg.receiveShadow = true;
-    // 脚掌
-    var paw = new THREE.Mesh(pawGeom, padMat);
-    paw.position.set(pos[0], pos[1] - legH / 2, pos[2]);
-    paw.scale.set(1, 0.5, 1.3);
-    paw.castShadow = true;
-    // 腿的 pivot 在顶部（髋关节位置），这样旋转时腿像摆锤
-    legs[i].position.set(0, -bodyH / 2 + 0.05, 0);
-    legs[i].add(leg);
-    legs[i].add(paw);
-    // 把腿和脚的局部坐标偏移，使 pivot 在腿顶
-    leg.position.y = -legH / 2;
-    leg.position.x = pos[0];
-    leg.position.z = pos[2];
-    paw.position.y = -legH + 0.05;
-    paw.position.x = pos[0];
-    paw.position.z = pos[2];
-  });
-
-  // 整体 y 调整：让脚掌底面贴地面
-  catGroup.position.y = legH + bodyH / 2;
-
-  state.loaded = true;
-  hint.style.display = 'none';
 }
 
 // ---------- 动画循环 ----------
@@ -741,39 +675,52 @@ function updatePhysics(dt) {
 function updatePose() {
   var phase = state.phase;
   var swing = PARAMS.SWING_DEG * Math.PI / 180;
-  
-  // 4 条腿对角步态
-  legs[0].rotation.z = Math.sin(phase) * swing;
-  legs[3].rotation.z = Math.sin(phase) * swing;
-  legs[1].rotation.z = Math.sin(phase + Math.PI) * swing;
-  legs[2].rotation.z = Math.sin(phase + Math.PI) * swing;
-  
-  // 走动时身体上下起伏
+
+  // 4 条腿对角步态（操作 GLB 子对象引用）
+  // v2 里是脚掌（Paw），绕自身中心小幅度前后摆；v1 里是整条腿
+  var isPaw = legs[0].ref && legs[0].ref.name && legs[0].ref.name.indexOf('Paw') === 0;
+  var pawSwing = isPaw ? swing * 0.45 : swing;  // 脚掌幅度小，整腿幅度大
+  if (legs[0].ref) legs[0].ref.rotation.x = Math.sin(phase) * pawSwing;
+  if (legs[3].ref) legs[3].ref.rotation.x = Math.sin(phase) * pawSwing;
+  if (legs[1].ref) legs[1].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
+  if (legs[2].ref) legs[2].ref.rotation.x = Math.sin(phase + Math.PI) * pawSwing;
+
+  // 走动时整体上下起伏（catGroup）
   var bob = Math.abs(Math.sin(phase * 2)) * PARAMS.BOB * (state.speed / PARAMS.SPEED_MAX);
-  catGroup.position.y = voxelSize * 1.6 + bob - state.sitting * 0.3 - state.pouncing * 0.15;
-  
-  // 尾巴主动摆动（猫尾比狗尾主动）
-  parts.tail.rotation.z = Math.sin(phase * 1.5) * PARAMS.TAIL_DEG * Math.PI / 180;
-  
-  // 头部轻微摆
-  parts.head.rotation.z = Math.sin(phase) * 0.04;
-  
-  // 坐下时身体下沉 + 尾巴收
-  if (state.sitting > 0.1) {
-    parts.tail.rotation.y = state.sitting * 0.6;
-    parts.head.rotation.x = state.sitting * 0.2;
-  } else {
-    parts.tail.rotation.y *= 0.9;
-    parts.head.rotation.x *= 0.9;
+  catGroup.position.y = 1.5 + bob - state.sitting * 0.45 - state.pouncing * 0.25;
+
+  // 尾巴摆动（猫尾主动）—— 操作 GLB 的 Tail 子对象
+  if (parts.tail.ref) {
+    // tail 的局部坐标可能不在根，我们旋转它的「骨骼」近似：
+    // 把尾巴绕 z 轴轻摆
+    parts.tail.ref.rotation.z = Math.sin(phase * 1.5) * PARAMS.TAIL_DEG * Math.PI / 180;
+    if (state.sitting > 0.1) {
+      parts.tail.ref.rotation.y = state.sitting * 0.5;
+    } else {
+      parts.tail.ref.rotation.y *= 0.9;
+    }
   }
-  
-  // 扑击时弓背
+
+  // 头部摆动（轻摆，让猫有生气）
+  if (parts.head.ref) {
+    parts.head.ref.rotation.z = Math.sin(phase) * 0.04;
+    if (state.sitting > 0.1) {
+      parts.head.ref.rotation.x = state.sitting * 0.15;
+    } else {
+      parts.head.ref.rotation.x *= 0.9;
+    }
+    if (state.pouncing > 0.05) {
+      parts.head.ref.position.y = state.pouncing * 0.04;
+    } else {
+      parts.head.ref.position.y *= 0.9;
+    }
+  }
+
+  // 扑击时整体微微低头弓背
   if (state.pouncing > 0.05) {
-    parts.body.rotation.x = -state.pouncing * 0.3;
-    parts.head.position.y = state.pouncing * 0.2;
-  } else {
-    parts.body.rotation.x *= 0.9;
-    parts.head.position.y *= 0.9;
+    catModel && catModel.rotation && (catModel.rotation.x = -state.pouncing * 0.08);
+  } else if (catModel) {
+    catModel.rotation.x *= 0.9;
   }
 }
 
@@ -789,7 +736,7 @@ function updateLeash() {
     
     leashLine.visible = true;
     var positions = leashGeom.attributes.position.array;
-    positions[0] = state.catX; positions[1] = voxelSize * 1.6; positions[2] = 0;
+    positions[0] = state.catX; positions[1] = 1.5; positions[2] = 0;
     positions[3] = state.anchor.x; positions[4] = 0.18; positions[5] = state.anchor.z;
     leashGeom.attributes.position.needsUpdate = true;
     
@@ -1004,7 +951,7 @@ buildCat();
 requestAnimationFrame(tick);
 
 // 暴露 state 给外部测试
-window.cyberStroll3D = { state: state, PARAMS: PARAMS, selfCheck: selfCheck, buildCat: buildCat };
+window.cyberStroll3D = { state: state, PARAMS: PARAMS, selfCheck: selfCheck, buildCat: buildCat, catGroup: catGroup, parts: parts, legs: legs };
 </script>
 
 </body>
