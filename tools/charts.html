@@ -209,6 +209,132 @@
     src: "来源等级 A · spec §5"
   });
 
+  // 9. 一天 1440 分钟里有明确用途的只有 200 分钟
+  bcharts.push({
+    svg: CC.donutChart([
+      { label: "睡眠/浅睡", v: 810, color: CC.GRAY.g1 },
+      { label: "理毛", v: 120, color: CC.GRAY.g3 },
+      { label: "巡视", v: 90, color: CC.GRAY.g4 },
+      { label: "玩耍/狩猎", v: 80, color: CC.GRAY.g2 },
+      { label: "进食", v: 40, color: CC.GRAY.g5 },
+      { label: "无明确用途", v: 300, color: CC.GRAY.g6 }
+    ], "1440 分钟里有明确用途的只有 1140 分钟"),
+    desc: "猫不是「睡 16 小时」——是「16 小时里多数是浅睡」，真正深睡只占其中的 30%。",
+    src: "来源等级 A · spec §5 · 行为预算分解"
+  });
+
+  // 10. 体重每翻一倍，每日热量需求只多 1.4 倍
+  bcharts.push({
+    svg: CC.lineChart([
+      { label: "2kg", v: 130 }, { label: "3kg", v: 180 }, { label: "4kg", v: 230 },
+      { label: "5kg", v: 280 }, { label: "6kg", v: 320 }, { label: "7kg", v: 370 },
+      { label: "8kg", v: 410 }
+    ], "体重每翻一倍，热量需求只多 1.4 倍"),
+    desc: "RER = 70 × 体重^0.75。代谢率是亚线性——胖猫不是按比例吃得更多。",
+    src: "来源等级 A · §6.1 RER 公式"
+  });
+
+  // 11. 同一只猫，生命阶段不同饭量差到 3.1 倍
+  bcharts.push({
+    svg: CC.barChart([
+      { label: "幼猫期", v: 250 },
+      { label: "哺乳期", v: 250 },
+      { label: "成绝室内", v: 100 },
+      { label: "成未绝", v: 120 },
+      { label: "活跃外放", v: 160 },
+      { label: "老年", v: 80 },
+      { label: "减重", v: 70 }
+    ], "同一只猫，阶段不同饭量差 3.1 倍"),
+    desc: "DER = RER × 系数。幼猫 ×2.5，老年 ×1.1——同一只 4kg 猫，从幼到老差出近 3 倍热量。",
+    src: "来源等级 B · FEDIAF 2021"
+  });
+
+  // 12. 32°C 那道线跟分数无关——是硬停止
+  bcharts.push({
+    svg: CC.barChart([
+      { label: "26°C", v: 1 }, { label: "28°C", v: 2 }, { label: "30°C", v: 5 },
+      { label: "32°C", v: 9 }, { label: "34°C", v: 9 }, { label: "36°C", v: 9 }
+    ], "32°C 那道线跟分数无关：硬停止"),
+    desc: "猫没有汗腺，散热只靠舔毛和喘气。G14 门槛：≥32°C 一律硬停止，不分外设接合分。",
+    src: "来源等级 A · §8 G14 气温上限"
+  });
+
+  // 13. 同样 28°C，毛发长度让热风险差 2 倍
+  bcharts.push({
+    svg: CC.barGroup([
+      { label: "短毛·干", v: 3, color: CC.GRAY.g3 },
+      { label: "短毛·湿", v: 6, color: CC.GRAY.g2 },
+      { label: "长毛·干", v: 5, color: CC.GRAY.g3 },
+      { label: "长毛·湿", v: 9, color: CC.GRAY.g1 }
+    ], "同样 28°C，长毛+湿气让风险翻倍"),
+    desc: "G15 湿度门槛：≥25°C 且 ≥75% 湿度即硬停止。长毛猫的毛发湿度蒸发更慢。",
+    src: "来源等级 A · §8 G15 湿度散热"
+  });
+
+  // 14. 27 条门槛里，11 条是硬停止
+  bcharts.push({
+    svg: CC.donutChart([
+      { label: "P0 硬停止", v: 11, color: CC.GRAY.g1 },
+      { label: "P1 限制时长", v: 8, color: CC.GRAY.g3 },
+      { label: "P2 警告", v: 5, color: CC.GRAY.g4 },
+      { label: "P3 提示", v: 3, color: CC.GRAY.g5 }
+    ], "27 条门槛里，11 条不许先在家观察"),
+    desc: "外设总线门槛分级——P0 类门槛一旦触发就不存在「再观察一下」的余地。",
+    src: "来源等级 A · §8 门槛表"
+  });
+
+  // 15. 凌晨 3-5 点触发 ZOOMIES 的概率是白天的 12 倍
+  bcharts.push({
+    svg: CC.barChart([
+      { label: "0-3", v: 4 }, { label: "3-6", v: 12 }, { label: "6-9", v: 3 },
+      { label: "9-12", v: 1 }, { label: "12-15", v: 1 }, { label: "15-18", v: 2 },
+      { label: "18-21", v: 8 }, { label: "21-24", v: 5 }
+    ], "凌晨 3-5 点的 ZOOMIES 是白天的 12 倍"),
+    desc: "crepuscular（晨昏性）。所谓的「半夜疯跑」不是异常——是它的作息表本来就这么写的。",
+    src: "来源等级 A · §5 作息协议"
+  });
+
+  // 16. 一只 4kg 猫一天喝的水，相当于它体重的 6%
+  bcharts.push({
+    svg: CC.areaChart([
+      { label: "2kg", v: 130 }, { label: "3kg", v: 180 }, { label: "4kg", v: 240 },
+      { label: "5kg", v: 300 }, { label: "6kg", v: 360 }, { label: "7kg", v: 420 }
+    ], "4kg 猫一天喝 240ml，相当于体重 6%"),
+    desc: "44-66 ml/kg/天。吃湿粮的猫饮水量会显著下降——这是为什么喂罐头算「补水」。",
+    src: "来源等级 B · Sparkes 2011"
+  });
+
+  // 17. 14 个状态里，PAIN 的置信度只有 0.45
+  if (CE && CE.STATES) {
+    bcharts.push({
+      svg: CC.barChart(CE.STATES.slice().sort((a,b)=>a.confidence-b.confidence).slice(0, 5).map(function (s) {
+        return { label: s.id, v: Math.round(s.confidence * 100) };
+      }), "14 个状态里 PAIN 最不确定：0.45"),
+      desc: "猫在疼的时候表情参数与放松态逐位相同。这不是识别精度问题——是架构级隐藏。",
+      src: "来源等级 C · §7 表情架构缺陷"
+    });
+  }
+
+  // 18. 慢眨是猫能给出的最高正面信号：+8
+  bcharts.push({
+    svg: CC.barChart([
+      { label: "慢眨", v: 8 }, { label: "侧身走开", v: 1 },
+      { label: "对峙", v: 0 }, { label: "对方先扑", v: -5 }
+    ], "慢眨 +8：猫能给出的最高正面信号"),
+    desc: "POST /api/v1/territory/negotiate 的 trust_delta。慢眨要等对方先冷静才可能发生。",
+    src: "来源等级 A · §领地协议 negotiate 端点"
+  });
+
+  // 19. 一次毛球需要 3-5 天才能从胃走到肠
+  bcharts.push({
+    svg: CC.lineChart([
+      { label: "第1天", v: 1 }, { label: "第2天", v: 2 }, { label: "第3天", v: 4 },
+      { label: "第4天", v: 6 }, { label: "第5天", v: 8 }, { label: "第6天", v: 10 }
+    ], "毛球从胃到肠需要 3-5 天"),
+    desc: "短毛猫一周一次梳毛足够；长毛猫每天都要——否则毛球堆积触发呕吐。",
+    src: "来源等级 B · veterinary advisory"
+  });
+
   document.getElementById("budget-charts").innerHTML = bcharts.map(function (c) {
     return '<div class="chart-card">' + c.svg +
       '<div class="desc">' + c.desc + '</div>' +
