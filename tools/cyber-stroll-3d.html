@@ -524,26 +524,22 @@ function buildCat() {
   gltfLoader.load(
     '../assets/models/cat.glb',
     function(gltf) {
-      catModel = gltf.scene;
-      // 启用阴影
-      catModel.traverse(function(obj) {
-        if (obj.isMesh) {
-          obj.castShadow = true;
-          obj.receiveShadow = true;
-        }
-      });
+      try {
+        catModel = gltf.scene;
+        // 启用阴影
+        catModel.traverse(function(obj) {
+          if (obj.isMesh) {
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+          }
+        });
 
-      // 模型原始尺寸是厘米/单位很小，需要放大让它在场景里看得清
-      // Toon Cat 模型约 2 单位高，场景目标约 3 单位高 → 放大约 12 倍
-      var scale = 12.0;
-      catModel.scale.set(scale, scale, scale);
-
-      // 让模型底部贴地面：模型坐标原点在身体中心，脚距离原点约 -0.24m × 6 = -1.44
-      // 我们让 catGroup 的 y = 1.44 即可
-      catGroup.position.y = 1.5;
-
-      // 把整个模型加到 catGroup
+      // 模型已经在 Blender 里清理过：原点居中、脚贴地、合理尺寸（约 1m 高）
+      // 只需要在场景里放大到合理大小（约 3 单位高 → 缩放 3 倍）
       catGroup.add(catModel);
+      catModel.scale.set(3, 3, 3);  // 1m × 3 = 3 单位高
+      catGroup.position.y = 0;  // 脚已经在原点
+      state.catBaseY = 0;
 
       // v3 模型（Toon Cat FREE）使用骨骼系统（Armature + 36 bones）
       // 找 SkinnedMesh 和骨骼，建立骨骼引用
@@ -597,6 +593,10 @@ function buildCat() {
       state.loaded = true;
       hint.style.display = 'none';
       console.log('[cyber-stroll-3d] 猫模型加载完成，部位:', Object.keys(found).join(', '));
+      } catch (e) {
+        console.error('[cyber-stroll-3d] 模型初始化失败:', e.message);
+        hint.textContent = '模型初始化失败：' + e.message;
+      }
     },
     function(progress) {
       if (progress.total) {
@@ -802,8 +802,10 @@ function updatePose() {
   }
 
   // ---------- 整体上下起伏（catGroup.position.y）----------
+  // 基准 y 是加载时计算的（让脚贴地），这里只在基准上叠加起伏
   var bob = Math.abs(Math.sin(phase * 2)) * PARAMS.BOB * (state.speed / PARAMS.SPEED_MAX);
-  catGroup.position.y = 1.5 + bob - state.sitting * 0.45 - state.pouncing * 0.25;
+  if (!state.catBaseY) state.catBaseY = catGroup.position.y;
+  catGroup.position.y = state.catBaseY + bob - state.sitting * 0.45 - state.pouncing * 0.25;
 }
 
 function updateLeash() {
@@ -840,7 +842,7 @@ var cameraState = {
   theta: Math.atan2(camera.position.x, camera.position.z),
   phi: Math.atan2(Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2), camera.position.y),
   dist: camera.position.length(),
-  target: new THREE.Vector3(0, 1, 0),
+  target: new THREE.Vector3(0, 1.5, 0),  // 猫高 3 单位，瞄准猫腰部
   isDragging: false,
   startX: 0,
   startY: 0,
