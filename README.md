@@ -1,167 +1,135 @@
-# CAT API — 猫咪接口规范
+<div align="center">
 
-> 用工程文体处理一种已经大规模部署、却始终不接受参数调优的系统：**猫**。
+# 🐱 CAT API
 
-受 [DOG API — 狗狗接口规范](https://nullurl.github.io/dog-api-spec/) 启发。区别在于，这次把权限模型写反了——系统从架构层面**否认 `Owner` 角色的存在**。
+### 猫咪接口规范 · 把猫写成系统，把系统写成猫
 
-线上：**https://lijinhongucl-pixel.github.io/cat-api-spec/** · 镜像：**https://atomgit.com/SocialiteUCL/cat-api-spec**
+一份用 RFC 骨架描述猫的工程文体规范。16 章正典、31 条当事猫意见、13 个状态码、14 种表情，以及一只真的住在终端里、会累会闷会记住你作息的猫运行时。
 
----
+[![Live Site](https://img.shields.io/badge/_live_ cat--api.app.workbuddy.host-1B3A2E?style=for-the-badge&logo=cat&logoColor=C8A35E)](https://cat-api.app.workbuddy.host/)
+[![GitHub](https://img.shields.io/badge/GitHub-仓库-181717?style=for-the-badge&logo=github)](https://github.com/lijinhongucl-pixel/cat-api-spec)
+[![AtomGit](https://img.shields.io/badge/AtomGit-镜像-1668?style=for-the-badge)](https://atomgit.com/SocialiteUCL/cat-api-spec)
+[![License: MIT](https://img.shields.io/badge/License-MIT-C8A35E?style=for-the-badge)](LICENSE)
 
-## 截图
-
-| | |
-|---|---|
-| ![首页](assets/img/screenshots/home.jpg) | ![正文·权限模型](assets/img/screenshots/spec-permissions.jpg) |
-| **首页** —— 项目门面与统计数字 | **正文 §2 权限模型** —— 否认 `Owner` 角色的存在 |
-| ![表情渲染器](assets/img/screenshots/expression.jpg) | ![外设控制台](assets/img/screenshots/peripherals.jpg) |
-| **表情渲染器** —— 选状态实时出猫脸 SVG | **外设控制台** —— 14 类外设 / 13 道门槛 / 接合评分 |
-| ![一只猫的生活意见](assets/img/screenshots/opinions.jpg) | ![活猫](assets/img/screenshots/livecat.jpg) |
-| **一只猫的生活意见** —— 31 条当事猫官方立场 | **活猫 LIVECAT v3** —— 屏幕上走来走去、啃元素、追 Token 老鼠 |
+</div>
 
 ---
 
-## 这是什么
-
-把一只猫当成一个接口规范来写。16 章正文、31 条「当事猫意见」、13 个状态码、14 种表情、一份从 §2 开始就反向定义的权限模型。外加：
-
-- 一只会在你屏幕上走来走去的**活猫**（LIVECAT v3，含状态机 / 行为准则 / Token 老鼠）
-- 全站**多人联机**（光标 / 多猫同屏 / 今日猫碗 / 协作围捕）
-- **CrossPet Protocol**——跨站宠物串门协议（猫能穿越到别站去）
-- 25 个交互式**工具页**（表情渲染器 / 抚摸路径规划器 / 赛博遛猫 / 猫狗串门 …）
-- 两份 **OpenAPI 3.1** 描述（14 端点 + 9 量化端点，可直接喂 Swagger UI）
-
-风格：工程文体 + 玩梗。不是科普，不是图鉴——是把 RFC 的骨架拿来描述一只猫。
-
-**数字**：151 次提交 · 24 个工具页面 · 10 个 JS 引擎 · 5500+ 行 JS · 零依赖零构建
+> **把猫当成一个接口规范来写。** 16 章正文、31 条「当事猫意见」、13 个状态码、14 种表情、一份从 §2 开始就反向定义的权限模型——系统从架构层面**否认 `Owner` 角色的存在**。
+>
+> 外加一只会在你屏幕上走来走去的活猫（LIVECAT v3）、全站多人联机、CrossPet 跨站串门协议、25 个交互式工具页、两份 OpenAPI 3.1 描述，以及新加入的 **CAT RUNTIME**——一只零依赖、无后台进程、接进任何工作台的终端猫。
 
 ---
 
-## 项目结构
+## ✨ 这是什么
 
-```
-cat-api-spec/
-├── index.html                  # 首页 / 项目门面（32 个入口，6 个 Tab）
-├── versions.html               # 历史版本（v0.1 → v0.6.0）
-├── 404.html                    # 状态码梗的 404
-├── llms.txt                    # 给 AI 读的索引
-├── AGENTS.md                   # 给 AI 编程工具的施工说明
-├── CLAUDE.md                   # Claude Code 专用
-├── spec/
-│   ├── cat.html                # 正文 16 章（§0 → §15）
-│   ├── openapi.yaml            # OpenAPI 3.1 完整描述（14 端点）
-│   └── quantified-api.yaml     # 量化派生指标 OpenAPI（9 端点）
-├── skill/                      # 命令行 + 安装包
-│   ├── cat-api.js              # 零依赖 CLI，14 个端点
-│   └── install.sh              # 一条 curl 命令的安装包
-├── tools/                      # 25 个交互式工具
-│   ├── expression.html         # 表情渲染器：选状态实时出猫脸 SVG
-│   ├── expression-sheet.html   # 表情联系表：批量查看 14 种表情
-│   ├── peripherals.html        # 外设控制台：14 类外设 + 17 道门槛
-│   ├── cyber-stroll.html       # 赛博遛猫：图片 → 网格 → 网格化 SVG
-│   ├── astraflow.html          # 星图接入：AstraFlow 大模型工作台
-│   ├── crosspet.html           # 跨站串门 + 猫狗串门互动矩阵
-│   ├── door-negotiator.html    # 不让猫进的那扇门：门判谈判模拟器
-│   ├── meow-decoder.html       # 猫语翻译器
-│   ├── petting-router.html     # 抚摸路径规划器
-│   ├── cat-review.html         # 360° 猫档案
-│   ├── health-check.html       # 健康检查面板
-│   ├── quantifier.html         # 量化评估器（RER / DER / HRI …）
-│   ├── charts.html             # 图表图鉴（19 张手绘灰阶 SVG）
-│   ├── heatmap-24h.html        # 24h 作息热力图
-│   ├── nine-lives.html         # 九条命燃尽图
-│   ├── litterbox.html          # 猫砂盆审计日志
-│   ├── adoption.html           # 领养（四元组 → 领养 KEY 与名字）
-│   ├── cat-diary.html          # 猫的日记
-│   ├── can-jump.html           # 跳跃判定器
-│   ├── breaking-changes.html   # Breaking Changes
-│   ├── cat-404.html            # 猫的 404 日志
-│   └── 3am-newsroom.html       # 3AM 编辑部
-├── reference/
-│   ├── opinions.html           # 一只猫的生活意见（31 条全文）
-│   ├── voice.html              # 口吻与文体指南
-│   ├── cheatsheet.html         # 速查卡
-│   ├── errors.html             # 13 个状态码对照
-│   ├── glossary.html           # 术语表
-│   └── vitals.html             # 生命体征参考值
-├── sdk/
-│   ├── cat-api-client.js       # JavaScript SDK（UMD，零依赖）
-│   └── demo.html               # SDK 演示页
-├── docs/
-│   ├── CHANGELOG.md            # v0.1 → v0.5.0 变更日志
-│   └── CONTRIBUTING.md         # 贡献指南
-├── assets/
-│   ├── css/
-│   │   ├── spec.css            # 主样式（浅色文档风）
-│   │   ├── livecat.css         # 活猫样式（22 状态动画）
-│   │   ├── crosspet.css        # CrossPet 串门协议样式
-│   │   └── multiplayer.css     # 多人协作样式
-│   ├── js/
-│   │   ├── livecat.js          # 活猫引擎（1828 行，22 状态状态机）
-│   │   ├── expression.js       # 表情渲染引擎（847 行，14 状态 SVG）
-│   │   ├── crosspet.js         # CrossPet 协议（464 行，跨站宠物串门）
-│   │   ├── multiplayer.js      # 多人协作（1002 行，跨 tab 光标/老鼠）
-│   │   ├── jev.js              # Jev AI 判定封装（score/choice/noul 三题型）
-│   │   ├── jev-brain.js        # Jev Brain 活猫 AI 决策引擎
-│   │   ├── peripherals.js      # 外设评分引擎
-│   │   ├── charts.js           # 图表引擎
-│   │   ├── quantify.js         # 量化计算引擎
-│   │   └── visitor-counter.js  # 访客计数
-│   └── img/
-│       ├── favicon.svg         # 侧脸猫剪影 favicon
-│       └── screenshots/        # README 截图
-├── .nojekyll                   # GitHub Pages 不走 Jekyll
-├── LICENSE                     # MIT
-└── README.md                   # 你正在看的这个
+把猫写成系统。不是科普，不是图鉴——是把 RFC 的骨架拿来描述一只猫。然后用工程文体把这套规范真的实现出来：一只你看得见、摸得着、会自己活动、会记住你作息的猫。
+
+**整个项目分三层：**
+
+| 层 | 是什么 | 在哪 |
+|---|---|---|
+| **规范** | 16 章 OpenAPI 风格的猫接口规范 | `spec/cat.html` |
+| **实现** | 25 个交互工具 + 6 个参考页 + SDK + CLI | `tools/` `reference/` `sdk/` `skill/` |
+| **运行时** | 一只跟着你项目走的终端猫（CAT RUNTIME v1.0） | `runtime/` |
+
+**关键数字：** 190+ 次提交 · 40 个页面 · 25 个 JS 引擎 · 零依赖零构建零 CDN
+
+---
+
+## 🚀 快速开始
+
+### 在线浏览
+
+直接访问：**https://cat-api.app.workbuddy.host/**
+
+### 本地预览
+
+```bash
+git clone https://github.com/lijinhongucl-pixel/cat-api-spec.git
+cd cat-api-spec
+python3 -m http.server 8000
+# 浏览器打开 http://localhost:8000
 ```
 
-**零依赖、零构建、零字体、零 CDN。** 把仓库克隆下来双击 `index.html` 就能跑。
+直接双击 `index.html` 也能跑——零依赖、零构建、零字体、零 CDN。
+
+### 装一只猫到终端
+
+```bash
+# 软链到 PATH（不需要 npm install）
+ln -s "$(pwd)/runtime/bin/catctl.js" ~/.local/bin/catctl
+
+# 看它一眼
+catctl
+
+# 让它动起来
+catctl watch
+
+# 包住一条命令，成没成它都知道
+catctl run -- npm test
+```
 
 ---
 
-## 核心系统
+## 🐾 CAT RUNTIME — 一只会跟你项目走的猫
 
-### 🐱 活猫 LIVECAT
+> **任务跑完了，总得有谁告诉你一声。**
 
-每页右下角有一只会自己活动的猫。**22 个行为状态**，由状态机驱动：
+桌宠现在很流行，但它们大多只在你盯着的时候活着。CAT RUNTIME 是一只**真的会累、会闷、会记住你作息的猫**——它接进 WorkBuddy、Codex、Claude Code，或者干脆只是你终端里的一条命令，活干完了它抬头报一句，卡住了它叫你，失败的时候它趴你旁边不吭声。
 
-- **基础状态**：睡觉 / 巡逻 / 理毛 / 进食 / 玩耍 / 凝视 / 疯跑 / 钻纸箱
-- **微动作**：伸懒腰 / 打哈欠 / 盯鼠标 / 啃食页面内容 / 蹭人腿
-- **特殊事件**：凌晨 3 点强制 ZOOMIES / 呕吐毛球 / 追激光笔 / 踩奶
-- **交互**：戳它触发踩奶、🐟 喂零食、抚摸配额每日 5 次（429）
-- **跨页面**：位置持久化到 localStorage，换页面猫还记得自己在哪
+### 特性
 
-### 🧠 Jev Brain — AI 决策引擎
+- **零依赖**：只有 Node 标准库，不装 npm 包，不联网
+- **无后台进程**：猫活在 `~/.cat-api/runtime/state.json` 里，你关掉终端它就睡了，下次命令进来先把这段时间补算完
+- **五种匮乏驱动**：困 / 闷 / 孤 / 饿 / 警觉——不是心情值，是「我缺什么」
+- **十二种行为**：效用竞争上岗，习惯化 + 驻留上限防卡死
+- **六种反应**：盖在行为上面一两秒，不替换行为——猫可以正在舔毛，突然抬头看你一眼，然后低头继续舔
+- **习惯学习**：只记时间 / 目录 / 命令 / 成败，派生三个性格维度（夜行 / 碎步 / 调试），每日 ×0.86 衰减
+- **五个进化阶段**：奶猫 → 少年 → 成猫 → 老猫 → 猫又。只升不降
+- **同一只猫**：同一个种子 + 同一份档案 = 同一只猫，终端里和网页上都是
 
-活猫可以被 AI 驱动。点首页左下角「🧠 AI 模式」按钮，输入 Jev API Key，猫的状态切换不再随机——Jev 根据当前时间、鼠标活跃度、上一状态、饱腹值、页面标题来智能决策。
+### 接到任何工作台
 
-每次决策时猫头上会冒出「猫在想什么」气泡，显示 AI 的判断理由和置信度。API 挂了自动降级回加权随机，不影响体验。
+```bash
+# 通用：包一层就行，退出码原样返回
+catctl run -- <你平时的命令>
 
-### ⚖️ 猫语审判台
+# WorkBuddy / Codex：emit 一行命令
+catctl emit task.ok      # 活干完了
+catctl emit task.wait    # 卡住等你确认（会弹系统通知）
+catctl emit task.fail    # 挂了
 
-输入一个猫行为事件，Jev AI 从猫的视角给出四维判决：内疚指数、该不该罚、作案动机分析（概率分布条形图）、猫自豪度。6 个预设示例，支持自由输入。
+# Claude Code：自动写 hooks
+catctl init --host claude
 
-### 🐾 CrossPet 串门协议
+# git：装 post-commit 钩子
+catctl init --host git
 
-跨站宠物串门。加载 `crosspet.js` 后，任何网站的宠物都可以穿越到你的页面。内置 4 只 AI 插画级串门宠物（金毛/橘猫/仓鼠/黑猫警长），支持手动召唤、互动检测、串门日志。
+# shell：zsh/bash precmd 钩子
+catctl init --host shell
 
-### 🎭 表情引擎
+# 不开 shell 的宿主：HTTP 口子（只听 127.0.0.1）
+catctl serve --port 9177
+```
 
-14 个可观测状态、13 维参数向量、确定性 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，实时看猫变脸。两个状态混合时权重不够会被拒绝。
+### 在线演示
 
-### 👥 多人协作
+浏览器里跑的是**同一份 `engine.js`**，和终端里的猫是同一只：
 
-跨 tab 光标追踪、在线人数、协作抓老鼠。打开两个标签页就能看到对方的光标在动。
+👉 **[runtime.html — 看它动](runtime.html)** · 📖 **[完整文档](runtime/README.md)**
 
 ---
 
-## 章节地图
+## 📖 规范正文
 
-| 章节 | 标题 | 在哪 |
+16 章正典，从「关于本文档怎么读」到「附录」。
+
+| 章节 | 标题 | 链接 |
 |---|---|---|
 | §0 | 关于本文档怎么读 | [spec/cat.html](spec/cat.html) |
 | §1 | 系统概述 | spec/cat.html#s1 |
-| §2 | 权限模型（无 Owner） | spec/cat.html#permissions |
+| §2 | **权限模型（无 Owner）** | spec/cat.html#permissions |
 | §3 | 领地协议 | spec/cat.html#territory |
 | §4 | 通信接口 | spec/cat.html#comm |
 | §5 | 睡眠子系统 | spec/cat.html#sleep |
@@ -171,74 +139,66 @@ cat-api-spec/
 | §9 | 排泄协议 | spec/cat.html#litter |
 | §10 | 表情接口 EXPR v1 | spec/cat.html#expr |
 | §11 | 状态码（13 个） | spec/cat.html#codes |
-| §12 | 一只猫的生活意见（节选） | spec/cat.html#opinions |
+| §12 | 一只猫的生活意见 | spec/cat.html#opinions |
 | §13 | 量化参数 | spec/cat.html#quant |
 | §14 | 速查卡 | spec/cat.html#cheat |
 | §15 | 附录 | spec/cat.html#apx |
 
----
-
-## 活猫（LIVECAT v3）
-
-每页右下角有一只会自己活动的猫：
-
-- **完整身体**：头 + 身体 + 4 腿 + 尾巴，SVG 实时渲染
-- **27 个状态**：睡觉 / 巡视 / 理毛 / 追猎 / 追 Token 老鼠 / 啃食 / 疯跑 / 钻纸箱 / 凝视 / 蹭你 / 被摸 / 踩奶 / 追激光 / 困惑 / 打哈欠 / 伸懒腰 / 吐毛球 / 吃零食 / 猫薄荷反应 / 不反应猫薄荷 / 凝视老鼠 / 凝视鼠标 / 穿越出去 / 遇见访客 …
-- **16 条行为准则**：领地完整时优先睡觉 / 鼠标太快触发追猎 / 凌晨三点 ZOOMIES / 钻纸箱后输入延迟 / 中央区域停留超 3 秒撤离 …
-- **Token 老鼠**：每隔一段时间刷新一只「Token 老鼠」，猫会去追，用户也可以抢先点击（猫吃醋）
-- **跨页面穿越**：猫会带着状态从上一个页面穿越到下一个页面
-- **CrossPet 桥接**：猫能「穿越出去」到加入 CrossPet Protocol 的别站去（比如 DOG API），别站宠物也能穿越过来
-- **可交互**：戳它切踩奶、🐟 喂零食、📜 查准则、× 收起 10 秒自动回
+两份 OpenAPI 3.1 描述可以直接喂 Swagger UI：[`spec/openapi.yaml`](spec/openapi.yaml)（14 端点）· [`spec/quantified-api.yaml`](spec/quantified-api.yaml)（9 端点）
 
 ---
 
-## 多人联机（Multiplayer）
+## 🛠️ 核心系统
 
-全站 30 个页面接入了多人联机系统（基于 Supabase Realtime Broadcast，未配置时自动降级为单机模式）：
+### 活猫 LIVECAT v3
 
-| 玩法 | 说明 |
-|---|---|
-| **远程光标** | 其他访客的鼠标位置实时显示为彩色幽灵箭头 |
-| **在线计数** | 右上角 HUD 显示当前几只猫在线 |
-| **自定义名字** | 访客徽章可点击编辑，改成你的名字（默认随机生成） |
-| **多猫同屏** | 别站访客的猫会出现在你的屏幕上（hue-rotate 染色区分） |
-| **今日猫碗** | 所有访客合作投喂，满 100 发金币粒子，满 1000 解锁传说徽章 |
-| **协作围捕** | 多人光标围堵 Token 老鼠的协作玩法 |
+每页右下角有一只会自己活动的猫。**22 个行为状态**，由状态机驱动：
+
+- **基础状态**：睡觉 / 巡逻 / 理毛 / 进食 / 玩耍 / 凝视 / 疯跑 / 钻纸箱
+- **微动作**：伸懒腰 / 打哈欠 / 盯鼠标 / 啃食页面内容 / 蹭人腿
+- **特殊事件**：凌晨 3 点强制 ZOOMIES / 呕吐毛球 / 追激光笔 / 踩奶
+- **交互**：戳它触发踩奶、🐟 喂零食、抚摸配额每日 5 次（429）
+- **跨页面**：位置持久化到 localStorage，换页面猫还记得自己在哪
+- **Token 老鼠**：定期刷新一只 Token 老鼠，猫会去追，用户也可以抢先点击（猫吃醋）
+
+### CAT RUNTIME v1.0
+
+终端里那只猫的运行时引擎。零依赖、无后台进程、接任何能执行命令的地方。
+
+- **5 种匮乏** → 12 种行为 → 6 种反应 → 5 个进化阶段
+- **12 条行为准则**：困到 0.34 就必须睡；没人看的时候才疯跑；反应盖姿势不改行为……
+- **习惯学习**：作息 / 领地 / 手艺 → 3 个性格维度直接进打分公式
+- **CLI**：`catctl` 9 种命令 + HTTP 服务
+
+### 表情引擎 EXPR v1
+
+14 个可观测状态、13 维参数向量、确定性 SVG 渲染。拖滑块改耳朵角度、瞳孔面积、炸毛指数和呼噜频率，实时看猫变脸。
+
+### CrossPet 串门协议
+
+跨站宠物串门开放协议。加载 `crosspet.js` 后，任何网站的宠物都可以穿越到你的页面。已加入：CAT API（猫）· DOG API（狗）。
+
+### 多人协作
+
+跨 tab 光标追踪、在线人数、协作抓老鼠。打开两个标签页就能看到对方的光标在动。
+
+### Jev Brain — AI 决策引擎
+
+活猫可以被 AI 驱动。输入 Jev API Key，猫的状态切换不再随机——AI 根据当前时间、鼠标活跃度、上一状态、饱腹值、页面标题来智能决策。
 
 ---
 
-## CrossPet Protocol
-
-跨站宠物串门开放协议（v1.0）。任何加载了 `crosspet.js` 的站点都能加入：
-
-```html
-<link rel="stylesheet" href="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/css/crosspet.css">
-<script src="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/js/crosspet.js"></script>
-<script>
-  CrossPet.init({
-    petType: 'dog',              // cat / dog / hamster / 自定义
-    petName: '我的狗',
-    petSVG: '<svg>...</svg>'      // 不传会用内置 fallback
-  });
-</script>
-```
-
-加入后你的宠物就能穿越到其他加入站点，别站宠物也会穿越过来。未配置 Supabase 时走单站演示模式（每 60-180 秒自动模拟穿越）。
-
-已加入站点：CAT API（猫）· DOG API（狗）
-
----
-
-## 工具页（25 个）
+## 🧰 工具页（25 个）
 
 | 工具 | 做什么 |
 |---|---|
 | [表情渲染器](tools/expression.html) | 选状态 / 参数实时出猫脸 SVG |
 | [表情联系表](tools/expression-sheet.html) | 14 种表情批量速览 |
 | [外设控制台](tools/peripherals.html) | 14 类外设 / 17 道门槛 / 环境抑制判定 |
-| [门判谈判器](tools/door-negotiator.html) | 那扇不让猫进的门，模拟判谈判过程 |
+| [门判谈判器](tools/door-negotiator.html) | 那扇不让猫进的门，模拟判谈判 |
 | [猫语翻译器](tools/meow-decoder.html) | 意图识别 → 结构化 JSON |
 | [赛博遛猫](tools/cyber-stroll.html) | 图片降格成网格猫，鼠标当牵引绳 |
+| [赛博遛猫 3D](tools/cyber-stroll-3d.html) | 3D 版本 |
 | [星图接入](tools/astraflow.html) | 浏览器直连 AstraFlow，KEY 不落地 |
 | [跨站串门](tools/crosspet.html) | 猫狗串门：跨物种互动矩阵 |
 | [抚摸路径规划器](tools/petting-router.html) | 规划安全抚摸路线（避开禁区） |
@@ -255,10 +215,10 @@ cat-api-spec/
 | [Breaking Changes](tools/breaking-changes.html) | 破坏性变更公告 |
 | [猫的 404 日志](tools/cat-404.html) | 猫找不到东西的记录 |
 | [3AM 编辑部](tools/3am-newsroom.html) | 凌晨三点的猫编辑部 |
+| [猫语审判台](tools/cat-judgment.html) | Jev AI 四维判决 |
+| [项目导览](tools/tour.html) | 全站导览 |
 
----
-
-## 参考页面（6 个）
+### 参考页面（6 个）
 
 | 页面 | 内容 |
 |---|---|
@@ -271,7 +231,7 @@ cat-api-spec/
 
 ---
 
-## SDK
+## 📦 SDK
 
 UMD 格式，零依赖，直接 `<script>` 引入即可。演示页：[sdk/demo.html](sdk/demo.html)。
 
@@ -297,7 +257,24 @@ const client = require('./sdk/cat-api-client.js');
 
 ---
 
-## 命令行（CLI）
+## 🔧 CLI
+
+### catctl — CAT RUNTIME 命令行
+
+```bash
+catctl                    # 看它一眼
+catctl watch              # 让它动起来（空格摸 · f 喂 · q 退出）
+catctl run -- npm test    # 包住一条命令，成没成它都知道
+catctl emit task.ok       # 宿主主动汇报
+catctl init --host claude # 接到工作台上
+catctl serve --port 9177  # 开 HTTP 口子（只听 127.0.0.1）
+catctl learn              # 它学会了什么
+catctl teach <维度> <0..1> # 手动作风纠正（少年猫起）
+catctl selftest           # 15 项不变量自测
+catctl reset --yes        # 清空这只猫，重来
+```
+
+### cat-api — 规范端点 CLI
 
 14 个端点全部可以从命令行调。零依赖，不装 npm 包，不联网。
 
@@ -312,43 +289,25 @@ cat-api state              # 查当前状态
 cat-api pet --json         # 机器可读输出
 cat-api 'DELETE /api/v1/laser'
 cat-api --help             # 完整说明
-cat-api --state            # 看模拟状态
 ```
 
 退出码分语义：`0` 成功 / `1` 端点不存在 / `2` 被拒绝 / `3` 系统不可用。
 
-想看 bath 彩蛋的「态度逐级恶化」需要开启持久化：
-
-```bash
-export CAT_API_STATE=/tmp/cat.json
-cat-api bath   # 418  I'm a cat
-cat-api bath   # 406  它已经知道你要干什么了
-cat-api bath   # 503  它走了。你找不到它。
-cat-api --reset
-```
-
-卸载：
-
-```bash
-sh skill/install.sh --uninstall
-```
-
-领养证保留在 `~/.cat-api/adoption.json` —— 卸载不撤销任何东西。
-
 ---
 
-## AI 接入
+## 🤖 AI 接入
 
 这个仓库同时是给人读的站点和给 AI 用的规范。
 
 | 文件 | 面向 |
 |---|---|
 | [`llms.txt`](llms.txt) | AI 索引。端点表、状态码含义、核心公式、工具清单 |
-| [`AGENTS.md`](AGENTS.md) | AI 编程工具施工说明。硬约束、目录职责、验证命令、已知坑 |
+| [`AGENTS.md`](AGENTS.md) | AI 编程工具施工说明。硬约束、目录职责、验证命令 |
 | [`CLAUDE.md`](CLAUDE.md) | Claude Code 专用，精简版 + 猫的行为学设定 |
 | [`skill/`](skill/) | CLI + 安装包 |
 | [`spec/openapi.yaml`](spec/openapi.yaml) | 14 个端点的 OpenAPI 3.1 描述 |
 | [`spec/quantified-api.yaml`](spec/quantified-api.yaml) | 9 个量化端点 |
+| [`runtime/README.md`](runtime/README.md) | CAT RUNTIME 完整文档 |
 
 让 AI 编程工具读懂这个仓库，只需要让它读 `AGENTS.md`。
 
@@ -363,20 +322,47 @@ assets/js/adoption-key.js ← 网页端领养 KEY 计算  （§5.3 测试向量�
 
 ---
 
-## 本地预览
+## 📂 项目结构
 
-```bash
-git clone https://github.com/lijinhongucl-pixel/cat-api-spec.git
-cd cat-api-spec
-python3 -m http.server 8000
-# 浏览器打开 http://localhost:8000
+```
+cat-api-spec/
+├── index.html                  # 首页 / 项目门面
+├── runtime.html                # CAT RUNTIME 演示页
+├── versions.html               # 历史版本
+├── 404.html                    # 状态码梗的 404
+├── llms.txt                    # 给 AI 读的索引
+├── AGENTS.md                   # AI 编程工具施工说明
+├── CLAUDE.md                   # Claude Code 专用
+├── runtime/                    # CAT RUNTIME v1.0
+│   ├── bin/catctl.js           # catctl 入口
+│   ├── src/
+│   │   ├── core/engine.js      # 猫行为引擎（UMD，Node+浏览器同源）
+│   │   └── node/               # CLI / 存档 / 学习 / 渲染
+│   └── README.md               # 完整文档
+├── spec/                       # 规范正文
+│   ├── cat.html                # 16 章正文
+│   ├── openapi.yaml            # OpenAPI 3.1（14 端点）
+│   └── quantified-api.yaml     # 量化端点（9 端点）
+├── skill/                      # 命令行 + 安装包
+│   ├── cat-api.js              # 零依赖 CLI
+│   └── install.sh              # 一条 curl 命令安装
+├── tools/                      # 25 个交互式工具
+├── reference/                  # 6 个参考页面
+├── sdk/                        # JavaScript SDK（UMD）
+├── assets/
+│   ├── css/                    # 主样式 / 活猫 / 多人 / 串门
+│   ├── js/                     # 10 个引擎
+│   └── img/
+├── .nojekyll                   # GitHub Pages 不走 Jekyll
+├── LICENSE                     # MIT
+└── README.md                   # 你正在看的这个
 ```
 
-直接双击 `index.html` 也能跑，但本地 server 更接近线上行为。
+**零依赖、零构建、零字体、零 CDN。** 克隆下来双击 `index.html` 就能跑。
 
 ---
 
-## 部署
+## 🏗️ 部署
 
 站点托管在 GitHub Pages，推到 `main` 分支自动部署：
 
@@ -393,13 +379,13 @@ git push origin main
 
 ---
 
-## 致谢
+## 🤝 致谢
 
 - 灵感来源：[DOG API — 狗狗接口规范](https://nullurl.github.io/dog-api-spec/)（已加入 CrossPet Protocol 🐾）
 - 所有真正懂猫的人——尤其是那只此刻正在你屏幕右下角走来走去的
 
 ---
 
-## License
+## 📄 License
 
 MIT — 见 [LICENSE](LICENSE)。
