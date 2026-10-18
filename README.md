@@ -6,14 +6,51 @@
 
 一份用 RFC 骨架描述猫的工程文体规范。16 章正典、31 条当事猫意见、13 个状态码、14 种表情，以及一只真的住在终端里、会累会闷会记住你作息的猫运行时。
 
-[![Live Site](https://img.shields.io/badge/_live_ cat--api.app.workbuddy.host-1B3A2E?style=for-the-badge&logo=cat&logoColor=C8A35E)](https://cat-api.app.workbuddy.host/)
-[![GitHub](https://img.shields.io/badge/GitHub-仓库-181717?style=for-the-badge&logo=github)](https://github.com/lijinhongucl-pixel/cat-api-spec)
-[![AtomGit](https://img.shields.io/badge/AtomGit-镜像-1668?style=for-the-badge)](https://atomgit.com/SocialiteUCL/cat-api-spec)
-[![License: MIT](https://img.shields.io/badge/License-MIT-C8A35E?style=for-the-badge)](LICENSE)
+[![Live Site](https://img.shields.io/badge/live-cat--api.app.workbuddy.host-1B3A2E?style=for-the-badge)](https://cat-api.app.workbuddy.host/)
+[![GitHub](https://img.shields.io/badge/GitHub-lijinhongucl--pixel-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/lijinhongucl-pixel/cat-api-spec)
+[![AtomGit](https://img.shields.io/badge/AtomGit-SocialiteUCL-0A66C2?style=for-the-badge)](https://atomgit.com/SocialiteUCL/cat-api-spec)
+[![License](https://img.shields.io/badge/License-MIT-C8A35E?style=for-the-badge)](LICENSE)
 
 </div>
 
 ---
+
+## 截图
+
+<table>
+  <tr>
+    <td width="50%" align="center"><a href="https://cat-api.app.workbuddy.host/"><img src="assets/img/screenshots/home.jpg" alt="首页"></a></td>
+    <td width="50%" align="center"><a href="runtime.html"><img src="assets/img/screenshots/runtime.jpg" alt="CAT RUNTIME 演示页"></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>首页</b> — 项目门面与统计数字</td>
+    <td width="50%" align="center"><b>CAT RUNTIME</b> — 终端里那只猫，网页上跑同一份引擎</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><a href="spec/cat.html"><img src="assets/img/screenshots/spec-permissions.jpg" alt="正文 · 权限模型"></a></td>
+    <td width="50%" align="center"><a href="tools/expression.html"><img src="assets/img/screenshots/expression.jpg" alt="表情渲染器"></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>正文 §2 权限模型</b> — 否认 <code>Owner</code> 角色的存在</td>
+    <td width="50%" align="center"><b>表情渲染器</b> — 选状态实时出猫脸 SVG</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><a href="tools/peripherals.html"><img src="assets/img/screenshots/peripherals.jpg" alt="外设控制台"></a></td>
+    <td width="50%" align="center"><a href="reference/opinions.html"><img src="assets/img/screenshots/opinions.jpg" alt="一只猫的生活意见"></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>外设控制台</b> — 14 类外设 / 17 道门槛 / 接合评分</td>
+    <td width="50%" align="center"><b>一只猫的生活意见</b> — 31 条当事猫官方立场</td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><a href="tools/crosspet.html"><img src="assets/img/screenshots/crosspet.jpg" alt="跨站串门"></a></td>
+    <td width="50%" align="center"><a href="tools/cyber-stroll.html"><img src="assets/img/screenshots/cyber-stroll.jpg" alt="赛博遛猫"></a></td>
+  </tr>
+  <tr>
+    <td width="50%" align="center"><b>CrossPet 串门</b> — 跨站宠物互动矩阵</td>
+    <td width="50%" align="center"><b>赛博遛猫</b> — 图片降格成网格猫</td>
+  </tr>
+</table>
 
 > **把猫当成一个接口规范来写。** 16 章正文、31 条「当事猫意见」、13 个状态码、14 种表情、一份从 §2 开始就反向定义的权限模型——系统从架构层面**否认 `Owner` 角色的存在**。
 >
