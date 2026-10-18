@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>交互组件样板间 · 8 个高级交互</title>
+<style>
+  :root {
+    --forest: #1B3A2E;
+    --gold: #C8A35E;
+    --gold-ink: #8A6A34;
+    --ivory: #FAF8F5;
+    --charcoal: #2C2C2A;
+    --cap: #6E6C66;
+    --line: #E5DFD3;
+    --panel: #FFFFFF;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-font-smoothing: antialiased; }
+  body {
+    background: var(--ivory);
+    color: var(--charcoal);
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 64px 24px 120px; }
+  header { margin-bottom: 72px; }
+  header .kicker {
+    font-size: 11px; letter-spacing: 0.2em; color: var(--gold-ink);
+    font-weight: 600; margin-bottom: 14px;
+  }
+  header h1 {
+    font-family: Georgia, "Songti SC", serif;
+    font-size: 34px; font-weight: 500; color: var(--forest);
+    letter-spacing: -0.01em; margin-bottom: 12px;
+  }
+  header p { color: var(--cap); font-size: 14px; max-width: 480px; }
+
+  .pattern { margin-bottom: 88px; }
+  .pattern-head { margin-bottom: 20px; display: flex; align-items: baseline; gap: 14px; }
+  .pattern-num {
+    font-family: Georgia, serif; font-style: italic;
+    color: var(--gold); font-size: 22px; font-weight: 500;
+  }
+  .pattern-name {
+    font-family: Georgia, "Songti SC", serif;
+    font-size: 19px; font-weight: 500; color: var(--forest);
+  }
+  .pattern-note { font-size: 12.5px; color: var(--cap); margin-bottom: 18px; }
+  .stage {
+    background: var(--panel);
+    border: 0.5px solid var(--line);
+    border-radius: 14px;
+    padding: 32px;
+    min-height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ========== 1. 撕线弹出面板 ========== */
+  .tear-card {
+    width: 320px; background: var(--panel);
+    border: 0.5px solid var(--line); border-radius: 12px;
+    overflow: hidden; user-select: none;
+  }
+  .tear-head { padding: 18px 20px; }
+  .tear-head h4 { font-size: 14px; font-weight: 600; color: var(--forest); }
+  .tear-head p { font-size: 12px; color: var(--cap); margin-top: 4px; }
+  .tear-handle {
+    padding: 10px 0; text-align: center; cursor: grab;
+    border-top: 1.5px dashed var(--gold);
+    position: relative; touch-action: none;
+  }
+  .tear-handle:active { cursor: grabbing; }
+  .tear-handle span {
+    font-size: 10px; letter-spacing: 0.18em; color: var(--gold-ink);
+  }
+  .tear-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .tear-body-inner { padding: 4px 20px 20px; font-size: 13px; color: var(--charcoal); }
+  .tear-card.open .tear-body { max-height: 200px; }
+
+  /* ========== 2. 保存按钮进度环 ========== */
+  .save-btn {
+    position: relative; height: 44px; min-width: 128px;
+    border: none; border-radius: 22px; background: var(--forest);
+    color: var(--ivory); font-size: 13.5px; letter-spacing: 0.06em;
+    cursor: pointer; overflow: hidden;
+    transition: min-width 0.4s cubic-bezier(0.22,1,0.36,1),
+                border-radius 0.4s cubic-bezier(0.22,1,0.36,1),
+                background 0.3s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .save-btn .label { transition: opacity 0.2s; }
+  .save-btn.saving {
+    min-width: 44px; border-radius: 50%;
+    background: var(--gold);
+  }
+  .save-btn.saving .label { opacity: 0; }
+  .save-btn .ring {
+    position: absolute; inset: 4px; opacity: 0;
+    transform: rotate(-90deg);
+    transition: opacity 0.2s;
+  }
+  .save-btn.saving .ring { opacity: 1; }
+  .save-btn .ring circle {
+    fill: none; stroke: var(--ivory); stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 113;
+    stroke-dashoffset: 113;
+  }
+  .save-btn.done { background: var(--forest); }
+  .save-btn.done .ring { opacity: 0; }
+
+  /* ========== 3. 双头范围滑块 ========== */
+  .range-wrap { width: 320px; padding: 28px 8px 8px; }
+  .range-track {
+    position: relative; height: 4px; background: var(--line);
+    border-radius: 2px;
+  }
+  .range-fill {
+    position: absolute; top: 0; bottom: 0;
+    background: var(--gold); border-radius: 2px;
+  }
+  .range-thumb {
+    position: absolute; top: 50%; width: 20px; height: 20px;
+    background: var(--panel); border: 2px solid var(--forest);
+    border-radius: 50%; transform: translate(-50%, -50%);
+    cursor: grab; touch-action: none; z-index: 2;
+  }
+  .range-thumb:active { cursor: grabbing; }
+  .range-thumb .val {
+    position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 600; color: var(--forest);
+    background: var(--ivory); border: 0.5px solid var(--line);
+    padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .range-wrap.dragging .val { opacity: 1; }
+
+  /* ========== 4. 轮播指示点 ========== */
+  .carousel-stage { flex-direction: column; gap: 22px; }
+  .carousel-cards {
+    display: flex; gap: 14px; overflow: hidden; width: 320px;
+  }
+  .carousel-card {
+    flex: 0 0 320px; height: 120px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 15px; color: var(--ivory);
+    transition: transform 0.5s cubic-bezier(0.22,1,0.36,1);
+  }
+  .carousel-dots { display: flex; gap: 8px; align-items: center; }
+  .cdot {
+    width: 6px; height: 6px; border-radius: 100px;
+    background: var(--line); cursor: pointer;
+    transition: width 0.4s cubic-bezier(0.22,1,0.36,1), background 0.3s;
+  }
+  .cdot.on { width: 26px; background: var(--gold); }
+
+  /* ========== 5. 照片抽屉面板 ========== */
+  .drawer-stage { padding: 0; height: 380px; align-items: stretch; }
+  .drawer-photo {
+    position: absolute; top: 0; left: 0; right: 0; height: 55%;
+    background: linear-gradient(135deg, #2C2C2A, #1B3A2E);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gold); font-family: Georgia, serif; font-size: 15px;
+    transition: transform 0.3s, opacity 0.3s;
+    transform-origin: top center;
+  }
+  .drawer-panel {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 52%; background: var(--panel);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(27,58,46,0.12);
+    transition: height 0.35s cubic-bezier(0.22,1,0.36,1);
+    touch-action: none;
+  }
+  .drawer-grip {
+    width: 36px; height: 4px; background: var(--line);
+    border-radius: 2px; margin: 10px auto 4px; cursor: grab;
+  }
+  .drawer-body { padding: 6px 22px; }
+  .drawer-body h4 { font-size: 15px; color: var(--forest); font-weight: 600; }
+  .drawer-body p { font-size: 12.5px; color: var(--cap); margin-top: 6px; }
+
+  /* ========== 6. 拖动选时间段 ========== */
+  .slots-wrap { width: 400px; user-select: none; }
+  .slots-head { display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .slots-head span { font-size: 11px; color: var(--cap); }
+  .slots-grid {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px;
+  }
+  .slot {
+    height: 34px; background: var(--ivory);
+    border: 0.5px solid var(--line); border-radius: 6px;
+    cursor: pointer; transition: background 0.15s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: var(--cap);
+  }
+  .slot.sel {
+    background: var(--forest); border-color: var(--forest);
+    color: var(--ivory);
+  }
+  .slot.sel.edge-l { border-radius: 6px 0 0 6px; }
+  .slot.sel.edge-r { border-radius: 0 6px 6px 0; }
+  .slot.sel.edge-l.edge-r { border-radius: 6px; }
+  .slots-result { margin-top: 12px; font-size: 12px; color: var(--forest); min-height: 20px; }
+
+  /* ========== 7. 吸边悬浮球 ========== */
+  .orb-stage { height: 300px; background: var(--ivory); }
+  .orb {
+    position: absolute; width: 52px; height: 52px;
+    border-radius: 50%; background: var(--forest);
+    display: flex; align-items: center; justify-content: center;
+    cursor: grab; touch-action: none; z-index: 10;
+    box-shadow: 0 4px 16px rgba(27,58,46,0.25);
+    transition: box-shadow 0.2s;
+    color: var(--gold); font-family: Georgia, serif; font-size: 16px;
+  }
+  .orb:active { cursor: grabbing; box-shadow: 0 8px 24px rgba(27,58,46,0.35); }
+  .orb.snapped { transition: left 0.4s cubic-bezier(0.22,1,0.36,1), top 0.4s cubic-bezier(0.22,1,0.36,1); }
+
+  /* ========== 8. 横向日期条 ========== */
+  .datestrip { width: 380px; user-select: none; }
+  .datestrip-month {
+    text-align: center; font-family: Georgia, serif;
+    font-size: 13px; color: var(--cap); margin-bottom: 12px;
+    letter-spacing: 0.06em;
+  }
+  .datestrip-row {
+    display: flex; gap: 4px; position: relative;
+    touch-action: pan-y;
+  }
+  .day {
+    flex: 1; text-align: center; padding: 8px 0;
+    border-radius: 10px; cursor: pointer; position: relative; z-index: 2;
+    transition: color 0.25s;
+  }
+  .day .dw { font-size: 10px; color: var(--cap); display: block; }
+  .day .dn {
+    font-family: Georgia, serif; font-size: 16px; font-weight: 500;
+    color: var(--charcoal); display: block; margin-top: 2px;
+  }
+  .day.on .dw, .day.on .dn { color: var(--ivory); }
+  .day-pill {
+    position: absolute; top: 0; bottom: 0; z-index: 1;
+    background: var(--forest); border-radius: 10px;
+    transition: left 0.35s cubic-bezier(0.22,1,0.36,1), width 0.35s cubic-bezier(0.22,1,0.36,1);
+  }
+
+  footer {
+    margin-top: 80px; padding-top: 24px; border-top: 0.5px solid var(--line);
+    font-size: 12px; color: var(--cap); text-align: center;
+    font-family: Georgia, serif; font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">INTERACTION PATTERNS</div>
+  <h1>交互组件样板间</h1>
+  <p>8 个高级交互组件。先定样式，再配交互——每个都可以直接上手把玩。</p>
+</header>
+
+<!-- 1. 撕线弹出面板 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">01</span>
+    <span class="pattern-name">撕线弹出面板</span>
+  </div>
+  <p class="pattern-note">底部虚线撕口，下拉露出内容，松手回弹。</p>
+  <div class="stage">
+    <div class="tear-card" id="tear1">
+      <div class="tear-head">
+        <h4>今日猫碗</h4>
+        <p>已被投喂 27 次 · 还剩 3 次可投喂</p>
+      </div>
+      <div class="tear-handle" id="tearHandle1"><span>PULL TO OPEN</span></div>
+      <div class="tear-body">
+        <div class="tear-body-inner">
+          投喂记录：08:23 路人甲 +1 / 10:05 匿名 +2 / 12:41 猫奴乙 +1 / 15:20 路过 +1 ……
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. 保存按钮进度环 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">02</span>
+    <span class="pattern-name">保存按钮变进度环</span>
+  </div>
+  <p class="pattern-note">点击收缩成圆环显示进度，完成展开切文字。</p>
+  <div class="stage">
+    <button class="save-btn" id="saveBtn">
+      <span class="label">保存更改</span>
+      <svg class="ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" id="ringCircle"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 3. 双头范围滑块 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">03</span>
+    <span class="pattern-name">双头范围滑块</span>
+  </div>
+  <p class="pattern-note">两把手拖动，中间填充伸缩，松手隐藏数值。</p>
+  <div class="stage">
+    <div class="range-wrap" id="rangeWrap">
+      <div class="range-track" id="rangeTrack">
+        <div class="range-fill" id="rangeFill"></div>
+        <div class="range-thumb" id="thumbA" style="left:20%"><span class="val" id="valA">¥200</span></div>
+        <div class="range-thumb" id="thumbB" style="left:75%"><span class="val" id="valB">¥750</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. 轮播指示点 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">04</span>
+    <span class="pattern-name">轮播指示点</span>
+  </div>
+  <p class="pattern-note">当前点拉长成条，随滑动连续过渡。</p>
+  <div class="stage carousel-stage">
+    <div class="carousel-cards" id="carouselCards">
+      <div class="carousel-card" style="background:#1B3A2E">Slide One</div>
+      <div class="carousel-card" style="background:#C8A35E">Slide Two</div>
+      <div class="carousel-card" style="background:#2C2C2A">Slide Three</div>
+      <div class="carousel-card" style="background:#8A6A34">Slide Four</div>
+    </div>
+    <div class="carousel-dots" id="carouselDots">
+      <div class="cdot on" data-i="0"></div>
+      <div class="cdot" data-i="1"></div>
+      <div class="cdot" data-i="2"></div>
+      <div class="cdot" data-i="3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. 照片抽屉面板 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">05</span>
+    <span class="pattern-name">照片抽屉面板</span>
+  </div>
+  <p class="pattern-note">打开照片铺满上半屏，面板从底部升起，上拖照片压缩。</p>
+  <div class="stage drawer-stage" id="drawerStage">
+    <div class="drawer-photo" id="drawerPhoto">PHOTO · 猫在窗台</div>
+    <div class="drawer-panel" id="drawerPanel">
+      <div class="drawer-grip" id="drawerGrip"></div>
+      <div class="drawer-body">
+        <h4>午后窗台</h4>
+        <p>13:20 巡逻结束，猫在窗台趴下。阳光的角度刚好，尾巴垂在桌沿。它看了你一眼，继续睡。</p>
+        <p style="margin-top:10px">状态：SLEEP · 精力 42% · 警觉 8%</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 拖动选时间段 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">06</span>
+    <span class="pattern-name">拖动选时间段</span>
+  </div>
+  <p class="pattern-note">按住连选格子合并成条，两端把手可调。</p>
+  <div class="stage">
+    <div class="slots-wrap" id="slotsWrap">
+      <div class="slots-head"><span>08:00</span><span>14:00</span><span>20:00</span></div>
+      <div class="slots-grid" id="slotsGrid"></div>
+      <div class="slots-result" id="slotsResult">按住拖动选择时间段</div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. 吸边悬浮球 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">07</span>
+    <span class="pattern-name">吸边悬浮球</span>
+  </div>
+  <p class="pattern-note">随意拖拽，松手吸附最近边缘。</p>
+  <div class="stage orb-stage" id="orbStage">
+    <div class="orb" id="orb1">猫</div>
+  </div>
+</div>
+
+<!-- 8. 横向日期条 -->
+<div class="pattern">
+  <div class="pattern-head">
+    <span class="pattern-num">08</span>
+    <span class="pattern-name">横向日期条</span>
+  </div>
+  <p class="pattern-note">选中底色滑动切换，左右划翻周，月份同步。</p>
+  <div class="stage">
+    <div class="datestrip" id="datestrip">
+      <div class="datestrip-month" id="dsMonth">2026 年 10 月</div>
+      <div class="datestrip-row" id="dsRow">
+        <div class="day-pill" id="dsPill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>交互组件样板间 · 先定样式，再配交互</footer>
+
+</div>
+
+<script>
+/* ================= 1. 撕线面板 ================= */
+(function () {
+  var card = document.getElementById("tear1");
+  var handle = document.getElementById("tearHandle1");
+  var body = card.querySelector(".tear-body");
+  var startY = 0, curH = 0, dragging = false;
+
+  handle.addEventListener("pointerdown", function (e) {
+    dragging = true; startY = e.clientY;
+    curH = card.classList.contains("open") ? 200 : 0;
+    body.style.transition = "none";
+    handle.setPointerCapture(e.pointerId);
+  });
+  handle.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var dy = e.clientY - startY;
+    var h = Math.max(0, Math.min(220, curH + dy));
+    body.style.maxHeight = h + "px";
+  });
+  handle.addEventListener("pointerup", function (e) {
+    if (!dragging) return;
+    dragging = false;
+    body.style.transition = "";
+    var dy = e.clientY - startY;
+    if (card.classList.contains("open")) {
+      if (dy < -40) { card.classList.remove("open"); }
+    } else {
+      if (dy > 40) { card.classList.add("open"); }
+    }
+    body.style.maxHeight = "";
+  });
+  handle.addEventListener("click", function () {
+    if (Math.abs(0) < 3) card.classList.toggle("open");
+  });
+})();
+
+/* ================= 2. 保存按钮进度环 ================= */
+(function () {
+  var btn = document.getElementById("saveBtn");
+  var label = btn.querySelector(".label");
+  var circle = document.getElementById("ringCircle");
+  var busy = false;
+
+  btn.addEventListener("click", function () {
+    if (busy) return;
+    busy = true;
+    btn.classList.add("saving");
+    label.textContent = "";
+    // 模拟进度
+    var progress = 0;
+    var iv = setInterval(function () {
+      progress += Math.random() * 18 + 6;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(iv);
+        setTimeout(function () {
+          btn.classList.remove("saving");
+          btn.classList.add("done");
+          label.textContent = "已保存 ✓";
+          setTimeout(function () {
+            btn.classList.remove("done");
+            label.textContent = "保存更改";
+            busy = false;
+          }, 1600);
+        }, 350);
+      }
+      circle.style.strokeDashoffset = 113 - (progress / 100) * 113;
+    }, 160);
+  });
+})();
+
+/* ================= 3. 双头范围滑块 ================= */
+(function () {
+  var wrap = document.getElementById("rangeWrap");
+  var track = document.getElementById("rangeTrack");
+  var fill = document.getElementById("rangeFill");
+  var tA = document.getElementById("thumbA");
+  var tB = document.getElementById("thumbB");
+  var vA = document.getElementById("valA");
+  var vB = document.getElementById("valB");
+  var MIN = 0, MAX = 1000;
+
+  function pct(el) { return parseFloat(el.style.left) / 100; }
+  function toVal(p) { return Math.round(MIN + p * (MAX - MIN)); }
+  function render() {
+    var a = pct(tA), b = pct(tB);
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    fill.style.left = (lo * 100) + "%";
+    fill.style.width = ((hi - lo) * 100) + "%";
+    vA.textContent = "¥" + toVal(a);
+    vB.textContent = "¥" + toVal(b);
+  }
+  render();
+
+  function bindDrag(thumb) {
+    thumb.addEventListener("pointerdown", function (e) {
+      thumb.setPointerCapture(e.pointerId);
+      wrap.classList.add("dragging");
+      function move(ev) {
+        var r = track.getBoundingClientRect();
+        var p = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+        thumb.style.left = (p * 100) + "%";
+        render();
+      }
+      function up() {
+        wrap.classList.remove("dragging");
+        thumb.removeEventListener("pointermove", move);
+        thumb.removeEventListener("pointerup", up);
+      }
+      thumb.addEventListener("pointermove", move);
+      thumb.addEventListener("pointerup", up);
+    });
+  }
+  bindDrag(tA); bindDrag(tB);
+})();
+
+/* ================= 4. 轮播指示点 ================= */
+(function () {
+  var cards = document.getElementById("carouselCards");
+  var dots = document.querySelectorAll("#carouselDots .cdot");
+  var idx = 0;
+
+  function go(i) {
+    idx = i;
+    var offset = -i * (320 + 14);
+    Array.from(cards.children).forEach(function (c) {
+      c.style.transform = "translateX(" + offset + "px)";
+    });
+    dots.forEach(function (d, j) { d.classList.toggle("on", j === i); });
+  }
+  dots.forEach(function (d) {
+    d.addEventListener("click", function () { go(parseInt(d.dataset.i)); });
+  });
+  // 自动轮播
+  setInterval(function () { go((idx + 1) % dots.length); }, 3000);
+})();
+
+/* ================= 5. 照片抽屉面板 ================= */
+(function () {
+  var panel = document.getElementById("drawerPanel");
+  var photo = document.getElementById("drawerPhoto");
+  var grip = document.getElementById("drawerGrip");
+  var startY = 0, startH = 0, dragging = false;
+
+  grip.addEventListener("pointerdown", function (e) {
+    dragging = true; startY = e.clientY;
+    startH = panel.offsetHeight;
+    panel.style.transition = "none";
+    photo.style.transition = "none";
+    grip.setPointerCapture(e.pointerId);
+  });
+  grip.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var dy = startY - e.clientY; // 上拖为正
+    var h = Math.max(120, Math.min(340, startH + dy));
+    panel.style.height = h + "px";
+    var ratio = (h - 120) / (340 - 120); // 0..1
+    photo.style.transform = "scale(" + (1 - ratio * 0.12) + ")";
+    photo.style.opacity = String(1 - ratio * 0.25);
+  });
+  grip.addEventListener("pointerup", function () {
+    dragging = false;
+    panel.style.transition = "";
+    photo.style.transition = "";
+    // 回弹到最近档位
+    var h = panel.offsetHeight;
+    var snap = h > 230 ? 320 : 200;
+    panel.style.height = snap + "px";
+    var ratio = (snap - 120) / (340 - 120);
+    photo.style.transform = "scale(" + (1 - ratio * 0.12) + ")";
+    photo.style.opacity = String(1 - ratio * 0.25);
+  });
+})();
+
+/* ================= 6. 拖动选时间段 ================= */
+(function () {
+  var grid = document.getElementById("slotsGrid");
+  var result = document.getElementById("slotsResult");
+  var H0 = 8, N = 12; // 08:00 - 20:00, 12 格每格 1h
+  var sel = []; // boolean per slot
+  var dragging = false, anchor = -1;
+
+  for (var i = 0; i < N; i++) {
+    var d = document.createElement("div");
+    d.className = "slot";
+    d.textContent = (H0 + i) + ":00";
+    d.dataset.i = i;
+    grid.appendChild(d);
+    sel.push(false);
+  }
+  var slots = grid.children;
+
+  function render() {
+    var lo = -1, hi = -1;
+    for (var i = 0; i < N; i++) {
+      slots[i].className = "slot" + (sel[i] ? " sel" : "");
+      if (sel[i]) { if (lo < 0) lo = i; hi = i; }
+    }
+    if (lo >= 0) {
+      slots[lo].classList.add("edge-l");
+      slots[hi].classList.add("edge-r");
+      result.textContent = "已选 " + (H0 + lo) + ":00 — " + (H0 + hi + 1) + ":00 · 共 " + (hi - lo + 1) + " 小时";
+    } else {
+      result.textContent = "按住拖动选择时间段";
+    }
+  }
+
+  function clearAll() { for (var i = 0; i < N; i++) sel[i] = false; }
+
+  grid.addEventListener("pointerdown", function (e) {
+    var t = e.target.closest(".slot");
+    if (!t) return;
+    dragging = true; anchor = parseInt(t.dataset.i);
+    clearAll(); sel[anchor] = true; render();
+    grid.setPointerCapture(e.pointerId);
+  });
+  grid.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var el = document.elementFromPoint(e.clientX, e.clientY);
+    if (!el || !el.classList.contains("slot")) return;
+    var cur = parseInt(el.dataset.i);
+    clearAll();
+    var lo = Math.min(anchor, cur), hi = Math.max(anchor, cur);
+    for (var i = lo; i <= hi; i++) sel[i] = true;
+    render();
+  });
+  grid.addEventListener("pointerup", function () { dragging = false; });
+})();
+
+/* ================= 7. 吸边悬浮球 ================= */
+(function () {
+  var stage = document.getElementById("orbStage");
+  var orb = document.getElementById("orb1");
+  var dragging = false, offX = 0, offY = 0;
+
+  // 初始位置
+  orb.style.left = "60%";
+  orb.style.top = "40%";
+
+  orb.addEventListener("pointerdown", function (e) {
+    dragging = true;
+    orb.classList.remove("snapped");
+    var r = orb.getBoundingClientRect();
+    offX = e.clientX - r.left;
+    offY = e.clientY - r.top;
+    orb.setPointerCapture(e.pointerId);
+  });
+  orb.addEventListener("pointermove", function (e) {
+    if (!dragging) return;
+    var sr = stage.getBoundingClientRect();
+    var x = e.clientX - sr.left - offX;
+    var y = e.clientY - sr.top - offY;
+    x = Math.max(0, Math.min(sr.width - 52, x));
+    y = Math.max(0, Math.min(sr.height - 52, y));
+    orb.style.left = x + "px";
+    orb.style.top = y + "px";
+  });
+  orb.addEventListener("pointerup", function () {
+    if (!dragging) return;
+    dragging = false;
+    var sr = stage.getBoundingClientRect();
+    var r = orb.getBoundingClientRect();
+    var cx = r.left - sr.left + 26;
+    var cy = r.top - sr.top + 26;
+    // 最近边
+    var dL = cx, dR = sr.width - cx, dT = cy, dB = sr.height - cy;
+    var min = Math.min(dL, dR, dT, dB);
+    orb.classList.add("snapped");
+    if (min === dL) orb.style.left = "8px";
+    else if (min === dR) orb.style.left = (sr.width - 60) + "px";
+    else if (min === dT) orb.style.top = "8px";
+    else orb.style.top = (sr.height - 60) + "px";
+  });
+})();
+
+/* ================= 8. 横向日期条 ================= */
+(function () {
+  var row = document.getElementById("dsRow");
+  var pill = document.getElementById("dsPill");
+  var monthEl = document.getElementById("dsMonth");
+  var DW = ["一", "二", "三", "四", "五", "六", "日"];
+  var today = new Date(2026, 9, 19); // 2026-10-19
+  var weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7)); // 周一
+  var selIdx = (today.getDay() + 6) % 7;
+
+  function buildWeek() {
+    // 移除旧的 day（保留 pill）
+    Array.from(row.querySelectorAll(".day")).forEach(function (d) { d.remove(); });
+    for (var i = 0; i < 7; i++) {
+      var dt = new Date(weekStart);
+      dt.setDate(weekStart.getDate() + i);
+      var d = document.createElement("div");
+      d.className = "day" + (i === selIdx ? " on" : "");
+      d.dataset.i = i;
+      d.innerHTML = '<span class="dw">' + DW[i] + '</span><span class="dn">' + dt.getDate() + '</span>';
+      d.addEventListener("click", function () { select(parseInt(this.dataset.i)); });
+      row.appendChild(d);
+    }
+    monthEl.textContent = weekStart.getFullYear() + " 年 " + (weekStart.getMonth() + 1) + " 月";
+    requestAnimationFrame(movePill);
+  }
+
+  function movePill() {
+    var days = row.querySelectorAll(".day");
+    if (!days[selIdx]) return;
+    var d = days[selIdx];
+    pill.style.left = d.offsetLeft + "px";
+    pill.style.width = d.offsetWidth + "px";
+  }
+
+  function select(i) {
+    selIdx = i;
+    row.querySelectorAll(".day").forEach(function (d, j) { d.classList.toggle("on", j === i); });
+    movePill();
+  }
+
+  // 滑动翻周
+  var sx = 0, dragging = false;
+  row.addEventListener("pointerdown", function (e) { sx = e.clientX; dragging = true; });
+  row.addEventListener("pointerup", function (e) {
+    if (!dragging) return;
+    dragging = false;
+    var dx = e.clientX - sx;
+    if (Math.abs(dx) > 50) {
+      weekStart.setDate(weekStart.getDate() + (dx < 0 ? 7 : -7));
+      buildWeek();
+    }
+  });
+
+  buildWeek();
+  window.addEventListener("resize", movePill);
+})();
+</script>
+</body>
+</html>
