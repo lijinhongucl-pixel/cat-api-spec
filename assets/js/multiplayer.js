@@ -40,6 +40,23 @@
   // 频道名：全站共用一个频道；不同页面用 location.pathname 作为子事件区分
   var CHANNEL_NAME = 'catapi-multiplayer';
 
+  // ★ 云数据库凭证：猫碗投喂持久化（WorkBuddy Cloud Service）
+  // 来源：workbuddy_cloud_service → activate → publicConfig
+  // 注意：publishableKey 是公开的，可以安全嵌入静态站点（不是 service_role！）
+  var CLOUD_ENDPOINT = 'https://cat-api.app.workbuddy.host';
+  var CLOUD_RELAY    = 'https://www.workbuddy.cn/v2/as/genie-baas/oauth';
+  var CLOUD_PKEY     = 'wbpk_CJr3sMfVJ4ts0qJP2wdQRD_52W23dIL8oM6RaYgvn9b0Vzp0okcMyyF';
+  var cloud = null;  // 云服务客户端；SDK 未加载时为 null，模块静默降级
+  try {
+    if (window.WorkBuddyCloud && typeof window.WorkBuddyCloud.createWorkBuddyCloud === 'function') {
+      cloud = window.WorkBuddyCloud.createWorkBuddyCloud({
+        endpoint: CLOUD_ENDPOINT,
+        oauthRelayBaseUrl: CLOUD_RELAY,
+        publishableKey: CLOUD_PKEY
+      });
+    }
+  } catch (e) { /* 静默降级 */ }
+
   // 上报节流：光标位置上报频率（毫秒）
   var CURSOR_REPORT_INTERVAL = 80;
   // 心跳：定期广播自己的存在（在线判定）
@@ -721,9 +738,53 @@
   var BOWL_MAX = 100;      // 满 100 触发第一档
   var BOWL_LEGENDARY = 1000;  // 传说档
   var BOWL_RESET_HOUR = 4;   // 凌晨 4 点重置
+  var BOWL_CLOUD_TABLE = 'bowl_feeds';  // 云数据库表名
 
   var bowlState = { level: 0, totalFed: 0, lastReset: 0, legendaryUnlocked: false };
   var bowlWidgetEl = null;
+  var bowlCloudReady = false;  // 云端数据是否已拉取完成
+  var bowlCloudSyncing = false;  // 防止并发查询
+
+  // 今天凌晨 4 点的 ISO 时间戳（服务端 timestamptz 比较）
+  function today4amISO() {
+    var d = new Date();
+    d.setHours(BOWL_RESET_HOUR, 0, 0, 0);
+    return d.toISOString();
+  }
+
+  // 从云数据库拉取今日投喂总数（source of truth）
+  // 失败时静默返回 null，让上层走 localStorage 兜底
+  function loadBowlTotalFromCloud() {
+    if (!cloud || !cloud.database) return Promise.resolve(null);
+    var since = today4amISO();
+    var query = cloud.database
+      .from(BOWL_CLOUD_TABLE)
+      .select('delta')
+      .gte('created_at', since)
+      .limit(2000);
+    return query.then(function (res) {
+      if (res && res.error) return null;
+      if (!res || !res.data) return null;
+      var sum = 0;
+      for (var i = 0; i < res.data.length; i++) {
+        var d = res.data[i].delta;
+        if (typeof d === 'number' && isFinite(d)) sum += d;
+      }
+      return { total: sum, count: res.data.length };
+    }).catch(function () { return null; });
+  }
+
+  // 把投喂记录写入云数据库（best-effort，失败不回滚本地）
+  function saveBowlFeedToCloud(delta, name) {
+    if (!cloud || !cloud.database) return Promise.resolve(false);
+    var row = { delta: delta };
+    if (name) row.feeder_name = name;
+    var query = cloud.database.from(BOWL_CLOUD_TABLE).insert(row);
+    return query.then(function (res) {
+      if (res && res.error) return false;
+      return true;
+    }).catch(function () { return false; });
+  }
 
   function loadBowlState() {
     try {
@@ -747,6 +808,26 @@
     } else if (!bowlState.lastReset) {
       bowlState.lastReset = Date.now();
     }
+    // 用云端数据覆盖本地（source of truth）——异步不阻塞首屏
+    syncBowlFromCloud();
+  }
+
+  function syncBowlFromCloud() {
+    if (bowlCloudSyncing) return;
+    bowlCloudSyncing = true;
+    loadBowlTotalFromCloud().then(function (res) {
+      bowlCloudSyncing = false;
+      if (!res) return;  // 云不可达，保持本地
+      bowlCloudReady = true;
+      // 云端是权威——用云端值覆盖本地
+      var delta = res.total - bowlState.totalFed;
+      if (res.total !== bowlState.totalFed) {
+        bowlState.totalFed = res.total;
+        setBowlLevel(res.total, false);  // 云端同步，不再广播回去
+      } else {
+        renderBowlWidget();
+      }
+    });
   }
 
   function saveBowlState() {
@@ -772,6 +853,7 @@
 
   function handleBowlFeed(payload) {
     // 收到别人的投喂：累加到本地进度
+    // 注意：云端写入已经由发送者完成，这里只做本地视觉同步
     if (typeof payload.delta !== 'number') return;
     bowlState.totalFed += payload.delta;
     setBowlLevel(bowlState.level + payload.delta, true);
@@ -780,9 +862,13 @@
 
   function feedBowl(delta) {
     delta = delta || 1;
+    // 本地乐观更新 + 广播（实时性）
     bowlState.totalFed += delta;
     setBowlLevel(bowlState.level + delta, false);
     saveBowlState();
+    // 云端持久化（source of truth）——异步 best-effort
+    var feederName = (identity && identity.name) || null;
+    saveBowlFeedToCloud(delta, feederName);
     if (connected && channel) {
       try {
         channel.send({
