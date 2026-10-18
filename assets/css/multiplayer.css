@@ -496,6 +496,14 @@
   .mp-remote-cat-label { display: none; }
   /* 今日猫碗手机端缩小 */
   .mp-bowl-widget { left: 8px; bottom: 52px; width: 200px; padding: 8px 10px; font-size: 11px; }
+  /* 手机端关闭按钮放大到 36×36，手指才点得到 */
+  .mp-bowl-widget .mp-close-btn {
+    width: 36px; height: 36px; font-size: 22px;
+    top: 2px; right: 2px;
+  }
+  .mp-bowl-widget .mp-bowl-header { padding-right: 40px; }
+  /* 投喂按钮也加大点击区 */
+  .mp-bowl-feed-btn { padding: 6px 14px; font-size: 12px; }
 }
 
 /* =========================================================================
