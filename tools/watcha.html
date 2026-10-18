@@ -126,6 +126,19 @@
   .item:last-child { border-bottom: 0; padding-bottom: 0; }
   .item .t { font-size: 14px; color: var(--ink); font-weight: 500; margin-bottom: 3px; }
   .item .d { font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+  .item-tag {
+    display: inline-block;
+    vertical-align: 1px;
+    margin-left: 8px;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    font-weight: 400;
+    padding: 1px 7px;
+    border-radius: 2px;
+    color: var(--ok);
+    background: #E7F3EC;
+  }
+  .item-tag.paid { color: var(--wine); background: var(--wine-soft); }
 
   /* 展区 */
   .zones {
@@ -264,29 +277,17 @@
   <!-- 议程 -->
   <section class="sec">
     <div class="sec-head"><span class="sec-no">01</span><h2>三天怎么排</h2></div>
-    <p class="sec-note">10 月 24—25 日，场地 A／B 会连续展开主题活动。已确认的先看，待公布的在官网更新。</p>
+    <p class="sec-note">10 月 24—25 日，场地 A／B 将连续展开主题活动；已确认内容与待公布场次会持续更新。</p>
 
-    <div class="day">
+<div class="day">
       <div class="day-head">
         <span class="day-no">DAY 1</span>
         <span class="day-date">10 月 23 日</span>
-        <span class="day-tag">付费</span>
+        <span class="day-tag free">免费</span>
       </div>
       <div class="item">
-        <div class="t">金猹奖盛典</div>
-        <div class="d">重磅嘉宾登台颁奖，特别演出点亮现场。好产品的高光时刻，年度 AI 产品奖与年度观猹员奖在这里揭晓。</div>
-      </div>
-      <div class="item">
-        <div class="t">观猹年度演讲</div>
-        <div class="d">从产品、创造者和真实体验出发，讲这一年的观察与变化。</div>
-      </div>
-      <div class="item">
-        <div class="t">战略合作仪式 &amp; OPC 创业复兴 TOP 5</div>
-        <div class="d">观猹 × 无问芯穹、观猹 × 支付宝 AI 付、观猹 × ATOX 等合作集中发布；与亚马逊云科技共同揭晓 OPC 创业复兴年度 TOP 5。</div>
-      </div>
-      <div class="item">
-        <div class="t">舞台特别演出</div>
-        <div class="d">脱口秀、乐队表演等内容穿插登场。</div>
+        <div class="t">观猹大会前哨</div>
+        <div class="d">亚马逊云科技 × 观猹，OPC 创业复兴终极路演。开幕前一天先把创业者的场子热起来。</div>
       </div>
     </div>
 
@@ -294,18 +295,22 @@
       <div class="day-head">
         <span class="day-no">DAY 2</span>
         <span class="day-date">10 月 24 日</span>
-        <span class="day-tag free">免费</span>
+        <span class="day-tag">付费 + 免费</span>
       </div>
       <div class="item">
-        <div class="t">百展堂</div>
-        <div class="d">逛产品、试工具、体验互动。把感兴趣的 AI 产品放进逛展清单，好不好用现场试过再说。</div>
+        <div class="t">金猹奖盛典<span class="item-tag paid">付费</span></div>
+        <div class="d">重磅嘉宾登台颁奖，特别演出点亮现场。好产品的高光时刻，年度 AI 产品奖与年度观猹员奖在这里揭晓。</div>
       </div>
       <div class="item">
-        <div class="t">AI 能力水平考试</div>
-        <div class="d">50 道由观猹金牌观猹员和共学营讲师出的考卷。你的 AI 水平，考了才知道。</div>
+        <div class="t">百展堂<span class="item-tag">免费</span></div>
+        <div class="d">逛产品、试工具、体验互动。把感兴趣的 AI 产品，放进你的逛展清单。</div>
       </div>
       <div class="item">
-        <div class="t">知乎论坛：AI 时代开发者生态 2.0</div>
+        <div class="t">AI 能力水平考试<span class="item-tag">免费</span></div>
+        <div class="d">50 道由观猹金牌观猹员和共学营讲师出题的考卷，你的 AI 水平，考了才知道。</div>
+      </div>
+      <div class="item">
+        <div class="t">知乎论坛：AI 时代开发者生态 2.0<span class="item-tag">免费</span></div>
         <div class="d">AI 时代，人人真的都是创造者？开发门槛降低，开发的边界在哪里？</div>
       </div>
     </div>
@@ -317,14 +322,23 @@
         <span class="day-tag free">免费</span>
       </div>
       <div class="item">
-        <div class="t">百展堂 · 展区继续</div>
+        <div class="t">百展堂 · 展区继续<span class="item-tag">免费</span></div>
         <div class="d">六大主题展区照常开放，前两天没逛完的可以补上。</div>
       </div>
       <div class="item">
-        <div class="t">猹话会 / 猹工坊 / 观猹学社</div>
-        <div class="d">坐下来交换经验，动手做点东西，或者把 AI 本领练一练。</div>
+        <div class="t">猹话会 | 具身智能<span class="item-tag">免费</span></div>
+        <div class="d">摘掉舞台滤镜，机器人如何真正走入真实生活？离开预设演示场景，探讨消费级具身智能落地的现实路径。</div>
+      </div>
+      <div class="item">
+        <div class="t">猹话会 | AI×教育<span class="item-tag">免费</span></div>
+        <div class="d">AI 时代，我们该如何重新定义自己的位置？当答案随手可得，教育的下一步该往哪走？</div>
+      </div>
+      <div class="item">
+        <div class="t">AI 能力水平考试<span class="item-tag">免费</span></div>
+        <div class="d">50 道考卷照常开放，前两天没考成的可以补上。</div>
       </div>
     </div>
+
   </section>
 
   <!-- 展区 -->

@@ -1100,6 +1100,7 @@
     for (var i = 0; i < els.length; i++) {
       var el = els[i];
       if (munchedSet.has(el)) continue;
+      if (el.closest && el.closest('[data-no-munch]')) continue;   // 标记为不可啃（CTA / 报名入口）
       if (el.classList && el.classList.contains('lc2-munched')) continue;
       if (el.classList && (el.classList.contains('lc2-wrap') || el.classList.contains('lc2-bubble') || el.classList.contains('lc2-label'))) continue;
       var tag = el.tagName;
