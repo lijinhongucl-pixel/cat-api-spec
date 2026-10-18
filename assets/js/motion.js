@@ -92,7 +92,7 @@
     // 滚动进入 —— section + 大块容器
     sectionReveal();
 
-    // 滚动叙事：日晷随滚动缩小 + 视差
+    // 滚动叙事：章节视差 + 金色刻线扫过
     scrollNarrative();
 
     // 兜底：2.5s 后强制显示所有 hero 元素的最终值
@@ -168,32 +168,12 @@
   }
 
   // =========================================================================
-  // 滚动叙事：日晷随滚动缩小 + 章节视差
-  //   - hero-machine 里的 three.js 日晷随滚动 1.0 → 0.65 缩放
+  // 滚动叙事：章节视差 + 金色刻线扫过
   //   - 章节标题向上视差移动（比滚动快 15%）
+  //   - 每个 section 进入时金色刻线从左到右扫过
   // ========================================================================= */
   function scrollNarrative() {
     if (typeof gsap === "undefined" || typeof ScrollTrigger === "undefined") return;
-
-    // 日晷缩小联动
-    var heroMachine = document.querySelector(".hero-machine");
-    if (heroMachine) {
-      ScrollTrigger.create({
-        trigger: ".hero",
-        start: "top top",
-        end: "bottom top",
-        scrub: 1.2,
-        onUpdate: function (st) {
-          var progress = st.progress; // 0 → 1
-          var scale = 1.0 - progress * 0.35; // 缩到 0.65
-          if (typeof window.__astrolabeSetScale === "function") {
-            window.__astrolabeSetScale(scale);
-          }
-          // 同时让 hero-machine 容器整体淡出
-          heroMachine.style.opacity = String(1 - progress * 0.6);
-        }
-      });
-    }
 
     // 章节标题视差
     document.querySelectorAll("section h2, section h3").forEach(function (h) {
