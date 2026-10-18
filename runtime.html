@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+<title>CAT RUNTIME — 一只会跟你项目走的猫</title>
+<meta name="description" content="零依赖的猫运行时。接进 WorkBuddy、Codex、Claude Code 或任意命令行，任务跑完它替工作台报一句。五种匮乏驱动、十二种行为、六种反应、十二条准则，全部由 CLI 驱动。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CAT RUNTIME — 一只会跟你项目走的猫">
+<meta property="og:description" content="零依赖、无后台进程、接任何能执行命令的地方。任务跑完，猫报一句。">
+<meta property="og:image" content="assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="assets/css/spec.css">
+<style>
+  /* ---------- 页面骨架 ---------- */
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 28px; }
+  section { padding: 62px 0; border-top: 1px solid var(--line); }
+  section:first-of-type { border-top: 0; }
+  .eyebrow {
+    font-size: 11.5px; letter-spacing: 0.19em; color: var(--gold-ink);
+    font-weight: 600; margin-bottom: 12px; display: block;
+  }
+  h2 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: 27px; letter-spacing: -0.01em; color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .sec-lead { font-size: 15px; color: var(--muted); max-width: 760px; line-height: 1.9; margin-bottom: 30px; }
+
+  /* ---------- Hero ---------- */
+  .hero { padding: 76px 0 8px; }
+  .hero-tag {
+    display: inline-block; font-size: 11.5px; letter-spacing: 0.16em;
+    color: var(--gold-ink); background: var(--gold-soft); border: 1px solid var(--gold);
+    border-radius: 100px; padding: 5px 15px; margin-bottom: 22px; font-weight: 500;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 400; font-size: 46px;
+    line-height: 1.25; letter-spacing: -0.02em; color: var(--accent); margin-bottom: 20px;
+  }
+  h1 .dim { color: var(--cap); }
+  .lead { font-size: 17px; line-height: 1.95; color: var(--ink); max-width: 760px; margin-bottom: 26px; }
+  .lead strong { color: var(--accent); font-weight: 600; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+  .btn {
+    display: inline-block; padding: 11px 22px; border-radius: 6px; font-size: 14.5px;
+    text-decoration: none; background: var(--accent); color: #fff; font-weight: 500;
+    border: 1px solid var(--accent); transition: background .2s ease;
+  }
+  .btn:hover { background: var(--accent-deep); }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn.ghost:hover { background: var(--accent-soft); }
+
+  .hero-stats { display: flex; gap: 42px; flex-wrap: wrap; padding-top: 26px; border-top: 1px solid var(--line); }
+  .hero-stat .n { font-family: var(--serif); font-size: 30px; color: var(--accent); line-height: 1.1; }
+  .hero-stat .l { font-size: 12.5px; color: var(--muted); letter-spacing: 0.04em; margin-top: 2px; }
+
+  /* ---------- 演示 ---------- */
+  .demo { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+  .term {
+    flex: 1 1 460px; min-width: 340px;
+    background: #14140F; border-radius: 10px; overflow: hidden;
+    box-shadow: 0 18px 44px -26px rgba(20,20,15,.55);
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 11px 15px; background: #1d1d16; border-bottom: 1px solid #2b2b22;
+  }
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; background: #3a3a30; }
+  .term-title { font-size: 12px; color: #8a8a7c; margin-left: 8px; letter-spacing: .04em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .term-body {
+    margin: 0; padding: 18px 20px 20px; color: #E9E5DB;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px; line-height: 1.62; white-space: pre; overflow-x: auto;
+  }
+  .term-body .cat { color: #C8A35E; }
+  .term-body .lbl { color: #7f8b83; }
+  .term-body .say { color: #F2EEE6; }
+  .term-body .rule { color: #3d3d33; }
+  .term-body .num { color: #8f9a92; font-variant-numeric: tabular-nums; }
+
+  .panel { flex: 1 1 320px; min-width: 300px; }
+  .panel-title {
+    font-size: 11.5px; letter-spacing: .16em; color: var(--gold-ink);
+    font-weight: 600; margin-bottom: 14px;
+  }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .btns button {
+    font: inherit; font-size: 13px; padding: 7px 13px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--ink);
+    cursor: pointer; transition: border-color .18s ease, background .18s ease;
+  }
+  .btns button:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btns button.ok:hover { border-color: var(--ok); color: var(--ok); }
+  .btns button.bad:hover { border-color: var(--wine); color: var(--wine); }
+
+  .meters { display: grid; gap: 9px; margin-bottom: 22px; }
+  .meter { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .meter .k { width: 34px; color: var(--muted); flex: none; }
+  .meter .t { flex: 1; height: 7px; background: var(--code-bg); border-radius: 100px; overflow: hidden; display: block; }
+  .meter .f { display: block; height: 100%; background: var(--accent); border-radius: 100px; transition: width .5s ease; }
+  .meter.hot .f { background: var(--wine); }
+  .meter .v { width: 34px; text-align: right; color: var(--cap); font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  .tl-wrap { margin-bottom: 8px; }
+  .tl { display: flex; gap: 2px; height: 30px; align-items: stretch; }
+  .tl i { flex: 1; border-radius: 2px; min-width: 3px; }
+  .tl-legend { font-size: 11.5px; color: var(--cap); margin-top: 8px; line-height: 1.7; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin: 0 3px 0 8px; vertical-align: 1px; }
+  .dot:first-child { margin-left: 0; }
+
+  .demo-note {
+    font-size: 13px; color: var(--muted); line-height: 1.85; margin-top: 26px;
+    padding: 16px 18px; background: var(--accent-soft); border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+  }
+  .demo-note code { background: rgba(255,255,255,.7); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+
+  /* ---------- 卡片与表格 ---------- */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 14px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 9px; padding: 18px 20px;
+  }
+  .card h4 { font-size: 15px; color: var(--accent); margin-bottom: 6px; font-weight: 600; }
+  .card h4 small { font-size: 11.5px; color: var(--cap); font-weight: 400; letter-spacing: .04em; margin-left: 5px; }
+  .card p { font-size: 13.5px; color: var(--muted); line-height: 1.8; }
+  .card .formula {
+    display: block; margin-top: 10px; font-family: ui-monospace, Menlo, monospace;
+    font-size: 12px; color: var(--accent); background: var(--code-bg);
+    padding: 6px 9px; border-radius: 4px; word-break: break-all;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th {
+    text-align: left; font-size: 11.5px; letter-spacing: .1em; color: var(--cap);
+    font-weight: 600; padding: 0 12px 9px 0; border-bottom: 1px solid var(--line);
+  }
+  td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink); }
+  tr:last-child td { border-bottom: 0; }
+  td.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--accent); white-space: nowrap; }
+  td .sub { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+
+  /* ---------- 准则 ---------- */
+  .rules { counter-reset: r; columns: 2; column-gap: 34px; }
+  .rule-item {
+    break-inside: avoid; display: flex; gap: 12px; padding: 11px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .rule-item .no {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 11.5px; font-weight: 700; display: flex;
+    align-items: center; justify-content: center; margin-top: 3px;
+  }
+  .rule-item .txt { font-size: 14px; line-height: 1.8; }
+  .rule-item .txt code {
+    display: inline-block; margin-top: 3px; font-size: 11.5px; color: var(--cap);
+    font-family: ui-monospace, Menlo, monospace;
+  }
+
+  /* ---------- 进化阶梯 ---------- */
+  .ladder { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .rung {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    padding: 18px 14px; text-align: center; position: relative;
+  }
+  .rung .lv { font-size: 11px; color: var(--cap); letter-spacing: .1em; }
+  .rung .nm { font-family: var(--serif); font-size: 21px; color: var(--accent); margin: 6px 0 4px; }
+  .rung .xp { font-size: 11.5px; color: var(--gold-ink); font-variant-numeric: tabular-nums; }
+  .rung .ds { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-top: 9px; }
+
+  /* ---------- 命令 ---------- */
+  .cmds { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 34px; }
+  .cmd { padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .cmd code {
+    font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+    color: var(--accent); background: var(--code-bg);
+    padding: 3px 8px; border-radius: 4px; display: inline-block;
+  }
+  .cmd p { font-size: 13.5px; color: var(--muted); margin-top: 5px; line-height: 1.75; }
+
+  /* ---------- 接入 ---------- */
+  .hosts { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .host { background: var(--panel); border: 1px solid var(--line); border-radius: 9px; padding: 18px 20px; }
+  .host h4 { font-size: 14.5px; color: var(--accent); margin-bottom: 4px; }
+  .host .how { font-size: 12px; color: var(--gold-ink); margin-bottom: 9px; }
+  .host pre {
+    background: var(--code-bg); border-radius: 5px; padding: 10px 12px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+    color: var(--code-ink); overflow-x: auto; line-height: 1.7; white-space: pre-wrap;
+  }
+  .host p.note { font-size: 12.5px; color: var(--muted); margin-top: 9px; line-height: 1.75; }
+
+  /* ---------- 收尾 ---------- */
+  .closing {
+    margin: 70px auto 0; max-width: 720px; text-align: center;
+    padding: 40px 28px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .closing p {
+    font-family: var(--serif); font-style: italic; font-size: 18px;
+    line-height: 2; color: var(--accent);
+  }
+  footer { padding: 40px 28px 60px; text-align: center; font-size: 12.5px; color: var(--cap); }
+
+  @media (max-width: 880px) {
+    h1 { font-size: 34px; }
+    .rules { columns: 1; }
+    .ladder { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding-top: 48px; }
+    .hero-stats { gap: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">CAT <span>API</span></a>
+    <div class="topnav">
+      <a href="index.html">首页</a>
+      <a href="spec/cat.html">正文</a>
+      <a href="runtime.html" class="on">运行时</a>
+      <a href="versions.html">历史版本</a>
+      <a class="gh-link" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" title="GitHub 仓库"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="hero">
+    <span class="hero-tag">CAT RUNTIME · v1.0.0</span>
+    <h1>任务跑完了，<br>总得有谁告诉你一声。</h1>
+    <p class="lead">
+      桌宠现在很流行，但它们大多只在你盯着的时候活着。
+      <strong>CAT RUNTIME 是一只真的会累、会闷、会记住你作息的猫</strong>——
+      它接进 WorkBuddy、Codex、Claude Code，或者干脆只是你终端里的一条命令，
+      活干完了它抬头报一句，卡住了它叫你，失败的时候它趴你旁边不吭声。
+    </p>
+
+    <div class="cta">
+      <a class="btn" href="#demo">看它动 →</a>
+      <a class="btn ghost" href="#install">接到我的项目上</a>
+      <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec/tree/main/runtime" target="_blank" rel="noopener">源码</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="n">0</div><div class="l">依赖</div></div>
+      <div class="hero-stat"><div class="n">5</div><div class="l">种匮乏</div></div>
+      <div class="hero-stat"><div class="n">12</div><div class="l">种行为</div></div>
+      <div class="hero-stat"><div class="n">12</div><div class="l">条准则</div></div>
+      <div class="hero-stat"><div class="n">5</div><div class="l">个进化阶段</div></div>
+    </div>
+  </div>
+
+  <!-- ================= 演示 ================= -->
+  <section id="demo">
+    <span class="eyebrow">LIVE</span>
+    <h2>现在这只，跑的是同一份引擎</h2>
+    <p class="sec-lead">
+      下面这个终端窗口里跑的是 <code>runtime/src/core/engine.js</code>，
+      和你在自己机器上 <code>catctl watch</code> 看到的是同一份代码。
+      同一个种子，连打个哈欠的时机都一样。
+    </p>
+
+    <div class="demo">
+      <div class="term">
+        <div class="term-bar">
+          <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
+          <span class="term-title">catctl watch</span>
+        </div>
+        <pre class="term-body" id="term"></pre>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">发个事件给它</div>
+        <div class="btns">
+          <button data-ev="task.start">活开始了</button>
+          <button class="ok" data-ev="task.ok">成了</button>
+          <button class="bad" data-ev="task.fail">挂了</button>
+          <button data-ev="task.wait">在等你</button>
+          <button data-ev="pet">摸一下</button>
+          <button data-ev="feed">喂一口</button>
+          <button data-ev="laser">激光笔</button>
+        </div>
+
+        <div class="panel-title">五种匮乏</div>
+        <div class="meters" id="meters"></div>
+
+        <div class="panel-title">它刚才在干什么</div>
+        <div class="tl-wrap">
+          <div class="tl" id="tl"></div>
+          <div class="tl-legend" id="legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="demo-note">
+      演示按 <strong>2 倍速</strong>跑，好让你看见它换动作。
+      真实使用里它是实时推进的——而且<strong>没有后台进程</strong>：
+      你关掉终端它就睡在 <code>~/.cat-api/runtime/state.json</code> 里，
+      下次任何一条命令进来，它先把这段时间补算完再回答你。
+    </div>
+  </section>
+
+  <!-- ================= 匮乏 ================= -->
+  <section>
+    <span class="eyebrow">NEEDS</span>
+    <h2>不是心情值，是「我缺什么」</h2>
+    <p class="sec-lead">
+      高 = 缺得多。所有行为都由这五个数驱动，没有一个行为是随机挑的。
+      其中 <strong>警觉</strong>是这套东西和玩具的分界线：别的都靠时间慢慢涨，
+      只有警觉是被你的工作强行灌进去的——所以你一跑测试，它就抬头。
+    </p>
+    <div class="cards">
+      <div class="card">
+        <h4>困 <small>fatigue</small></h4>
+        <p>醒着一直涨，约五小时见底。只有睡觉能掉，而且掉得比涨快得多。</p>
+        <span class="formula">+0.0034/分 · 睡时 −0.052/分</span>
+      </div>
+      <div class="card">
+        <h4>闷 <small>boredom</small></h4>
+        <p>一直涨。扑咬、疯跑、巡视、磨爪会真的把它往回压——用减法，不是抵消。</p>
+        <span class="formula">+0.011/分 · 扑咬 −0.085/分</span>
+      </div>
+      <div class="card">
+        <h4>孤 <small>loneliness</small></h4>
+        <p>没人理就涨。判断标准不是「被摸了几下」，而是「你手上有活吗」。</p>
+        <span class="formula">+0.0038/分 · 你在线时 −0.0053/分</span>
+      </div>
+      <div class="card">
+        <h4>饿 <small>hunger</small></h4>
+        <p>慢慢涨，约九小时见顶。吃一顿掉回一半，然后再慢慢涨。</p>
+        <span class="formula">+0.0018/分 · 吃时 −0.55/分</span>
+      </div>
+      <div class="card">
+        <h4>警觉 <small>alertness</small></h4>
+        <p>不自然涨，只由任务事件注入。半衰期 50 秒，掉得很快——所以它只在你要紧的时候盯着。</p>
+        <span class="formula">任务 +0.52~0.66 · 半衰期 50s</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 行为 ================= -->
+  <section>
+    <span class="eyebrow">BEHAVIORS</span>
+    <h2>十二种自发行为</h2>
+    <p class="sec-lead">
+      每轮决策，所有「能做的」行为各自算一个分，最高的上岗。
+      两个细节让它不抽搐：<strong>习惯化</strong>——刚做过的事下次打分打折，90 秒半衰期；
+      <strong>停留上限</strong>——到了上限就不许再选自己，否则一只爱巡视的猫可以巡视一整夜。
+    </p>
+    <table>
+      <thead>
+        <tr><th style="width:120px">行为</th><th style="width:170px">触发</th><th>说明</th><th style="width:130px">停留</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">SLEEP</td><td class="mono">困 &gt; 0.34</td><td>你夜里干活多，它夜里就不睡。<span class="sub">准则六</span></td><td class="mono">26s – 25min</td></tr>
+        <tr><td class="mono">LOAF</td><td class="mono">保底项</td><td>什么都不想干的时候就是这个姿势。猫的主业。</td><td class="mono">8s – 4min</td></tr>
+        <tr><td class="mono">GROOM</td><td class="mono">不闷 + 有精神</td><td>低成本自娱。顺序不能乱，先从爪子开始。</td><td class="mono">7s – 90s</td></tr>
+        <tr><td class="mono">PATROL</td><td class="mono">闷</td><td>沿墙走。这间屋子归它。</td><td class="mono">9s – 2min</td></tr>
+        <tr><td class="mono">PLAY</td><td class="mono">闷 + 不困</td><td>扑咬任何会动的东西。</td><td class="mono">9s – 40s</td></tr>
+        <tr><td class="mono">ZOOMIES</td><td class="mono">闷 + 极有精神 + 没人看</td><td>准则三：没人在的时候才疯跑。</td><td class="mono">2.6s – 12s</td></tr>
+        <tr><td class="mono">EAT</td><td class="mono">饿 &gt; 0.66</td><td>先闻一下，吃两口就走。</td><td class="mono">10s – 60s</td></tr>
+        <tr><td class="mono">WATCH</td><td class="mono">警觉 &gt; 0.34</td><td>盯着屏幕。别按第二次。</td><td class="mono">5s – 10min</td></tr>
+        <tr><td class="mono">STRETCH</td><td class="mono">刚睡醒</td><td>前爪推出去，咔。</td><td class="mono">3s – 8s</td></tr>
+        <tr><td class="mono">SCRATCH</td><td class="mono">闷</td><td>这个角正好。不是你的椅子。</td><td class="mono">9s – 45s</td></tr>
+        <tr><td class="mono">BOXED</td><td class="mono">闷 + 3% 概率</td><td>进去了就不出来，半小时起。</td><td class="mono">40s – 10min</td></tr>
+        <tr><td class="mono">KNEAD</td><td class="mono">心情好 + 有点孤单</td><td>踩奶。左右左右。</td><td class="mono">5s – 16s</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= 反应 ================= -->
+  <section>
+    <span class="eyebrow">REACTIONS</span>
+    <h2>反应不替换行为，是盖在上面</h2>
+    <p class="sec-lead">
+      这是整个模型里最关键的一条。猫可以正在舔毛，突然抬头看你一眼，然后低头继续舔——
+      它的<strong>状态</strong>没变，只是被打断了。现实里的猫就是这么动的。
+      反应持续一到三秒，撤掉后姿势自动回到原来那个行为。
+    </p>
+    <div class="cards">
+      <div class="card"><h4>应声 <small>ACK</small></h4><p>活开始了。警觉 +0.52。<span class="formula">task.start</span></p></div>
+      <div class="card"><h4>得意 <small>CHEER</small></h4><p>成了。心情 +0.48，+12xp。<span class="formula">task.ok</span></p></div>
+      <div class="card"><h4>炸毛 <small>ALARM</small></h4><p>挂了。心情 −0.38，警觉 +0.66，+4xp。<span class="formula">task.fail</span></p></div>
+      <div class="card"><h4>叫你 <small>MEW</small></h4><p>卡住了。会弹系统通知。<span class="formula">task.wait</span></p></div>
+      <div class="card"><h4>呼噜 <small>PURR</small></h4><p>被摸到了。孤独 −0.30。<span class="formula">pet · feed</span></p></div>
+      <div class="card"><h4>打哈欠 <small>YAWN</small></h4><p>等到长蘑菇了。<span class="formula">prompt.idle</span></p></div>
+    </div>
+  </section>
+
+  <!-- ================= 准则 ================= -->
+  <section>
+    <span class="eyebrow">RULES</span>
+    <h2>十二条行为准则</h2>
+    <p class="sec-lead">
+      印在文档上，也写在代码里。每一条都能在 <code>src/core/engine.js</code> 里搜到对应的实现，
+      自测里有对应断言。
+    </p>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <!-- ================= 进化 ================= -->
+  <section>
+    <span class="eyebrow">EVOLUTION</span>
+    <h2>它会自己长成自己的样子</h2>
+    <p class="sec-lead">
+      失败也加经验，只是少一点——因为失败确实也学到了东西。
+      阶段会改行为：老猫每种动作都待得更久、睡得更沉、疯跑更少。<strong>进化只升不降。</strong>
+    </p>
+    <div class="ladder" id="ladder"></div>
+    <p class="sec-lead" style="margin:26px 0 0">
+      同时它还在学你：几点干活、在哪个目录、跑什么命令、失败率高不高。
+      从这些压出三个性格维度（夜行 / 碎步 / 调试）直接进打分公式——
+      <strong>同一套匮乏，不同主人的猫走不同的路。</strong>
+      每天零点全部统计乘 0.86，搬了家、换了技术栈，它会跟着变。
+    </p>
+    <div class="card" style="margin-top:18px">
+      <h4>它现在知道什么 <small>catctl learn</small></h4>
+      <p style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:2;color:var(--ink)">
+        ●●●●●  你的活有 68% 落在 21:00–02:00，我按这个点儿调了作息，主要是夜里。<br>
+        ●●●●○  最常待的是 cat-api-spec（134 次），那里算主领地，另外还有 3 处会去。<br>
+        ●●●●●  「npm test」跑了 41 次，挂掉 44%，一次大约 18 秒。你重试之前我一般不吵。<br>
+        ●●●●●  失败率 44%。我不催你——失败的时候我趴旁边，不盯着屏幕。
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= 命令 ================= -->
+  <section>
+    <span class="eyebrow">CLI</span>
+    <h2>整个东西就是一条命令</h2>
+    <p class="sec-lead">
+      为什么是 CLI：任何能 fork 一个进程的地方都能养这只猫。
+      编辑器插件、CI、make、git hook、WorkBuddy 的 hook、tmux、ssh——都只需要执行一条命令。
+    </p>
+    <div class="cmds">
+      <div class="cmd"><code>catctl</code><p>看它一眼。状态、匮乏、它在干嘛。</p></div>
+      <div class="cmd"><code>catctl watch</code><p>让它动起来。空格摸它，f 喂，l 激光笔，q 退出。</p></div>
+      <div class="cmd"><code>catctl run -- npm test</code><p>包住一条命令。退出码原样返回，CI 不会出错。</p></div>
+      <div class="cmd"><code>catctl emit task.ok</code><p>宿主主动汇报。9 种事件，见下表。</p></div>
+      <div class="cmd"><code>catctl init --host claude</code><p>写 .claude/settings.json，改之前自动备份。</p></div>
+      <div class="cmd"><code>catctl serve --port 9177</code><p>不给开 shell 的宿主一个 HTTP 口子，只听 127.0.0.1。</p></div>
+      <div class="cmd"><code>catctl learn</code><p>它学会了什么，带置信度。错了可以 <code style="font-size:12px">catctl teach</code> 纠正。</p></div>
+      <div class="cmd"><code>catctl selftest</code><p>15 项不变量自测，含 172800 步的确定性断言。</p></div>
+    </div>
+    <p class="sec-lead" style="margin-top:24px">
+      事件只有这几种：<code>task.start</code> · <code>task.ok</code> · <code>task.fail</code> ·
+      <code>task.wait</code> · <code>prompt.idle</code> · <code>pet</code> · <code>feed</code> ·
+      <code>laser</code> · <code>wake</code>。宿主不需要知道猫的内部结构，只需要知道这九个词。
+    </p>
+  </section>
+
+  <!-- ================= 接入 ================= -->
+  <section id="install">
+    <span class="eyebrow">ADAPTERS</span>
+    <h2>接到任何工作台</h2>
+    <p class="sec-lead">
+      不知道你那个宿主怎么配 hook？没关系。<strong>包一层就行</strong>——
+      任何能跑命令的地方，把命令前面加上 <code>catctl run --</code>，猫就接上了。
+    </p>
+    <div class="hosts">
+      <div class="host">
+        <h4>WorkBuddy / Codex</h4>
+        <div class="how">emit 一行命令</div>
+        <pre>catctl emit task.ok
+catctl emit task.wait --notify
+catctl emit task.fail</pre>
+        <p class="note">Codex 没有外挂钩子，就写进 AGENTS.md 一句话，或者外面套一层 <code>catctl run -- codex</code>。</p>
+      </div>
+      <div class="host">
+        <h4>Claude Code</h4>
+        <div class="how">catctl init --host claude</div>
+        <pre>settings.hooks.Stop
+  → catctl emit task.ok
+settings.hooks.Notification
+  → catctl emit task.wait --notify</pre>
+        <p class="note">合并写入，改之前自动备份旧的 settings.json。</p>
+      </div>
+      <div class="host">
+        <h4>git</h4>
+        <div class="how">catctl init --host git</div>
+        <pre>.git/hooks/post-commit
+  → catctl emit task.ok \
+      --name "git commit"</pre>
+        <p class="note">每次提交它看一眼。已有 hook 会先备份。</p>
+      </div>
+      <div class="host">
+        <h4>shell</h4>
+        <div class="how">catctl init --host shell</div>
+        <pre>source 项目/.catctl/shell-hook.sh
+# 写进 ~/.zshrc</pre>
+        <p class="note">之后你在终端里跑的每条命令，成没成它都知道。</p>
+      </div>
+      <div class="host">
+        <h4>不开 shell 的宿主</h4>
+        <div class="how">catctl serve</div>
+        <pre>GET  /state
+GET  /learn
+POST /emit  {"type":"task.ok"}</pre>
+        <p class="note">只监听 127.0.0.1，不出网。给 Electron、Tauri、VSCode webview 用。</p>
+      </div>
+      <div class="host">
+        <h4>任何地方</h4>
+        <div class="how">万能的一条</div>
+        <pre>catctl run -- &lt;你平时的命令&gt;</pre>
+        <p class="note">退出码原样返回。不需要宿主配合，也不需要你改任何配置。</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="closing">
+    <p>
+      桌宠的难点从来不是画一只猫。<br>
+      难点是让它在你不看的时候，也真的活着。
+    </p>
+  </div>
+
+</div>
+
+<footer>
+  CAT RUNTIME v1.0.0 · 零依赖 · 无后台进程 · 不联网 · <a href="https://github.com/lijinhongucl-pixel/cat-api-spec/tree/main/runtime" style="color:var(--accent)">源码</a>
+</footer>
+
+<script src="runtime/src/core/engine.js"></script>
+<script src="runtime/src/node/ascii.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  var E = window.CatEngine, A = window.CatAscii;
+  var term = document.getElementById("term");
+  if (!E || !A || !term) return;
+
+  /* ---------- 颜色表 ---------- */
+  var COLORS = {
+    SLEEP: "#3d5c4b", LOAF: "#8a8f7a", GROOM: "#6f8b6a", PATROL: "#C8A35E",
+    PLAY: "#9a7b3f", ZOOMIES: "#5C1A1B", EAT: "#7a6a4f", WATCH: "#1B3A2E",
+    STRETCH: "#a89a72", SCRATCH: "#b09060", BOXED: "#5d5d52", KNEAD: "#c9a227"
+  };
+  function colorOf(id) { return COLORS[id] || "#8a8f7a"; }
+
+  /* ---------- 引擎 ---------- */
+  var engine = E.create({ seed: 20261018 });
+  var timeline = [];
+  var lastBehavior = null;
+  var flash = null;
+
+  /* ---------- 终端渲染 ---------- */
+  function render() {
+    var snap = engine.snapshot();
+    var frame = Math.floor(Date.now() / 700) % 2;
+    var text = A.renderPanel(snap, { color: false, frame: frame ? 1 : 0 });
+
+    var html = "";
+    text.split("\n").forEach(function (line) {
+      var cut = 15;                      // "  " + 11 字符的猫 + "  "
+      var left = line.slice(0, cut);
+      var right = line.slice(cut);
+      var cls = "lbl";
+      if (/[─]/.test(right)) cls = "rule";
+      else if (/[#.]+\s+\d+%$/.test(right)) cls = "lbl";
+      else if (right.indexOf("CAT RUNTIME") > -1) cls = "lbl";
+      else if (/%/.test(right)) cls = "lbl";
+      else if (right.trim() === "") cls = "";
+      else cls = "say";
+      html += '<span class="cat">' + esc(left) + "</span>" +
+        (right ? '<span class="' + cls + '">' + esc(right) + "</span>" : "") + "\n";
+    });
+    term.innerHTML = html;
+    renderMeters(snap);
+  }
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /* ---------- 匮乏条 ---------- */
+  var METER_DEFS = [
+    ["精力", function (n) { return 1 - n.fatigue; }],
+    ["闷", function (n) { return n.boredom; }],
+    ["孤", function (n) { return n.loneliness; }],
+    ["饿", function (n) { return n.hunger; }],
+    ["警觉", function (n) { return n.alertness; }]
+  ];
+
+  function renderMeters(snap) {
+    var box = document.getElementById("meters");
+    if (!box.childNodes.length) {
+      METER_DEFS.forEach(function (d) {
+        var row = document.createElement("div");
+        row.className = "meter";
+        row.innerHTML = '<span class="k">' + d[0] + "</span>" +
+          '<span class="t"><span class="f" style="width:0%"></span></span>' +
+          '<span class="v">0%</span>';
+        box.appendChild(row);
+      });
+    }
+    METER_DEFS.forEach(function (d, i) {
+      var row = box.childNodes[i];
+      var v = d[1](snap.needs);
+      row.querySelector(".f").style.width = Math.round(v * 100) + "%";
+      row.querySelector(".v").textContent = Math.round(v * 100) + "%";
+      row.classList.toggle("hot", v > 0.7 && d[0] !== "精力");
+    });
+  }
+
+  /* ---------- 时间线 ---------- */
+  function pushTimeline(id) {
+    if (id === lastBehavior) return;
+    lastBehavior = id;
+    timeline.push(id);
+    if (timeline.length > 48) timeline.shift();
+    drawTimeline();
+  }
+
+  function drawTimeline() {
+    var tl = document.getElementById("tl");
+    tl.innerHTML = "";
+    timeline.forEach(function (id) {
+      var i = document.createElement("i");
+      i.style.background = colorOf(id);
+      i.title = id;
+      tl.appendChild(i);
+    });
+  }
+
+  /* ---------- 循环：2 倍速 ---------- */
+  var interval = setInterval(function () {
+    engine.tick(2000);
+    var snap = engine.snapshot();
+    pushTimeline(flash ? flash : snap.behavior);
+    render();
+    if (flash) flash = null;
+  }, 1000);
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) clearInterval(interval);
+    else {
+      interval = setInterval(function () {
+        engine.tick(2000);
+        var snap = engine.snapshot();
+        pushTimeline(flash ? flash : snap.behavior);
+        render();
+        if (flash) flash = null;
+      }, 1000);
+    }
+  });
+
+  /* ---------- 按钮 ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll(".btns button"), function (b) {
+    b.addEventListener("click", function () {
+      var ev = b.getAttribute("data-ev");
+      engine.emit(ev);
+      flash = ev === "task.ok" ? "PLAY" : ev === "task.fail" ? "WATCH" : null;
+      render();
+    });
+  });
+
+  /* ---------- 准则 ---------- */
+  var rulesBox = document.getElementById("rules");
+  if (rulesBox) {
+    E.RULES.forEach(function (r) {
+      var d = document.createElement("div");
+      d.className = "rule-item";
+      d.innerHTML = '<span class="no">' + r.n + "</span>" +
+        '<span class="txt">' + r.text + "<br><code>" + r.where + "</code></span>";
+      rulesBox.appendChild(d);
+    });
+  }
+
+  /* ---------- 阶梯 ---------- */
+  var ladder = document.getElementById("ladder");
+  if (ladder) {
+    E.STAGES.forEach(function (st, i) {
+      var d = document.createElement("div");
+      d.className = "rung";
+      d.innerHTML = '<div class="lv">LV.' + (i + 1) + "</div>" +
+        '<div class="nm">' + st.name + "</div>" +
+        '<div class="xp">' + st.at + " xp</div>" +
+        '<div class="ds">' + st.note + "</div>";
+      ladder.appendChild(d);
+    });
+  }
+
+  /* ---------- 图例 ---------- */
+  var legend = document.getElementById("legend");
+  if (legend) {
+    var seen = {};
+    E.BEHAVIORS.forEach(function (b) {
+      if (seen[b.id]) return;
+      seen[b.id] = 1;
+      var s = document.createElement("span");
+      s.innerHTML = '<span class="dot" style="background:' + colorOf(b.id) + '"></span>' + b.label;
+      legend.appendChild(s);
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

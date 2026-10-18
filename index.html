@@ -26,7 +26,7 @@
     display: inline-block;
     font-size: 11.5px;
     letter-spacing: 0.16em;
-    color: var(--gold);
+    color: var(--gold-ink);
     background: var(--gold-soft);
     border: 1px solid var(--gold);
     border-radius: 100px;
@@ -39,7 +39,7 @@
     margin: 16px auto 0;
     padding: 0 28px;
     font-size: 12.5px;
-    color: var(--faint);
+    color: var(--cap);
   }
   .closing-quote {
     max-width: 720px;
@@ -59,7 +59,7 @@
     margin-top: 12px;
     font-style: normal;
     font-size: 14px;
-    color: var(--gold);
+    color: var(--gold-ink);
     font-family: "PingFang SC", sans-serif;
     letter-spacing: 0.08em;
   }
@@ -92,7 +92,7 @@
   }
   .hero-person:hover .hero-person-art {
     transform: translateY(-2px);
-    border-color: var(--gold);
+    border-color: var(--gold-ink);
     box-shadow: 0 10px 26px -18px rgba(27, 58, 46, 0.55);
   }
   .hero-person-cap { display: block; margin-top: 10px; }
@@ -215,12 +215,53 @@
   }
   .vid-note {
     font-size: 12.5px;
-    color: var(--faint);
+    color: var(--cap);
     margin: 12px 0 0;
     letter-spacing: 0.02em;
   }
   .vid-note a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); }
   .vid-note a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ===== CAT RUNTIME 入口 ===== */
+  .rt-tease { max-width: 940px; margin: 56px auto 0; padding: 0 28px; }
+  .rt-tease-inner {
+    display: flex; gap: 40px; align-items: center; justify-content: space-between;
+    background: var(--accent); border-radius: 12px; padding: 44px 46px;
+    color: #EDE9E0; position: relative; overflow: hidden;
+  }
+  .rt-tease-copy { flex: 1 1 340px; min-width: 0; }
+  .rt-tease-kicker {
+    display: inline-block; font-size: 11px; letter-spacing: 0.19em; font-weight: 600;
+    color: var(--gold); border: 1px solid rgba(200,163,94,.55); border-radius: 100px;
+    padding: 4px 13px; margin-bottom: 18px;
+  }
+  .rt-tease-title {
+    font-family: var(--serif); font-weight: 400; font-size: 28px;
+    line-height: 1.35; color: #F4F1EA; letter-spacing: -0.01em; margin-bottom: 12px;
+  }
+  .rt-tease-sub { font-size: 14px; line-height: 1.9; color: rgba(237,233,224,.82); max-width: 520px; }
+  .rt-tease-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 22px; }
+  .rt-btn {
+    display: inline-block; padding: 11px 22px; border-radius: 6px; font-size: 14px;
+    text-decoration: none; background: var(--gold); color: var(--accent-deep);
+    font-weight: 600; border: 1px solid var(--gold); transition: background .2s ease;
+  }
+  .rt-btn:hover { background: #d8b471; }
+  .rt-cmd {
+    font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: rgba(237,233,224,.85);
+    background: rgba(0,0,0,.28); border: 1px solid rgba(200,163,94,.3);
+    padding: 8px 14px; border-radius: 5px;
+  }
+  .rt-tease-term {
+    flex: 0 0 300px; margin: 0; background: #14140F; color: #C8A35E;
+    font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; line-height: 1.7;
+    padding: 18px 20px; border-radius: 8px; white-space: pre; overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(200,163,94,.16);
+  }
+  @media (max-width: 880px) {
+    .rt-tease-inner { flex-direction: column; align-items: flex-start; gap: 26px; padding: 30px 26px; }
+    .rt-tease-term { flex: none; width: 100%; }
+  }
 
   @media (max-width: 880px) {
     .hero-row { flex-direction: column; gap: 30px; }
@@ -257,7 +298,7 @@
   .watcha-kicker {
     font-size: 10.5px;
     letter-spacing: 0.22em;
-    color: var(--gold);
+    color: var(--gold-ink);
     text-transform: uppercase;
     margin-bottom: 13px;
   }
@@ -303,7 +344,7 @@
     font-style: normal;
     font-size: 9.5px;
     letter-spacing: 0.16em;
-    color: var(--gold);
+    color: var(--gold-ink);
     margin-right: 9px;
   }
   .watcha-invite-cta {
@@ -335,12 +376,12 @@
     color: rgba(250, 248, 245, 0.42);
   }
   .watcha-note a {
-    color: var(--gold);
+    color: var(--gold-ink);
     text-decoration: none;
     border-bottom: 1px solid rgba(200, 163, 94, 0.4);
     transition: border-color 0.2s ease;
   }
-  .watcha-note a:hover { border-bottom-color: var(--gold); }
+  .watcha-note a:hover { border-bottom-color: var(--gold-ink); }
 
   /* ===== 观猹大会议程 ===== */
   .watcha-days {
@@ -359,7 +400,7 @@
   .wd-kicker {
     font-size: 10px;
     letter-spacing: 0.22em;
-    color: var(--gold);
+    color: var(--gold-ink);
     text-transform: uppercase;
     white-space: nowrap;
   }
@@ -392,7 +433,7 @@
     font-weight: 600;
     color: var(--accent);
   }
-  .wd-date { font-size: 12px; color: var(--faint); }
+  .wd-date { font-size: 12px; color: var(--cap); }
   .wd-list { list-style: none; margin: 0; padding: 0; }
   .wd-list li { margin-bottom: 17px; }
   .wd-item-head {
@@ -434,7 +475,7 @@
     margin: 18px 0 0;
     font-size: 11.5px;
     line-height: 1.8;
-    color: var(--faint);
+    color: var(--cap);
   }
   .wd-note a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
   .wd-note a:hover { color: var(--accent); }
@@ -487,7 +528,7 @@
     left: 22px;
     font-size: 10px;
     letter-spacing: 0.18em;
-    color: var(--gold);
+    color: var(--gold-ink);
     font-weight: 600;
     font-family: "SF Mono", Menlo, monospace;
   }
@@ -745,7 +786,7 @@
   }
   .machine-caption strong { color: var(--accent); font-weight: 600; }
   .machine-caption .now-state {
-    color: var(--gold);
+    color: var(--gold-ink);
     font-weight: 600;
     font-family: var(--serif);
     font-style: italic;
@@ -788,6 +829,7 @@
           GitHub
         </a>
         <a class="btn gold" href="tools/expression.html">表情渲染器 →</a>
+        <a class="btn ghost" href="runtime.html">猫已上线 · 看它动 →</a>
       </div>
 
       <div class="hero-stats">
@@ -1023,6 +1065,32 @@
   <p class="vid-note">
     播放器由 B 站提供 · <a href="https://www.bilibili.com/video/BV1JFng61EMW/" target="_blank" rel="noopener">去 B 站看原片 →</a>
   </p>
+</section>
+
+<!-- ===== CAT RUNTIME 入口 ===== -->
+<section class="rt-tease" aria-label="CAT RUNTIME" data-no-munch>
+  <div class="rt-tease-inner">
+    <div class="rt-tease-copy">
+      <span class="rt-tease-kicker">CAT RUNTIME · v1.0.0</span>
+      <h2 class="rt-tease-title">任务跑完了，总得有谁告诉你一声。</h2>
+      <p class="rt-tease-sub">
+        把这份规范跑起来。一只真的会累、会闷、会记住你作息的猫，
+        接进 WorkBuddy、Codex、Claude Code，或者干脆只是你终端里的一条命令。
+        活干完了它抬头报一句，卡住了它叫你，失败的时候它趴你旁边不吭声。
+      </p>
+      <div class="rt-tease-cta">
+        <a class="rt-btn" href="runtime.html">看它动 →</a>
+        <code class="rt-cmd">catctl run -- npm test</code>
+      </div>
+    </div>
+    <pre class="rt-tease-term" aria-hidden="true">  /\_/\
+ ( o.o )   CAT RUNTIME · Lv.3 成猫 · 盯活
+  > ^ <    我在看。
+ /|   |\   ───────────────
+(_|___|_)  精力 ████████ 84%
+           闷   ███░░░░░ 31%
+           孤   ██░░░░░░ 22%</pre>
+  </div>
 </section>
 <script>
 (function () {

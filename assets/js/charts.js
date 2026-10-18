@@ -60,7 +60,9 @@
     var gap = inner / data.length;
 
     var bars = data.map(function (d, i) {
-      var bh = (d.v / max) * innerH;
+      // 数据里出现负数时，bh 会变成负数，SVG 直接报错。
+      // 允许负数存在，但柱高不许是负的；负值画 0 高的柱子，标签照常。
+      var bh = Math.max(0, (d.v / (max || 1)) * innerH);
       var x = PAD.left + i * gap + (gap - bw) / 2;
       var y = PAD.top + innerH - bh;
       return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + bh +

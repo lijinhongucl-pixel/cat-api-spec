@@ -38,7 +38,7 @@
   .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   @media (max-width: 760px) { .scores { grid-template-columns: repeat(2, 1fr); } }
   .sc { border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; background: var(--panel); }
-  .sc .k { font-size: 11.5px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+  .sc .k { font-size: 11.5px; color: var(--cap); letter-spacing: .1em; text-transform: uppercase; }
   .sc .v { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
   .sc .b { font-size: 12.5px; color: var(--muted); }
   .sc.good .v { color: var(--ok); }
@@ -67,7 +67,7 @@
   .vtag.ban { background: #1f2430; color: #f8fafc; }
   .devwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
   table.dev { font-size: 12.5px; margin: 0; width: 100%; }
-  table.dev th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); white-space: nowrap; padding: 9px 6px; }
+  table.dev th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--cap); white-space: nowrap; padding: 9px 6px; }
   table.dev td { padding: 6px; vertical-align: middle; }
   table.dev input[type=number] { width: 56px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 5px; font-family: inherit; font-size: 12.5px; background: #fff; color: var(--ink); }
   table.dev select { padding: 4px 5px; border: 1px solid var(--line); border-radius: 5px; font-family: inherit; font-size: 12.5px; background: #fff; color: var(--ink); max-width: 120px; }
@@ -85,7 +85,7 @@
   .gate-row { display: grid; grid-template-columns: 44px 1fr 50px; gap: 9px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; align-items: baseline; }
   .gate-row:last-child { border-bottom: none; }
   .gate-row .st { font-size: 11px; font-weight: 700; }
-  .st.pass, .st.good { color: var(--ok); } .st.warn { color: var(--warn); } .st.fail { color: #b91c1c; } .st.na { color: var(--faint); }
+  .st.pass, .st.good { color: var(--ok); } .st.warn { color: var(--warn); } .st.fail { color: #b91c1c; } .st.na { color: var(--cap); }
 </style>
 </head>
 <body>
@@ -439,7 +439,7 @@
 
     // 门槛矩阵 —— 13 道逐条给结论。NA 单独标出来，
     // 不把「本清单里没有可判对象」混进「已通过」。
-    $("gatematrix").innerHTML = '<table class="dev" style="font-size:12px;">' +
+    $("gatematrix").innerHTML = '<div class="devwrap" style="border:0;border-radius:0;overflow-x:auto;"><table class="dev" style="font-size:12px;">' +
       "<tr><th>ID</th><th>门槛</th><th>判定</th><th>判过</th><th>挂</th><th>规则</th></tr>" +
       r.gates.map(function (g) {
         var cls = g.status === "FAIL" ? "fail" : g.status === "PASS" ? "good" : "na";
@@ -450,7 +450,7 @@
           '<td style="text-align:center;">' + g.checked + "</td>" +
           '<td style="text-align:center;">' + g.failed + "</td>" +
           '<td style="color:var(--muted);">' + esc(g.rule) + "</td></tr>";
-      }).join("") + "</table>" +
+      }).join("") + "</table></div>" +
       '<div class="note" style="margin-top:10px;">13 道门槛：<strong>' + (13 - r.gateNaCount) + " 道已判定</strong> · " +
       r.gateNaCount + " 道因清单里没有可判对象而跳过 · 其中 " + r.gateFailCount + " 道不通过。" +
       "环境：地面 " + esc(env.floor) + "（抓地 " + r.env.surface + "/10）。</div>";
@@ -493,26 +493,26 @@
 
   // 设备注册表
   function renderRegistry() {
-    $("registry").innerHTML = '<table class="dev" style="font-size:12px;">' +
+    $("registry").innerHTML = '<div class="devwrap" style="border:0;border-radius:0;overflow-x:auto;"><table class="dev" style="font-size:12px;">' +
       "<tr><th>CODE</th><th>名称</th><th>阶段</th><th>角色</th><th>狩猎权重</th><th>说明</th></tr>" +
       P.CLASSES.map(function (c) {
         return "<tr><td><code>" + c.code + "</code></td><td>" + esc(c.name) + "</td>" +
           "<td>" + c.stage + "</td><td>" + c.role + "</td>" +
           '<td style="text-align:center;">' + c.huntWeight + "</td>" +
           '<td style="color:var(--muted);">' + esc(c.note) + "</td></tr>";
-      }).join("") + "</table>";
+      }).join("") + "</table></div>";
   }
 
   // 门槛注册表
   function renderGates() {
-    $("gatereg").innerHTML = '<table class="dev" style="font-size:12px;">' +
+    $("gatereg").innerHTML = '<div class="devwrap" style="border:0;border-radius:0;overflow-x:auto;"><table class="dev" style="font-size:12px;">' +
       "<tr><th>ID</th><th>名称</th><th>规则</th><th>等级</th><th>严重度</th></tr>" +
       P.GATES.map(function (g) {
         return "<tr><td><code>" + g.id + "</code></td><td>" + esc(g.name) + "</td>" +
           '<td style="color:var(--muted);">' + esc(g.rule) + "</td>" +
           '<td><span class="grade ' + g.grade + '">' + g.grade + "</span></td>" +
           "<td>" + g.severity + "</td></tr>";
-      }).join("") + "</table>";
+      }).join("") + "</table></div>";
   }
 
   // 事件

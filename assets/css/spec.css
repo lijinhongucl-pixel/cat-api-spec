@@ -31,6 +31,11 @@
   --warn: #b45309;
   --danger: #991b1b;
 
+  /* 文字专用色（对比度达标）：金色作强调色/边框仍用 --gold，
+     但当金色以文字出现时用它自己的文字色；说明性小字用 --cap。 */
+  --gold-ink: #8a6a34;   /* 金字 AA 4.73 / 象牙 */
+  --cap: #6e6c66;        /* 说明小字 AA 4.95 / 象牙 */
+
   /* 衬线字体（标题专用）*/
   --serif: Georgia, "Songti SC", "Noto Serif SC", serif;
 }
@@ -126,7 +131,7 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
 }
-.vc-unit { color: var(--faint); font-size: 12px; }
+.vc-unit { color: var(--cap); font-size: 12px; }
 
 /* ---------- 布局 ---------- */
 .layout { display: flex; max-width: 1180px; margin: 0 auto; }
@@ -140,7 +145,7 @@ aside {
   overflow-y: auto;
 }
 aside .doc-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
-aside .doc-sub { font-size: 12px; color: var(--faint); margin-bottom: 22px; }
+aside .doc-sub { font-size: 12px; color: var(--cap); margin-bottom: 22px; }
 aside nav a {
   display: block;
   padding: 6px 11px;
@@ -159,7 +164,7 @@ aside nav a.active { background: var(--accent-soft); color: var(--accent); font-
 aside nav .nav-label {
   font-size: 11px;
   letter-spacing: 0.12em;
-  color: var(--faint);
+  color: var(--cap);
   margin: 20px 11px 6px;
   text-transform: uppercase;
 }
@@ -227,7 +232,7 @@ table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;
 th, td { border: 1px solid var(--line); padding: 10px 14px; text-align: left; vertical-align: top; }
 th { background: var(--code-bg); font-weight: 600; }
 .divider { border: none; border-top: 1px solid var(--line); margin: 48px 0; }
-.end-note { margin-top: 68px; text-align: center; color: var(--faint); font-size: 13px; }
+.end-note { margin-top: 68px; text-align: center; color: var(--cap); font-size: 13px; }
 
 /* ---------- 首页 / Hero v2 ---------- */
 .hero {
@@ -259,7 +264,7 @@ th { background: var(--code-bg); font-weight: 600; }
   line-height: 1.75;
 }
 .hero .lead strong { color: var(--accent); font-weight: 600; }
-.hero .meta { font-size: 13px; color: var(--faint); margin-top: 18px; }
+.hero .meta { font-size: 13px; color: var(--cap); margin-top: 18px; }
 
 /* 首屏视觉锤：统计数字前移 */
 .hero-stats {
@@ -277,7 +282,7 @@ th { background: var(--code-bg); font-weight: 600; }
   background: var(--panel);
   transition: border-color 0.2s;
 }
-.hero-stat:hover { border-color: var(--gold); }
+.hero-stat:hover { border-color: var(--gold-ink); }
 .hero-stat .n {
   font-family: var(--serif);
   font-size: 28px;
@@ -296,7 +301,7 @@ th { background: var(--code-bg); font-weight: 600; }
   background: var(--accent);
   border-color: var(--accent);
 }
-.hero-stat.featured .n { color: var(--gold); }
+.hero-stat.featured .n { color: var(--gold-ink); }
 .hero-stat.featured .l { color: rgba(250,248,245,0.7); }
 
 /* 首屏主按钮（只留 2-3 个核心 CTA）*/
@@ -339,11 +344,11 @@ th { background: var(--code-bg); font-weight: 600; }
 }
 .tab-btn .count {
   font-size: 10.5px;
-  color: var(--faint);
+  color: var(--cap);
   font-weight: 400;
   margin-left: 3px;
 }
-.tab-btn.active .count { color: var(--gold); }
+.tab-btn.active .count { color: var(--gold-ink); }
 
 /* Tab 说明条：让用户知道每个分类里有什么 */
 .tab-hint {
@@ -358,7 +363,7 @@ th { background: var(--code-bg); font-weight: 600; }
   align-items: baseline;
   gap: 8px;
 }
-.tab-hint-lead { color: var(--faint); }
+.tab-hint-lead { color: var(--cap); }
 .tab-hint-sep { color: var(--line); }
 .tab-hint-desc {
   color: var(--accent);
@@ -396,12 +401,12 @@ th { background: var(--code-bg); font-weight: 600; }
   position: relative;
 }
 .card:hover {
-  border-color: var(--gold);
+  border-color: var(--gold-ink);
   transform: translateY(-3px);
   box-shadow: 0 6px 20px rgba(27,58,46,0.06);
 }
 .card.featured {
-  border-color: var(--gold);
+  border-color: var(--gold-ink);
   border-width: 1.5px;
   background: linear-gradient(180deg, var(--gold-soft) 0%, var(--panel) 60%);
 }
@@ -410,13 +415,13 @@ th { background: var(--code-bg); font-weight: 600; }
   position: absolute;
   top: 14px;
   right: 16px;
-  color: var(--gold);
+  color: var(--gold-ink);
   font-size: 14px;
 }
 .card .kicker {
   font-size: 11px;
   letter-spacing: 0.14em;
-  color: var(--gold);
+  color: var(--gold-ink);
   text-transform: uppercase;
   margin-bottom: 8px;
   font-weight: 600;
@@ -432,7 +437,7 @@ th { background: var(--code-bg); font-weight: 600; }
 .card .foot {
   margin-top: 12px;
   font-size: 11.5px;
-  color: var(--faint);
+  color: var(--cap);
   font-family: "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -442,7 +447,7 @@ th { background: var(--code-bg); font-weight: 600; }
   padding: 0 28px;
   font-size: 13px;
   letter-spacing: 0.16em;
-  color: var(--gold);
+  color: var(--gold-ink);
   text-transform: uppercase;
   font-weight: 600;
 }

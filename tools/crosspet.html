@@ -25,7 +25,7 @@
   @media (max-width: 640px) { .cp-header { grid-template-columns: 1fr; } }
   .cp-title h1 { margin: 0; font-size: 26px; }
   .cp-title .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  .cp-title .sub code { font-size: 12px; color: var(--faint); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  .cp-title .sub code { font-size: 12px; color: var(--cap); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
 
   .status-badge {
     background: var(--panel);
@@ -44,7 +44,7 @@
     animation: pulse 2s ease-in-out infinite;
   }
   .status-badge.connected .dot { background: var(--ok); }
-  .status-badge .label { font-size: 12px; color: var(--faint); margin-top: 4px; }
+  .status-badge .label { font-size: 12px; color: var(--cap); margin-top: 4px; }
   .status-badge .status-text { font-size: 14px; font-weight: 700; }
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -91,7 +91,7 @@
   .summon-btn .pet-img { width: 72px; height: 72px; border-radius: 12px; overflow: hidden; }
   .summon-btn .pet-img img { width: 100%; height: 100%; object-fit: cover; }
   .summon-btn .pet-name { font-size: 14px; font-weight: 700; color: var(--ink); }
-  .summon-btn .pet-desc { font-size: 11px; color: var(--faint); }
+  .summon-btn .pet-desc { font-size: 11px; color: var(--cap); }
 
   /* 手动穿越 */
   .depart-section {
@@ -128,7 +128,7 @@
   .cs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .cs-table th {
     text-align: left; font-size: 10.5px; letter-spacing: 0.05em;
-    text-transform: uppercase; color: var(--faint);
+    text-transform: uppercase; color: var(--cap);
     padding: 7px 8px; border-bottom: 1px solid var(--line); font-weight: 600;
   }
   .cs-table td { padding: 4px; border-bottom: 1px dashed var(--line); }
@@ -143,7 +143,7 @@
     font-family: inherit; font-size: 12.5px; color: var(--muted);
     line-height: 1.5; transition: all 0.15s;
   }
-  .cs-cell:hover { border-color: var(--gold); background: var(--gold-soft); color: var(--ink); }
+  .cs-cell:hover { border-color: var(--gold-ink); background: var(--gold-soft); color: var(--ink); }
   .cs-cell.on {
     border-color: var(--accent); background: var(--accent-soft);
     color: var(--accent); font-weight: 600;
@@ -154,9 +154,9 @@
     border-left: 3px solid var(--gold);
     font-size: 13.5px; line-height: 1.85; color: var(--ink);
   }
-  .cs-empty { color: var(--faint); font-size: 12.5px; }
+  .cs-empty { color: var(--cap); font-size: 12.5px; }
   .cs-detail .who { font-weight: 600; color: var(--accent); }
-  .cs-detail .line { color: var(--gold); font-family: var(--serif); font-size: 15px; margin: 4px 0; }
+  .cs-detail .line { color: var(--gold-ink); font-family: var(--serif); font-size: 15px; margin: 4px 0; }
   .cs-detail .why { color: var(--muted); font-size: 12.5px; margin-top: 6px; }
   .cs-note {
     margin-top: 16px; padding: 14px 18px; background: var(--accent-soft);
@@ -190,7 +190,7 @@
   }
   .sc-out .ok { color: #4ade80; }
   .sc-out .no { color: #f87171; }
-  .sc-out .sum { color: var(--gold); margin-top: 10px; padding-top: 10px; border-top: 1px solid #374151; }
+  .sc-out .sum { color: var(--gold-ink); margin-top: 10px; padding-top: 10px; border-top: 1px solid #374151; }
 
   /* ===== 互动日志 ===== */
   .log-section {
@@ -208,7 +208,7 @@
     border-radius: 10px;
     background: var(--bg);
   }
-  .log-empty { padding: 32px; text-align: center; color: var(--faint); font-size: 14px; }
+  .log-empty { padding: 32px; text-align: center; color: var(--cap); font-size: 14px; }
   .log-entry {
     padding: 10px 16px;
     border-bottom: 1px solid var(--line);
@@ -218,7 +218,7 @@
     gap: 10px;
   }
   .log-entry:last-child { border-bottom: none; }
-  .log-entry .ts { color: var(--faint); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; }
+  .log-entry .ts { color: var(--cap); font-size: 11px; min-width: 60px; font-variant-numeric: tabular-nums; }
   .log-entry .icon { font-size: 18px; }
   .log-entry .text { color: var(--ink); flex: 1; }
   .log-entry.arrive { background: rgba(21, 128, 61, 0.04); }

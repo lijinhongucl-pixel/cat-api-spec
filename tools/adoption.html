@@ -45,7 +45,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     font-family: "SF Mono", Menlo, monospace;
   }
-  .card-panel > .hint { font-size: 12.5px; color: var(--faint); margin: 0 0 16px; line-height: 1.7; }
+  .card-panel > .hint { font-size: 12.5px; color: var(--cap); margin: 0 0 16px; line-height: 1.7; }
 
   .fld { margin-bottom: 14px; }
   .fld label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 5px; }
@@ -57,7 +57,7 @@
   }
   .fld input:focus { outline: none; border-color: var(--accent); background: #fff; }
   .fld input.mono { font-family: "SF Mono", Menlo, monospace; font-size: 12.5px; }
-  .fld .sub { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+  .fld .sub { font-size: 11.5px; color: var(--cap); margin-top: 4px; }
 
   .btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -69,7 +69,7 @@
   .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { background: var(--accent-deep); }
-  .btn.gold { background: var(--gold); color: #fff; border-color: var(--gold); }
+  .btn.gold { background: var(--gold); color: #fff; border-color: var(--gold-ink); }
   .btn.gold:hover { background: #b08f4d; }
   .btn.sm { padding: 5px 11px; font-size: 12px; border-radius: 6px; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
@@ -80,7 +80,7 @@
     border: 1px solid var(--gold); border-radius: 16px;
     padding: 28px; text-align: center; margin-bottom: 20px;
   }
-  .cert .label { font-size: 10.5px; letter-spacing: 0.2em; color: var(--gold); font-weight: 600; }
+  .cert .label { font-size: 10.5px; letter-spacing: 0.2em; color: var(--gold-ink); font-weight: 600; }
   .cert .name {
     font-size: 34px; font-weight: 700; margin: 12px 0 6px;
     font-family: var(--serif); color: var(--ink); letter-spacing: 0.01em;
@@ -94,7 +94,7 @@
     background: var(--accent); color: #fff; border-radius: 4px;
     font-size: 11.5px; letter-spacing: 0.06em; font-weight: 600;
   }
-  .cert .note { font-size: 12px; color: var(--faint); margin-top: 12px; line-height: 1.7; }
+  .cert .note { font-size: 12px; color: var(--cap); margin-top: 12px; line-height: 1.7; }
 
   /* 命令框 */
   .cmdbox {
@@ -121,7 +121,7 @@
   table.tv { width: 100%; font-size: 12px; border-collapse: collapse; margin-top: 12px; }
   table.tv th {
     text-align: left; font-size: 10.5px; letter-spacing: 0.05em;
-    text-transform: uppercase; color: var(--faint);
+    text-transform: uppercase; color: var(--cap);
     padding: 7px 8px; border-bottom: 1px solid var(--line); font-weight: 600;
   }
   table.tv td {
@@ -288,7 +288,7 @@
       任何一份实现都 MUST 复现这三组值。本页用的是 <code>assets/js/adoption-key.js</code>，
       命令行用的是 <code>skill/install.sh</code>——两份实现互相钉住，判据就是这张表。
     </p>
-    <table class="tv" id="tv-table"></table>
+    <div style="overflow-x:auto;"><table class="tv" id="tv-table"></table></div>
     <div class="selfcheck" id="selfcheck"></div>
     <div class="btn-row">
       <button class="btn sm" id="btn-selfcheck">跑一次自检</button>

@@ -17,11 +17,14 @@
   .chart-section { margin-bottom: 36px; }
   .chart-section h2 { font-size: 18px; margin-bottom: 16px; padding-bottom: 6px;
     border-bottom: 2px solid var(--accent); }
-  .chart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(580px, 1fr)); gap: 24px; }
-  .chart-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; }
-  .chart-card svg { width: 100%; height: auto; border-radius: 6px; }
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+  @media (min-width: 640px) {
+    .chart-grid { grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); }
+  }
+  .chart-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; min-width: 0; }
+  .chart-card svg { width: 100%; height: auto; border-radius: 6px; display: block; }
   .chart-card .desc { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.6; }
-  .chart-card .src { font-size: 11px; color: var(--faint); margin-top: 4px; }
+  .chart-card .src { font-size: 11px; color: var(--cap); margin-top: 4px; }
   .foot-note { margin-top: 36px; padding: 16px 20px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; line-height: 1.8; color: var(--muted); }
 </style>
