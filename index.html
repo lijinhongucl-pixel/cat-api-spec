@@ -64,6 +64,69 @@
     letter-spacing: 0.08em;
   }
 
+  /* ===== Hero 右栏：大会主视觉 ===== */
+  .hero-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 38px;
+  }
+  .hero-copy { flex: 1 1 auto; min-width: 0; }
+  .hero-conf {
+    flex: 0 0 330px;
+    display: block;
+    text-decoration: none;
+    padding-top: 8px;
+  }
+  .hero-conf picture { display: block; }
+  .hero-conf-art {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #F4F0E9;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 12px 10px;
+    box-sizing: border-box;
+    transition: transform 0.25s ease, border-color 0.2s ease;
+  }
+  .hero-conf:hover .hero-conf-art { transform: translateY(-2px); border-color: var(--gold); }
+  .hero-conf-cap {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 13px;
+  }
+  .hero-conf-text { display: block; }
+  .hero-conf-more {
+    font-size: 11.5px;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    padding-bottom: 1px;
+    border-bottom: 1px solid rgba(27, 58, 46, 0.28);
+    transition: border-color 0.2s ease;
+  }
+  .hero-conf:hover .hero-conf-more { border-bottom-color: var(--accent); }
+  .hero-conf-kicker {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .hero-conf-date {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 5px;
+    letter-spacing: 0.02em;
+  }
+  @media (max-width: 880px) {
+    .hero-row { flex-direction: column; gap: 26px; }
+    .hero-conf { flex: none; width: 100%; max-width: 400px; padding-top: 0; }
+  }
+
   /* ===== 观猹大会 · 猫的欢迎 ===== */
   .watcha-invite {
     max-width: 940px;
@@ -95,6 +158,17 @@
     color: var(--gold);
     text-transform: uppercase;
     margin-bottom: 13px;
+  }
+  .watcha-invite .watcha-title {
+    margin: 0 0 14px;
+    padding: 0;
+    border: 0;
+    line-height: 0;
+  }
+  .watcha-wordmark {
+    width: 244px;
+    height: auto;
+    display: block;
   }
   .watcha-invite h2 {
     font-family: var(--serif);
@@ -174,6 +248,7 @@
       gap: 26px;
     }
     .watcha-invite h2 { font-size: 21px; }
+    .watcha-wordmark { width: 196px; }
     .watcha-invite-cta { text-align: left; }
   }
   /* ===== 首页专有：把多人联机 HUD 挪出状态机框 =====
@@ -377,26 +452,44 @@
 <body>
 
 <div class="hero">
-  <span class="hero-tag">CAT API · v0.6.0 FULL SPEC</span>
-  <h1>把猫写成系统。
-    <span class="alt">把系统写成猫。</span>
-  </h1>
-  <p class="lead">
-    本项目用同一套工程文体处理一种已经大规模部署、
-    却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。
-    区别在于，这次我们把权限模型写反了——
-    系统从架构层面否认 Owner 角色的存在。
-  </p>
+  <div class="hero-row">
+    <div class="hero-copy">
+      <span class="hero-tag">CAT API · v0.6.0 FULL SPEC</span>
+      <h1>把猫写成系统。
+        <span class="alt">把系统写成猫。</span>
+      </h1>
+      <p class="lead">
+        本项目用同一套工程文体处理一种已经大规模部署、
+        却始终<strong>不接受参数调优</strong>的系统：<strong>猫</strong>。
+        区别在于，这次我们把权限模型写反了——
+        系统从架构层面否认 Owner 角色的存在。
+      </p>
 
-  <div class="hero-cta">
-    <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
-    <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;">
-      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
-        <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
-      </svg>
-      GitHub
+      <div class="hero-cta">
+        <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
+        <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
+            <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub
+        </a>
+        <a class="btn gold" href="tools/expression.html">表情渲染器 →</a>
+      </div>
+    </div>
+
+    <a class="hero-conf" href="tools/watcha.html" aria-label="2026 观猹大会 · 猫版导览">
+      <picture>
+        <source srcset="assets/img/watcha-logo.webp" type="image/webp">
+        <img class="hero-conf-art" src="assets/img/watcha-logo.png" alt="2026 观猹大会主视觉：三只白熊站在积木上" width="660" height="254">
+      </picture>
+      <span class="hero-conf-cap">
+        <span class="hero-conf-text">
+          <span class="hero-conf-kicker">2026 · 观猹大会</span>
+          <span class="hero-conf-date">10.23 – 10.25 · 杭州龙坞</span>
+        </span>
+        <span class="hero-conf-more" aria-hidden="true">猫版导览 →</span>
+      </span>
     </a>
-    <a class="btn gold" href="tools/expression.html">表情渲染器 →</a>
   </div>
 
   <div class="hero-stats">
@@ -502,7 +595,9 @@
   <div class="watcha-invite-inner">
     <div class="watcha-invite-main">
       <div class="watcha-kicker">2026 Watcha Conference · 猫的特邀</div>
-      <h2>观猹大会，猫也欢迎你来。</h2>
+      <h2 class="watcha-title">
+        <img class="watcha-wordmark" src="assets/img/watcha-wordmark-light.png" alt="观猹大会" width="1000" height="203">
+      </h2>
       <p>三天，杭州龙坞。好产品、创造者、真实反馈，都放在同一片场地上。<br>猫的意思是：沙发可以空三天，人得去看看别人在造什么。</p>
       <div class="watcha-meta">
         <span><em>WHEN</em>2026.10.23 – 10.25</span>
