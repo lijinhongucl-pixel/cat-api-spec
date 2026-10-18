@@ -64,41 +64,85 @@
     letter-spacing: 0.08em;
   }
 
-  /* ===== Hero 右栏：大会主视觉 ===== */
+  /* ===== Hero 右栏：设计者 + 大会 ===== */
   .hero-row {
     display: flex;
     align-items: flex-start;
     gap: 38px;
   }
   .hero-copy { flex: 1 1 auto; min-width: 0; }
-  .hero-conf {
-    flex: 0 0 330px;
-    display: block;
-    text-decoration: none;
+  .hero-aside {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
     padding-top: 8px;
   }
-  .hero-conf picture { display: block; }
-  .hero-conf-art {
+  /* 设计者肖像：像扉页上的作者照 */
+  .hero-person { margin: 0; }
+  .hero-person picture { display: block; }
+  .hero-person-art {
     width: 100%;
     height: auto;
     display: block;
-    background: #F4F0E9;
     border: 1px solid var(--line);
     border-radius: 2px;
-    padding: 12px 10px;
-    box-sizing: border-box;
-    transition: transform 0.25s ease, border-color 0.2s ease;
+    background: #14140f;
+    transition: transform 0.3s ease, border-color 0.2s ease, box-shadow 0.3s ease;
   }
-  .hero-conf:hover .hero-conf-art { transform: translateY(-2px); border-color: var(--gold); }
+  .hero-person:hover .hero-person-art {
+    transform: translateY(-2px);
+    border-color: var(--gold);
+    box-shadow: 0 10px 26px -18px rgba(27, 58, 46, 0.55);
+  }
+  .hero-person-cap { display: block; margin-top: 12px; }
+  .hero-person-kicker {
+    display: block;
+    font-size: 10.5px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .hero-person-name {
+    display: block;
+    font-family: var(--serif);
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+  .hero-person-note {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.02em;
+  }
+  .hero-conf {
+    display: block;
+    width: 100%;
+    text-decoration: none;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .hero-conf-wordmark {
+    width: 112px;
+    height: auto;
+    display: block;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+  .hero-conf:hover .hero-conf-wordmark { opacity: 1; }
   .hero-conf-cap {
     display: flex;
-    align-items: flex-end;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 14px;
-    margin-top: 13px;
+    gap: 10px;
+    margin-top: 9px;
   }
   .hero-conf-text { display: block; }
   .hero-conf-more {
+    display: inline-block;
     font-size: 11.5px;
     color: var(--accent);
     letter-spacing: 0.04em;
@@ -119,12 +163,97 @@
     display: block;
     font-size: 12px;
     color: var(--muted);
-    margin-top: 5px;
     letter-spacing: 0.02em;
   }
+
+  /* ===== 项目介绍视频 ===== */
+  .vid { max-width: 940px; margin: 0 auto; padding: 0 28px; }
+  .vid-title { font-family: var(--serif); font-weight: 400; }
+  .vid-sub { font-size: 14.5px; color: var(--muted); margin: -4px 0 18px; line-height: 1.75; }
+  .vid-frame {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: #14140f;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .vid-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .vid-play {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+  }
+  .vid-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.22, 0.9, 0.3, 1), filter 0.3s ease;
+  }
+  .vid-play:hover .vid-cover { transform: scale(1.015); filter: brightness(1.04); }
+  .vid-btn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 66px;
+    height: 66px;
+    margin: -33px 0 0 -33px;
+    border-radius: 50%;
+    background: rgba(250, 248, 245, 0.94);
+    border: 1px solid rgba(200, 163, 94, 0.65);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 4px;
+    box-shadow: 0 6px 24px -10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease;
+  }
+  .vid-play:hover .vid-btn {
+    transform: scale(1.07);
+    background: #fff;
+    color: var(--accent-deep);
+  }
+  .vid-meta {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+    color: rgba(250, 248, 245, 0.92);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  }
+  .vid-time {
+    font-variant-numeric: tabular-nums;
+    border: 1px solid rgba(250, 248, 245, 0.5);
+    border-radius: 2px;
+    padding: 1px 6px;
+  }
+  .vid-note {
+    font-size: 12.5px;
+    color: var(--faint);
+    margin: 12px 0 0;
+    letter-spacing: 0.02em;
+  }
+  .vid-note a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--line); }
+  .vid-note a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
   @media (max-width: 880px) {
-    .hero-row { flex-direction: column; gap: 26px; }
-    .hero-conf { flex: none; width: 100%; max-width: 400px; padding-top: 0; }
+    .hero-row { flex-direction: column; gap: 30px; }
+    .hero-aside { flex: none; width: 100%; max-width: 360px; padding-top: 0; gap: 24px; }
+    .vid-meta { left: 10px; bottom: 9px; font-size: 10.5px; }
+    .vid-btn { width: 54px; height: 54px; margin: -27px 0 0 -27px; }
   }
 
   /* ===== 观猹大会 · 猫的欢迎 ===== */
@@ -687,22 +816,6 @@
         </a>
         <a class="btn gold" href="tools/expression.html">表情渲染器 →</a>
       </div>
-    </div>
-
-    <a class="hero-conf" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener" aria-label="2026 观猹大会 · 前往官网" data-no-munch>
-      <picture>
-        <source srcset="assets/img/watcha-logo.webp" type="image/webp">
-        <img class="hero-conf-art" src="assets/img/watcha-logo.png" alt="2026 观猹大会主视觉：三只白熊站在积木上" width="660" height="254">
-      </picture>
-      <span class="hero-conf-cap">
-        <span class="hero-conf-text">
-          <span class="hero-conf-kicker">2026 · 观猹大会</span>
-          <span class="hero-conf-date">10.23 – 10.25 · 杭州龙坞</span>
-        </span>
-        <span class="hero-conf-more" aria-hidden="true">去官网 →</span>
-      </span>
-    </a>
-  </div>
 
   <div class="hero-stats">
     <div class="hero-stat"><div class="n">16</div><div class="l">章节</div></div>
@@ -710,6 +823,34 @@
     <div class="hero-stat"><div class="n">31</div><div class="l">猫意见</div></div>
     <div class="hero-stat featured"><div class="n">0</div><div class="l">Owner 角色</div></div>
   </div>
+    </div>
+
+    <div class="hero-aside">
+      <figure class="hero-person" data-no-munch>
+        <picture>
+          <source srcset="assets/img/designer.webp" type="image/webp">
+          <img class="hero-person-art" src="assets/img/designer.jpg" alt="CAT API 设计者：李锦宏" width="412" height="496">
+        </picture>
+        <figcaption class="hero-person-cap">
+          <span class="hero-person-kicker">CAT API · 设计者</span>
+          <span class="hero-person-name">李锦宏</span>
+          <span class="hero-person-note">社交名流 UCL · 优刻得星图</span>
+        </figcaption>
+      </figure>
+
+      <a class="hero-conf" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener" aria-label="2026 观猹大会 · 前往官网" data-no-munch>
+        <img class="hero-conf-wordmark" src="assets/img/watcha-wordmark-dark.png" alt="观猹大会" width="1000" height="203">
+        <span class="hero-conf-cap">
+          <span class="hero-conf-text">
+            <span class="hero-conf-kicker">2026 WATCHA CONFERENCE</span>
+            <span class="hero-conf-date">10.23 – 10.25 · 杭州龙坞</span>
+          </span>
+          <span class="hero-conf-more" aria-hidden="true">去官网 →</span>
+        </span>
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <div class="hero-machine">
@@ -888,6 +1029,51 @@
     </div>
   </div>
 </div>
+
+<!-- ===== 项目介绍视频 ===== -->
+<section class="vid" aria-label="项目介绍视频">
+  <h2 class="vid-title">项目介绍视频</h2>
+  <p class="vid-sub">
+    七十一秒，把这套东西讲一遍：状态机怎么转、表情渲染器怎么画、3D 赛博遛猫怎么走。
+    视频在 B 站，点击直接播。
+  </p>
+  <div class="vid-frame" data-bvid="BV1JFng61EMW">
+    <button class="vid-play" type="button" aria-label="播放 B 站项目介绍视频：把猫写进 OpenAPI">
+      <picture>
+        <source srcset="assets/img/bili-cover.webp" type="image/webp">
+        <img class="vid-cover" src="assets/img/bili-cover.jpg" alt="CAT API 项目介绍视频封面" width="1280" height="720" loading="lazy">
+      </picture>
+      <span class="vid-btn" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M8 4.5v15l12-7.5z"/></svg>
+      </span>
+      <span class="vid-meta"><span class="vid-time">01:11</span><span>bilibili · 社交名流UCLAI版</span></span>
+    </button>
+  </div>
+  <p class="vid-note">
+    播放器由 B 站提供 · <a href="https://www.bilibili.com/video/BV1JFng61EMW/" target="_blank" rel="noopener">去 B 站看原片 →</a>
+  </p>
+</section>
+<script>
+(function () {
+  var frame = document.querySelector('.vid-frame');
+  if (!frame) return;
+  var btn = frame.querySelector('.vid-play');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var bvid = frame.getAttribute('data-bvid');
+    if (!bvid) return;
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://player.bilibili.com/player.html?bvid=' + bvid +
+      '&page=1&high_quality=1&danmaku=0&autoplay=1';
+    iframe.title = 'CAT API 项目介绍视频';
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('scrolling', 'no');
+    iframe.setAttribute('frameborder', '0');
+    frame.innerHTML = '';
+    frame.appendChild(iframe);
+  });
+})();
+</script>
 
 <!-- ===== 观猹大会 · 猫的欢迎 ===== -->
 <section class="watcha-invite" aria-label="2026 观猹大会" data-no-munch>
