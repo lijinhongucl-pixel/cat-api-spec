@@ -489,25 +489,129 @@
   @keyframes link-dash {
     to { stroke-dashoffset: -16; }
   }
-  /* 中心猫 */
+  /* 中心猫 v3：侧坐剪影 + 六状态姿态 */
   .cat-body { fill: #2C2C2A; }
-  .cat-belly { fill: #55554F; }
+  .cat-shadow { fill: rgba(27, 58, 46, 0.09); }
   .cat-ear { fill: #2C2C2A; }
-  .cat-eye {
-    fill: var(--gold);
+  .cat-ear-inner { fill: #C8A35E; opacity: 0.4; }
+  .cat-rim { fill: none; stroke: rgba(250, 248, 245, 0.16); stroke-width: 1.6; stroke-linecap: round; }
+  .cat-paw { fill: none; stroke: rgba(250, 248, 245, 0.24); stroke-width: 1.8; stroke-linecap: round; }
+  .cat-eye { fill: #C8A35E; }
+  .cat-pupil { fill: #14261D; }
+  .cat-eye-g {
     transform-box: fill-box;
     transform-origin: center;
     transition: transform 0.14s ease;
   }
-  .cat-eye.blink { transform: scaleY(0.08); }
-  .cat-whisker { stroke: #8a8a84; stroke-width: 0.5; stroke-linecap: round; }
-  .cat-nose { fill: #5C1A1B; }
+  .cat-eye-g.blink { transform: scaleY(0.06); }
+  .cat-eyes-closed { opacity: 0; transition: opacity 0.3s ease; }
+  .cat-eyes-closed path { fill: none; stroke: #C8A35E; stroke-width: 2.2; stroke-linecap: round; }
+  .cat-whisker { stroke: #9a9a92; stroke-width: 1; stroke-linecap: round; opacity: 0.5; }
+  .cat-nose { fill: #C87A72; }
+  .cat-mouth { fill: none; stroke: rgba(250, 248, 245, 0.5); stroke-width: 1.5; stroke-linecap: round; }
+  .cat-tongue { fill: #D08B84; opacity: 0; transition: opacity 0.3s ease; }
+
+  /* 姿态层：整体 / 头 / 尾巴各自独立变换，叠加生效 */
+  .cat-pose,
+  .cat-head,
+  .cat-tail-wrap {
+    transform-box: fill-box;
+    transition: transform 0.62s cubic-bezier(0.34, 0.9, 0.35, 1);
+  }
+  .cat-pose { transform-origin: 50% 100%; }
+  .cat-head { transform-origin: 60% 88%; }
+
+  /* 道具：食盆 / 睡意 / 速度线 / 毛线球 */
+  .cat-bowl {
+    opacity: 0;
+    transform: translate(-9px, 5px) scale(0.9);
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    transition: opacity 0.34s ease, transform 0.34s ease;
+  }
+  .cat-bowl-rim { fill: #C8A35E; }
+  .cat-bowl-body { fill: #3C3C37; }
+  .cat-kibble { fill: #C8A35E; }
+  .cat-zzz { opacity: 0; transition: opacity 0.4s ease; }
+  .cat-zzz text { font-family: var(--serif); font-style: italic; font-size: 17px; fill: var(--gold); }
+  .cat-speed { opacity: 0; transition: opacity 0.3s ease; }
+  .cat-speed path {
+    fill: none;
+    stroke: rgba(200, 163, 94, 0.6);
+    stroke-width: 3.6;
+    stroke-linecap: round;
+  }
+  .cat-yarn { opacity: 0; transition: opacity 0.35s ease; }
+  .cat-yarn-ball { fill: none; stroke: #C8A35E; stroke-width: 3.6; }
+  .cat-yarn-line { fill: none; stroke: rgba(200, 163, 94, 0.6); stroke-width: 1.7; stroke-linecap: round; }
+
+  /* —— 六个状态：姿态 + 表情 + 道具 —— */
+  .machine-svg[data-cat-state="SLEEP"] .cat-eyes-open { opacity: 0; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-eyes-closed { opacity: 1; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-zzz { opacity: 1; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-zzz text:nth-child(1) { animation: zzz-float 3.2s ease-in-out infinite; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-zzz text:nth-child(2) { animation: zzz-float 3.2s ease-in-out 0.55s infinite; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-zzz text:nth-child(3) { animation: zzz-float 3.2s ease-in-out 1.1s infinite; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-pose { transform: translateY(7px) scaleY(0.88); }
+  .machine-svg[data-cat-state="SLEEP"] .cat-head { transform: translate(-3px, 13px) rotate(-2deg); }
+  .machine-svg[data-cat-state="SLEEP"] .cat-tail-wrap { transform: translate(-9px, 5px); }
+  .machine-svg[data-cat-state="SLEEP"] .cat-tail { animation-duration: 7.6s; }
+  .machine-svg[data-cat-state="SLEEP"] .cat-breath { animation-duration: 5.4s; }
+
+  .machine-svg[data-cat-state="EAT"] .cat-head { transform: translate(-3px, 9px) rotate(-11deg); }
+  .machine-svg[data-cat-state="EAT"] .cat-bowl { opacity: 1; transform: translate(0, 0) scale(1); }
+  .machine-svg[data-cat-state="EAT"] .cat-tail { animation-duration: 5.6s; }
+
+  .machine-svg[data-cat-state="GROOM"] .cat-pose { transform: rotate(2deg); }
+  .machine-svg[data-cat-state="GROOM"] .cat-head { transform: translate(7px, 8px) rotate(16deg); }
+  .machine-svg[data-cat-state="GROOM"] .cat-tongue { opacity: 1; }
+  .machine-svg[data-cat-state="GROOM"] .cat-tail { animation-duration: 3.4s; }
+
+  .machine-svg[data-cat-state="PLAY"] .cat-pose { transform: rotate(-4deg) translateY(-3px); }
+  .machine-svg[data-cat-state="PLAY"] .cat-head { transform: translate(-6px, 7px) rotate(-11deg); }
+  .machine-svg[data-cat-state="PLAY"] .cat-yarn { opacity: 1; }
+  .machine-svg[data-cat-state="PLAY"] .cat-tail { animation-duration: 1.5s; }
+
+  .machine-svg[data-cat-state="PATROL"] .cat-pose { transform: scaleY(1.05); }
+  .machine-svg[data-cat-state="PATROL"] .cat-head { transform: translate(1px, -3px); }
+  .machine-svg[data-cat-state="PATROL"] .cat-ear {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    transform: scaleY(1.07);
+  }
+  .machine-svg[data-cat-state="PATROL"] .cat-tail { animation-duration: 2.6s; }
+
+  .machine-svg[data-cat-state="ZOOMIES"] .cat-pose { transform: translateX(6px) rotate(-6deg); }
+  .machine-svg[data-cat-state="ZOOMIES"] .cat-head { transform: translate(-3px, 4px) rotate(-10deg); }
+  .machine-svg[data-cat-state="ZOOMIES"] .cat-speed {
+    opacity: 1;
+    animation: speed-drift 0.72s linear infinite;
+  }
+  .machine-svg[data-cat-state="ZOOMIES"] .cat-tail { animation-duration: 0.8s; }
+
+  @keyframes zzz-float {
+    0%, 100% { transform: translateY(0);    opacity: 0.9; }
+    50%      { transform: translateY(-6px); opacity: 0.35; }
+  }
+  @keyframes speed-drift {
+    0%   { transform: translateX(0);     opacity: 0.9; }
+    100% { transform: translateX(-18px); opacity: 0; }
+  }
+  /* 状态徽标 */
+  .cat-badge-bg { fill: rgba(250, 248, 245, 0.94); stroke: rgba(200, 163, 94, 0.5); stroke-width: 1; }
+  .cat-badge-text {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 8.6px;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    fill: var(--gold);
+  }
   /* 尾巴：外层 g 只做位移，内层 g 做摆动，避免 CSS 覆盖 SVG transform */
   .cat-tail-wrap { transform: translate(0, 0); }
   .cat-tail {
     fill: none;
     stroke: #2C2C2A;
-    stroke-width: 4.6;
+    stroke-width: 9.5;
     stroke-linecap: round;
     transform-box: fill-box;
     transform-origin: 0% 60%;
@@ -519,12 +623,12 @@
   }
   .cat-breath {
     transform-box: fill-box;
-    transform-origin: center;
+    transform-origin: 50% 100%;
     animation: cat-breath 3.6s ease-in-out infinite;
   }
   @keyframes cat-breath {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.022); }
+    50% { transform: scale(1.016, 1.028); }
   }
   /* caption 独占底部条带，跟 livecat 气泡错开 */
   .machine-caption {
@@ -552,6 +656,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .cat-breath, .cat-tail, .m-link.pulse, .machine-frame::after,
+    .cat-speed, .cat-zzz text,
     .m-group.active .m-halo { animation: none; }
   }
 </style>
@@ -609,7 +714,7 @@
 
 <div class="hero-machine">
   <div class="machine-frame">
-    <svg class="machine-svg" viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="猫的六状态作息状态机，当前状态沿环循环高亮">
+    <svg class="machine-svg" data-cat-state="ZOOMIES" viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="猫的六状态作息状态机，中心猫随当前状态改变姿态与表情">
       <!-- 轨道：一条闭合椭圆，六个状态均分其上 -->
       <ellipse class="m-track" cx="380" cy="160" rx="290" ry="95"/>
 
@@ -664,31 +769,118 @@
         <text class="m-time"    x="129" y="241">20:00</text>
       </g>
 
-      <!-- ============ 中心猫 ============ -->
-      <!-- 外层 g 只做位移，内层 g 做呼吸缩放，避免 CSS 覆盖 SVG transform -->
-      <g transform="translate(380 160)">
+      <!-- ============ 中心猫 v4 · 坐姿剪影 ============ -->
+      <g transform="translate(344 182) scale(0.86)" id="cat-sprite">
+        <!-- 地面投影（不随呼吸缩放） -->
+        <ellipse class="cat-shadow" cx="4" cy="1" rx="52" ry="5.2"/>
+
         <g class="cat-breath">
-          <!-- 尾巴：外层 wrap 做位移，内层做摆动 -->
+          <!-- 尾巴：外层 wrap 管位移，内层做摆动 -->
           <g class="cat-tail-wrap">
-            <path class="cat-tail" d="M 24,2 Q 42,-12 55,-4 Q 62,2 58,10"/>
+            <path class="cat-tail" d="M 31,-18 C 48,-24 58,-46 55,-64 C 54,-74 48,-79 43,-74"/>
           </g>
-          <!-- 身体 -->
-          <ellipse class="cat-body"  cx="0"  cy="0"  rx="29" ry="12"/>
-          <ellipse class="cat-belly" cx="-2" cy="4.5" rx="21" ry="5.5" opacity="0.65"/>
-          <!-- 头 -->
-          <circle class="cat-body" cx="-23" cy="-4" r="10"/>
-          <!-- 耳朵 -->
-          <path class="cat-ear" d="M -29,-10.5 L -27.5,-19 L -22.5,-12 Z"/>
-          <path class="cat-ear" d="M -19.5,-12 L -15.5,-19 L -15,-10.5 Z"/>
-          <!-- 眼（金色，会眨） -->
-          <ellipse class="cat-eye" id="cat-eye-l" cx="-26.5" cy="-5" rx="1.4" ry="2"/>
-          <ellipse class="cat-eye" id="cat-eye-r" cx="-20.5" cy="-5" rx="1.4" ry="2"/>
-          <!-- 鼻 -->
-          <path class="cat-nose" d="M -24.5,0 L -22.5,0 L -23.5,1.6 Z"/>
-          <!-- 胡须 -->
-          <line class="cat-whisker" x1="-23" y1="2" x2="-15" y2="1"/>
-          <line class="cat-whisker" x1="-23" y1="3.4" x2="-15" y2="4.6"/>
+
+          <g class="cat-pose">
+            <!-- 身体：前胸一路升到颈根、臀部宽厚的坐姿轮廓 -->
+            <path class="cat-body" d="M -28,0
+              C -31,-12 -32,-26 -31,-40
+              C -30,-54 -28,-70 -24,-80
+              C -19,-88 -11,-92 -2,-91
+              C 12,-90 25,-82 31,-68
+              C 38,-55 41,-30 39,-10
+              C 38,-3 36,0 34,0 Z"/>
+
+            <!-- 背脊轮廓光 -->
+            <path class="cat-rim" d="M 2,-85 C 14,-84 24,-78 30,-66"/>
+            <!-- 前腿分缝 -->
+            <path class="cat-paw" d="M -22,0 L -22,-32"/>
+
+            <!-- 头：整体可低头 / 歪头 -->
+            <g class="cat-head">
+              <!-- 耳（先画，头形压住耳根） -->
+              <path class="cat-ear" d="M -49,-101 C -52,-111 -53,-121 -52,-128 C -46,-120 -39,-110 -35,-104 Z"/>
+              <path class="cat-ear" d="M -22,-107 C -16,-117 -10,-125 -7,-128 C -5,-120 -5,-109 -7,-100 Z"/>
+              <path class="cat-ear-inner" d="M -47,-103 C -49,-111 -50,-118 -49,-124 C -44,-117 -39,-109 -36,-103 Z"/>
+              <path class="cat-ear-inner" d="M -20,-106 C -15,-115 -11,-121 -9,-123 C -8,-116 -8,-108 -9,-102 Z"/>
+
+              <!-- 头形：额头窄、颊部宽 -->
+              <path class="cat-body" d="M -31,-109
+                C -20,-109 -11,-104 -9,-96
+                C -7,-88 -12,-81 -20,-78
+                C -29,-75 -38,-76 -44,-81
+                C -50,-86 -52,-95 -48,-101
+                C -44,-107 -38,-109 -31,-109 Z"/>
+              <!-- 头顶轮廓光 -->
+              <path class="cat-rim" d="M -46,-97 C -45,-105 -39,-108 -31,-108"/>
+
+              <!-- 睁眼（会眨） -->
+              <g class="cat-eyes-open">
+                <g class="cat-eye-g" id="cat-eye-l">
+                  <path class="cat-eye" d="M -49,-93 C -46,-98 -40,-98 -37,-93 C -40,-88 -46,-88 -49,-93 Z"/>
+                  <ellipse class="cat-pupil" cx="-43" cy="-93" rx="1.7" ry="3.9"/>
+                </g>
+                <g class="cat-eye-g" id="cat-eye-r">
+                  <path class="cat-eye" d="M -27,-92 C -25,-96 -19,-96 -17,-92 C -19,-88 -25,-88 -27,-92 Z"/>
+                  <ellipse class="cat-pupil" cx="-22" cy="-92" rx="1.5" ry="3.4"/>
+                </g>
+              </g>
+              <!-- 闭眼（睡觉） -->
+              <g class="cat-eyes-closed">
+                <path d="M -49,-93 Q -43,-88 -37,-93"/>
+                <path d="M -27,-92 Q -22,-88 -17,-92"/>
+              </g>
+
+              <!-- 鼻与嘴 -->
+              <path class="cat-nose" d="M -35,-83 L -29,-83 L -32,-78.5 Z"/>
+              <path class="cat-mouth" d="M -32,-78.5 Q -36,-74 -40,-77"/>
+              <path class="cat-mouth" d="M -32,-78.5 Q -28,-74 -24,-77"/>
+              <!-- 舌头：GROOM 状态出现 -->
+              <path class="cat-tongue" d="M -33,-77 C -35,-72 -31,-69 -29,-72 C -28,-75 -30,-76 -31,-77 Z"/>
+
+              <!-- 胡须 -->
+              <line class="cat-whisker" x1="-37" y1="-81" x2="-59" y2="-86"/>
+              <line class="cat-whisker" x1="-37" y1="-78" x2="-60" y2="-73"/>
+            </g>
+          </g>
+
+          <!-- 食盆：EAT 状态出现 -->
+          <g class="cat-bowl">
+            <ellipse class="cat-bowl-rim" cx="-46" cy="-6" rx="15" ry="4.8"/>
+            <path class="cat-bowl-body" d="M -61,-6 C -61,1.8 -54.5,6.2 -46,6.2 C -37.5,6.2 -31,1.8 -31,-6 Z"/>
+            <circle class="cat-kibble" cx="-52" cy="-9.2" r="2.5"/>
+            <circle class="cat-kibble" cx="-44" cy="-10.2" r="2.2"/>
+            <circle class="cat-kibble" cx="-38" cy="-8.8" r="2"/>
+          </g>
+
+          <!-- 速度线：ZOOMIES 状态出现 -->
+          <g class="cat-speed">
+            <path d="M 80,-58 L 102,-58"/>
+            <path d="M 76,-40 L 106,-40"/>
+            <path d="M 82,-22 L 98,-22"/>
+          </g>
+
+          <!-- 毛线球：PLAY 状态出现 -->
+          <g class="cat-yarn">
+            <ellipse class="cat-shadow" cx="-76" cy="1" rx="16" ry="3"/>
+            <circle class="cat-yarn-ball" cx="-76" cy="-14" r="14.5"/>
+            <path class="cat-yarn-line" d="M -86,-11 C -85,-22 -77,-27 -68,-25"/>
+            <path class="cat-yarn-line" d="M -89,-3 C -88,-16 -77,-22 -65,-19"/>
+            <path class="cat-yarn-line" d="M -66,-9 C -70,-2 -80,0 -86,-2"/>
+          </g>
+
+          <!-- 睡意：SLEEP 状态出现 -->
+          <g class="cat-zzz">
+            <text x="-72" y="-120">z</text>
+            <text x="-58" y="-133">z</text>
+            <text x="-42" y="-143">z</text>
+          </g>
         </g>
+      </g>
+
+      <!-- 状态徽标：跟着状态机切换 -->
+      <g class="cat-badge" transform="translate(380 208)">
+        <rect class="cat-badge-bg" x="-36" y="-9.5" width="72" height="19" rx="9.5"/>
+        <text class="cat-badge-text" id="cat-badge-text" text-anchor="middle" dominant-baseline="central">EAT</text>
       </g>
     </svg>
     <div class="machine-caption">
@@ -1166,6 +1358,8 @@
   var groups = document.querySelectorAll('.m-group');
   var stateEl = document.getElementById('now-state');
   if (!groups.length || !stateEl) return;
+  var svgEl = document.querySelector('.machine-svg');
+  var badgeEl = document.getElementById('cat-badge-text');
 
   // 检查 prefers-reduced-motion
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1199,6 +1393,9 @@
     document.querySelectorAll('.m-link').forEach(function(l) {
       l.classList.toggle('pulse', l.id === 'link-' + stateName);
     });
+    // 猫自身的形态跟着状态走（闭眼 / 食盆 / 尾巴速度等由 CSS 接管）
+    if (svgEl) svgEl.setAttribute('data-cat-state', stateName);
+    if (badgeEl) badgeEl.textContent = stateName;
     // 更新 caption
     stateEl.style.opacity = '0';
     setTimeout(function() {
