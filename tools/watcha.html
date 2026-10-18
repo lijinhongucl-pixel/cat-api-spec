@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/watcha.html">
+<meta name="description" content="观猹大会 2026 猫版导览：10 月 23—25 日，杭州龙坞。三天议程、六大展区、现场玩法与金猹奖，猫替你先看一遍。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="观猹大会 · 猫版导览 — CAT API">
+<meta property="og:description" content="10 月 23—25 日，杭州龙坞。三天议程、六大展区、现场玩法与金猹奖。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/watcha.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<title>观猹大会 · 猫版导览 — CAT API</title>
+<link rel="stylesheet" href="../assets/css/spec.css">
+<style>
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 28px 100px; }
+
+  /* 顶部 */
+  .head { margin-top: 36px; padding-bottom: 26px; border-bottom: 1px solid var(--line); }
+  .eyebrow {
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .head h1 {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 400;
+    line-height: 1.35;
+    color: var(--accent);
+    margin: 0 0 14px;
+    border: 0;
+    padding: 0;
+  }
+  .head .lead {
+    font-size: 15px;
+    line-height: 2;
+    color: var(--ink);
+    max-width: 720px;
+    margin: 0;
+  }
+  .head .lead strong { color: var(--accent); font-weight: 600; }
+
+  /* 关键信息 */
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    margin: 34px 0 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .fact { padding: 20px 22px; border-right: 1px solid var(--line); }
+  .fact:last-child { border-right: 0; }
+  .fact .k {
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .fact .v { font-size: 14.5px; color: var(--accent); font-weight: 500; line-height: 1.5; }
+  .fact .v small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+
+  /* 通用区块 */
+  .sec { margin-top: 62px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 8px; }
+  .sec-no {
+    font-family: var(--serif);
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+  }
+  .sec h2 {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--accent);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    line-height: 1.4;
+  }
+  .sec-note { font-size: 13px; color: var(--muted); line-height: 1.85; max-width: 680px; margin: 6px 0 22px; }
+
+  /* 议程 */
+  .day {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+    padding: 22px 26px;
+    margin-bottom: 14px;
+  }
+  .day-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .day-no {
+    font-family: var(--serif);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--gold);
+  }
+  .day-date { font-size: 15px; color: var(--accent); font-weight: 500; }
+  .day-tag {
+    margin-left: auto;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    color: var(--wine);
+    background: var(--wine-soft);
+    border-radius: 2px;
+    padding: 2px 8px;
+  }
+  .day-tag.free { color: var(--ok); background: #E7F3EC; }
+  .item { padding: 11px 0; border-bottom: 1px dashed var(--line); }
+  .item:last-child { border-bottom: 0; padding-bottom: 0; }
+  .item .t { font-size: 14px; color: var(--ink); font-weight: 500; margin-bottom: 3px; }
+  .item .d { font-size: 12.5px; color: var(--muted); line-height: 1.8; }
+
+  /* 展区 */
+  .zones {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .zone {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+    padding: 18px 18px 20px;
+    position: relative;
+  }
+  .zone .code {
+    font-family: var(--serif);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .zone h3 {
+    font-size: 14.5px;
+    color: var(--accent);
+    margin: 0 0 6px;
+    font-weight: 600;
+  }
+  .zone p { font-size: 12px; color: var(--muted); line-height: 1.8; margin: 0; }
+
+  /* 玩法 */
+  .plays { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 34px; }
+  .play { padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .play .n {
+    font-family: var(--serif);
+    font-size: 10.5px;
+    letter-spacing: 0.14em;
+    color: var(--gold);
+    margin-bottom: 5px;
+  }
+  .play h3 { font-size: 14px; color: var(--accent); margin: 0 0 4px; font-weight: 600; }
+  .play p { font-size: 12.5px; color: var(--muted); line-height: 1.8; margin: 0; }
+
+  /* 结尾 CTA */
+  .cta {
+    margin-top: 66px;
+    padding: 38px 40px;
+    background: var(--accent);
+    border-radius: 4px;
+    position: relative;
+    text-align: center;
+  }
+  .cta::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1px solid rgba(200, 163, 94, 0.26);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .cta h2 {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-weight: 400;
+    color: #FAF8F5;
+    margin: 0 0 10px;
+    padding: 0;
+    border: 0;
+  }
+  .cta p { font-size: 13px; color: rgba(250, 248, 245, 0.7); margin: 0 0 22px; }
+  .m-br { display: none; }
+  .btn {
+    display: inline-block;
+    padding: 12px 30px;
+    background: var(--gold);
+    color: #1B3A2E;
+    font-size: 13.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .btn:hover { background: #d8b876; transform: translateY(-1px); }
+
+  .foot-note {
+    margin-top: 26px;
+    font-size: 11.5px;
+    color: var(--faint);
+    line-height: 1.9;
+    text-align: center;
+  }
+  .foot-note a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: 760px) {
+    .head h1 { font-size: 27px; }
+    .facts { grid-template-columns: 1fr; }
+    .fact { border-right: 0; border-bottom: 1px solid var(--line); }
+    .fact:last-child { border-bottom: 0; }
+    .zones { grid-template-columns: 1fr; }
+    .plays { grid-template-columns: 1fr; }
+    .sec h2 { font-size: 20px; }
+    .cta { padding: 30px 22px; }
+    .m-br { display: inline; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="head">
+    <div class="eyebrow">2026 Watcha Conference · 猫版导览</div>
+    <h1>观猹大会，<br>猫替你先走了一遍。</h1>
+    <p class="lead">
+      三天里，好产品会摆出来让人亲手试，做产品的人会站上台讲判断，
+      而真实用过的人可以当场把问题问回去。<strong>猫的判断是：值得去。</strong>
+      以下按猫的动线排了一遍，人照着走就行。
+    </p>
+  </header>
+
+  <div class="facts">
+    <div class="fact">
+      <div class="k">WHEN / 时间</div>
+      <div class="v">2026.10.23 – 10.25<small>周五至周日 · 共三天</small></div>
+    </div>
+    <div class="fact">
+      <div class="k">WHERE / 地点</div>
+      <div class="v">杭州茶叶博览会会议会展中心<small>龙坞展馆 · 西湖区龙坞茶镇</small></div>
+    </div>
+    <div class="fact">
+      <div class="k">ENTRY / 入场</div>
+      <div class="v">部分场次免费<small>金猹奖盛典需报名付费</small></div>
+    </div>
+  </div>
+
+  <!-- 议程 -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-no">01</span><h2>三天怎么排</h2></div>
+    <p class="sec-note">10 月 24—25 日，场地 A／B 会连续展开主题活动。已确认的先看，待公布的在官网更新。</p>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="day-no">DAY 1</span>
+        <span class="day-date">10 月 23 日</span>
+        <span class="day-tag">付费</span>
+      </div>
+      <div class="item">
+        <div class="t">金猹奖盛典</div>
+        <div class="d">重磅嘉宾登台颁奖，特别演出点亮现场。好产品的高光时刻，年度 AI 产品奖与年度观猹员奖在这里揭晓。</div>
+      </div>
+      <div class="item">
+        <div class="t">观猹年度演讲</div>
+        <div class="d">从产品、创造者和真实体验出发，讲这一年的观察与变化。</div>
+      </div>
+      <div class="item">
+        <div class="t">战略合作仪式 &amp; OPC 创业复兴 TOP 5</div>
+        <div class="d">观猹 × 无问芯穹、观猹 × 支付宝 AI 付、观猹 × ATOX 等合作集中发布；与亚马逊云科技共同揭晓 OPC 创业复兴年度 TOP 5。</div>
+      </div>
+      <div class="item">
+        <div class="t">舞台特别演出</div>
+        <div class="d">脱口秀、乐队表演等内容穿插登场。</div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="day-no">DAY 2</span>
+        <span class="day-date">10 月 24 日</span>
+        <span class="day-tag free">免费</span>
+      </div>
+      <div class="item">
+        <div class="t">百展堂</div>
+        <div class="d">逛产品、试工具、体验互动。把感兴趣的 AI 产品放进逛展清单，好不好用现场试过再说。</div>
+      </div>
+      <div class="item">
+        <div class="t">AI 能力水平考试</div>
+        <div class="d">50 道由观猹金牌观猹员和共学营讲师出的考卷。你的 AI 水平，考了才知道。</div>
+      </div>
+      <div class="item">
+        <div class="t">知乎论坛：AI 时代开发者生态 2.0</div>
+        <div class="d">AI 时代，人人真的都是创造者？开发门槛降低，开发的边界在哪里？</div>
+      </div>
+    </div>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="day-no">DAY 3</span>
+        <span class="day-date">10 月 25 日</span>
+        <span class="day-tag free">免费</span>
+      </div>
+      <div class="item">
+        <div class="t">百展堂 · 展区继续</div>
+        <div class="d">六大主题展区照常开放，前两天没逛完的可以补上。</div>
+      </div>
+      <div class="item">
+        <div class="t">猹话会 / 猹工坊 / 观猹学社</div>
+        <div class="d">坐下来交换经验，动手做点东西，或者把 AI 本领练一练。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 展区 -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-no">02</span><h2>六个展区，按猫的优先级</h2></div>
+    <p class="sec-note">百展堂沿一条斜向步道错落连接。六个积木展区各有主题，先逛哪个取决于你想带走什么。</p>
+    <div class="zones">
+      <div class="zone">
+        <div class="code">A</div>
+        <h3>观猹朋友圈</h3>
+        <p>生态、社区、一起玩的人。先来这里认个门。</p>
+      </div>
+      <div class="zone">
+        <div class="code">B</div>
+        <h3>高效行动派</h3>
+        <p>AI 办公与开发。资料整理、文档协作、编程开发，重复操作交给它。</p>
+      </div>
+      <div class="zone">
+        <div class="code">C</div>
+        <h3>灵感制造所</h3>
+        <p>内容创作。写作、绘图、视频，找能接住灵感的那一款。</p>
+      </div>
+      <div class="zone">
+        <div class="code">D</div>
+        <h3>生活新搭子</h3>
+        <p>生活互动。把 AI 放进日常，看看顺不顺手。</p>
+      </div>
+      <div class="zone">
+        <div class="code">E</div>
+        <h3>未来体验场</h3>
+        <p>智能硬件。能摸到的未来，比参数表可信。</p>
+      </div>
+      <div class="zone">
+        <div class="code">F</div>
+        <h3>OPC 造物集</h3>
+        <p>独立造物。一个人做出来的产品，往往最有脾气。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 现场玩法 -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-no">03</span><h2>现场六件事</h2></div>
+    <p class="sec-note">逛展不只是看。猫建议至少做两件动手的。</p>
+    <div class="plays">
+      <div class="play">
+        <div class="n">01</div>
+        <h3>百展堂</h3>
+        <p>好产品现场见。清单挑好，一个一个试。</p>
+      </div>
+      <div class="play">
+        <div class="n">02</div>
+        <h3>猹话会</h3>
+        <p>把问题带来，把方法带走。交换一些实用经验。</p>
+      </div>
+      <div class="play">
+        <div class="n">03</div>
+        <h3>猹工坊</h3>
+        <p>亲手做点有意思的。AI 加一点灵感，手作加一点意外。</p>
+      </div>
+      <div class="play">
+        <div class="n">04</div>
+        <h3>观猹学社</h3>
+        <p>你掌握的 AI 知识和技巧，来这里练一练。</p>
+      </div>
+      <div class="play">
+        <div class="n">05</div>
+        <h3>创始人 AMA</h3>
+        <p>产品背后的问题当面问。聊产品，也聊判断和选择。</p>
+      </div>
+      <div class="play">
+        <div class="n">06</div>
+        <h3>猹乐园</h3>
+        <p>认真体验，也尽情表达。给逛展加一点玩心。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 金猹奖 -->
+  <section class="sec">
+    <div class="sec-head"><span class="sec-no">04</span><h2>金猹奖，为创造喝彩</h2></div>
+    <p class="sec-note">年度揭晓，把掌声送给好产品与认真表达的人。</p>
+    <div class="facts">
+      <div class="fact">
+        <div class="k">年度 AI 产品奖</div>
+        <div class="v">10 项<small>给真正好用的产品</small></div>
+      </div>
+      <div class="fact">
+        <div class="k">年度观猹员奖</div>
+        <div class="v">3 项<small>给分享真实体验的人</small></div>
+      </div>
+      <div class="fact">
+        <div class="k">年度最佳 OPC 奖</div>
+        <div class="v">1 项<small>给一个人做成一件事</small></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <div class="cta">
+    <h2>猫看家，人去看。</h2>
+    <p>2026.10.23 – 10.25 · 杭州龙坞。<br class="m-br">三天留给好奇心。</p>
+    <a class="btn" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener">报名观猹大会 →</a>
+  </div>
+
+  <p class="foot-note">
+    本页信息整理自 <a href="https://dahui.watcha.cn/" target="_blank" rel="noopener">观猹大会官网</a>，
+    以官方最新公布为准。<br>
+    议程、嘉宾、合作阵容持续更新，报名与票务请走官网。
+  </p>
+
+</div>
+
+</body>
+</html>

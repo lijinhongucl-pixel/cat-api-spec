@@ -10,6 +10,10 @@
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary">
 <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
+<link rel="modulepreload" href="../assets/vendor/three.module.min.js">
+<link rel="modulepreload" href="../assets/vendor/GLTFLoader.js">
+<link rel="modulepreload" href="../assets/utils/BufferGeometryUtils.js">
+<link rel="preload" href="../assets/models/cat.glb" as="fetch" crossorigin="anonymous">
 <title>赛博遛猫 3D · CAT API</title>
 <style>
 :root {
@@ -57,6 +61,8 @@ header .mode-toggle a {
   color: var(--muted);
   font-size: 13px;
   background: var(--panel);
+  white-space: nowrap;
+  flex: 0 0 auto;
   transition: all 0.15s;
 }
 header .mode-toggle a.active {
@@ -83,6 +89,52 @@ header .mode-toggle a:hover:not(.active) {
   border-radius: 3px;
   font-size: 12px;
   color: var(--accent);
+}
+
+/* ===== 观猹大会 · 猫的欢迎条 ===== */
+.watcha-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 12px 18px;
+  background: var(--accent);
+  border-radius: 6px;
+  text-decoration: none;
+  color: #FAF8F5;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.watcha-strip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px -10px rgba(15, 34, 24, 0.6);
+}
+.watcha-strip-kicker {
+  flex: none;
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+  padding-right: 16px;
+  border-right: 1px solid rgba(200, 163, 94, 0.32);
+}
+.watcha-strip-text {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: rgba(250, 248, 245, 0.78);
+}
+.watcha-strip-cta {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+@media (max-width: 640px) {
+  .watcha-strip { flex-wrap: wrap; gap: 8px 14px; }
+  .watcha-strip-kicker { border-right: 0; padding-right: 0; }
+  .watcha-strip-text { flex-basis: 100%; }
+  header { flex-direction: column; align-items: flex-start; gap: 14px; }
+  header h1 { font-size: 24px; }
 }
 
 .stage-frame {
@@ -244,6 +296,10 @@ header .mode-toggle a:hover:not(.active) {
   border-top: 1px solid var(--line);
 }
 .source-note code { background: var(--panel); padding: 1px 5px; border-radius: 3px; }
+
+@media (max-width: 640px) {
+  #stage-3d { height: 460px; }
+}
 </style>
 </head>
 <body>
@@ -260,18 +316,27 @@ header .mode-toggle a:hover:not(.active) {
   </header>
 
   <div class="intro">
-    <strong>3D 模式</strong>：猫以体素（voxel）方式实时渲染。
+    <strong>3D 模式</strong>：猫是带 36 根骨骼的低多边形模型，实时蒙皮渲染。
     左键拖动 = 旋转视角，滚轮 = 缩放；
     鼠标移到地面 <code>蓝点</code> 上 = 牵引猫走过去；
     <code>←/→</code> 推动猫，<code>Space</code> 坐下，<code>P</code> 扑击。
     全程离线渲染，无任何外部 API 调用。
   </div>
 
+  <a class="watcha-strip" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener">
+    <span class="watcha-strip-kicker">2026 观猹大会</span>
+    <span class="watcha-strip-text">猫说：10 月 23–25 日，杭州龙坞。人去看看别人在造什么，我留下看家。</span>
+    <span class="watcha-strip-cta">报名 →</span>
+  </a>
+
   <div class="stage-frame">
     <canvas id="stage-3d"></canvas>
     <div class="stage-hint-3d" id="hint3d">
-      正在加载 3D 场景…<br>
-      <span style="font-size:11.5px;">需要支持 WebGL 的浏览器</span>
+      <div id="hint3d-text">正在加载 3D 引擎…</div>
+      <div style="margin-top:6px;font-size:11px;opacity:0.7;" id="hint3d-sub">需 WebGL 支持</div>
+      <div style="margin-top:8px;width:160px;height:3px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden;">
+        <div id="hint3d-bar" style="width:0%;height:100%;background:#C8A35E;transition:width 0.3s;"></div>
+      </div>
     </div>
     <div class="toolbar">
       <button class="btn primary" id="btn-cat">用内置猫</button>
@@ -296,24 +361,25 @@ header .mode-toggle a:hover:not(.active) {
     <div class="panel">
       <h3>3D 渲染管线</h3>
       <ul>
-        <li><strong>体素化</strong>：网格猫的每个格子变成一个 3D 立方体（box geometry）</li>
-        <li><strong>骨骼分组</strong>：头/躯干/尾/4 腿 各自 Group，按 pivot 旋转</li>
-        <li><strong>地面网格</strong>：GridHelper + 半透明 plane 接收阴影</li>
+        <li><strong>模型</strong>：glTF 低多边形猫，约 1800 顶点 / 2600 面 / 36 骨骼</li>
+        <li><strong>蒙皮</strong>：SkinnedMesh + Skeleton，逐帧写入骨骼旋转后实时蒙皮</li>
+        <li><strong>步态</strong>：对角步态（前左+后右 / 前右+后左 反相），膝盖只向后弯</li>
+        <li><strong>地面网格</strong>：1 单位网格烘焙进 canvas 贴图，靠 mipmap 抗锯齿</li>
         <li><strong>光照</strong>：HemisphereLight + DirectionalLight 投射阴影</li>
-        <li><strong>相机</strong>：PerspectiveCamera + OrbitControls 可拖拽</li>
-        <li><strong>物理循环</strong>：60fps requestAnimationFrame 驱动步态</li>
+        <li><strong>相机</strong>：PerspectiveCamera + 手写轨道控制（拖拽旋转 / 滚轮缩放）</li>
       </ul>
     </div>
     <div class="panel">
       <h3>参数 <span class="heur">全部 HEURISTIC</span></h3>
       <table class="param-tbl">
         <tr><th>参数</th><th>值</th></tr>
-        <tr><td>体素尺寸</td><td>0.18 单位</td></tr>
+        <tr><td>猫高</td><td>3.0 单位</td></tr>
         <tr><td>猫体长</td><td>~3.6 单位</td></tr>
         <tr><td>牵引绳长</td><td>1.55 体长</td></tr>
-        <tr><td>步态相位差</td><td>0.35</td></tr>
+        <tr><td>步态相位差</td><td>π（对角反相）</td></tr>
         <tr><td>尾巴摆幅</td><td>22°</td></tr>
         <tr><td>速度上限</td><td>1.4 体长/秒</td></tr>
+        <tr><td>静止坐下</td><td>5 秒后</td></tr>
       </table>
     </div>
     <div class="panel">
@@ -324,8 +390,8 @@ header .mode-toggle a:hover:not(.active) {
 
   <div class="source-note">
     对应 §8 外设总线 <code>PER/LEASH</code> 分类。<br>
-    Three.js r160 本地加载（<code>assets/vendor/three.module.js</code>），无任何 CDN 依赖。
-    内置猫形态基于像素网格 → 体素映射。<br>
+    Three.js r160 本地加载（<code>assets/vendor/three.module.min.js</code>），无任何 CDN 依赖。
+    猫模型为 Toon Cat（Omabuarts Studio，CC-BY 4.0），已清理为单网格 + 36 骨骼。<br>
     <strong>HEURISTIC</strong> = 行为学里没有这个数的明确定量。
   </div>
 </div>
@@ -333,7 +399,7 @@ header .mode-toggle a:hover:not(.active) {
 <script type="importmap">
 {
   "imports": {
-    "three": "../assets/vendor/three.module.js",
+    "three": "../assets/vendor/three.module.min.js",
     "three/addons/loaders/GLTFLoader.js": "../assets/vendor/GLTFLoader.js"
   }
 }
@@ -343,61 +409,19 @@ header .mode-toggle a:hover:not(.active) {
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// ---------- 内置猫：像素网格 → 体素坐标 ----------
-// 与 2D 版本同一份网格（11 行 × 22 列，左为头）
-var GRID = [
-  "...........##############.....",
-  ".........###################..",
-  "........###################...",
-  "........##################....",
-  ".........################.....",
-  "..........##############......",
-  "............##########........",
-  "............##########........",
-  "............##########........",
-  "............##########........",
-  "............##########........",
-];
-
-// 解析网格 → 体素坐标列表
-function parseGrid(grid) {
-  var cells = [];
-  for (var y = 0; y < grid.length; y++) {
-    for (var x = 0; x < grid[y].length; x++) {
-      if (grid[y][x] === '#') cells.push({ x: x, y: y });
-    }
-  }
-  return cells;
-}
-
-// ---------- 部位识别（与 2D 同算法）----------
-function rigCat(grid) {
-  var cells = parseGrid(grid);
-  if (cells.length < 5) return null;
-
-  var xs = cells.map(function(c){return c.x;});
-  var ys = cells.map(function(c){return c.y;});
-  var bw = Math.max.apply(null, xs) - Math.min.apply(null, xs) + 1;
-  var bh = Math.max.apply(null, ys) - Math.min.apply(null, ys) + 1;
-
-  // 猫默认朝右（头在右侧），但网格里头在左侧 → 朝左
-  // 我们统一翻转成朝右处理
-  var facing = 'right';
-  // 实际上 11 行网格里，'#'集中在 x ∈ [3, 25]，头在 x=11-13 区（密度集中端）
-  // 简单启发：哪一端的行高更小（轮廓更圆）就是头
-  var leftMaxX = Math.min.apply(null, xs);
-  var rightMaxX = Math.max.apply(null, xs);
-  // 头部一侧的列数少（因为头比躯干窄）
-  var leftCols = cells.filter(function(c){return c.x <= leftMaxX + 4;}).length;
-  var rightCols = cells.filter(function(c){return c.x >= rightMaxX - 4;}).length;
-  facing = leftCols < rightCols ? 'left' : 'right';
-  
-  return { cells: cells, bw: bw, bh: bh, facing: facing, grid: grid };
-}
 
 // ---------- 三维场景 ----------
 var canvas = document.getElementById('stage-3d');
 var hint = document.getElementById('hint3d');
+// Three.js 已加载，更新进度
+(function() {
+  var bar = document.getElementById('hint3d-bar');
+  var txt = document.getElementById('hint3d-text');
+  var sub = document.getElementById('hint3d-sub');
+  if (bar) bar.style.width = '20%';
+  if (txt) txt.textContent = '初始化 3D 场景…';
+  if (sub) sub.textContent = 'WebGL 渲染器';
+})();
 
 var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -406,11 +430,12 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setClearColor(0xECE9E2, 1);
 
 var scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xECE9E2, 18, 38);
+scene.fog = new THREE.Fog(0xECE9E2, 14, 34);
 
 var camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-camera.position.set(8, 7, 11);
-camera.lookAt(0, 1, 0);
+var CAM_HOME = { x: 4.2, y: 3.7, z: 5.8 };
+camera.position.set(CAM_HOME.x, CAM_HOME.y, CAM_HOME.z);
+camera.lookAt(0, 1.5, 0);
 
 // 光照
 var hemi = new THREE.HemisphereLight(0xFFFFFF, 0x8B8478, 0.55);
@@ -428,21 +453,36 @@ dir.shadow.camera.near = 0.5;
 dir.shadow.camera.far = 30;
 dir.shadow.bias = -0.001;
 scene.add(dir);
+// 地面：网格烘焙进贴图，避免线条渲染在掠射角下的走样与深度问题
+function makeGridTexture() {
+  var cell = 128;
+  var cv = document.createElement('canvas');
+  cv.width = cv.height = cell;
+  var g = cv.getContext('2d');
+  g.fillStyle = '#D8D2C5';
+  g.fillRect(0, 0, cell, cell);
+  // 主网格线（右、下各一条，平铺后自然闭合）
+  g.strokeStyle = 'rgba(150,142,128,0.34)';
+  g.lineWidth = 3;
+  g.beginPath();
+  g.moveTo(0, 1.5); g.lineTo(cell, 1.5);
+  g.moveTo(1.5, 0); g.lineTo(1.5, cell);
+  g.stroke();
+  var tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(90, 90);            // 每格 1 单位
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return tex;
+}
 
-// 地面
-var groundGeom = new THREE.PlaneGeometry(40, 40);
-var groundMat = new THREE.MeshStandardMaterial({ color: 0xD8D2C5, roughness: 0.92 });
+var groundGeom = new THREE.PlaneGeometry(90, 90);
+var groundMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, map: makeGridTexture(), roughness: 0.92 });
 var ground = new THREE.Mesh(groundGeom, groundMat);
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0;
 ground.receiveShadow = true;
 scene.add(ground);
-
-var grid3d = new THREE.GridHelper(40, 40, 0xC8A35E, 0xC0BAB0);
-grid3d.position.y = 0.005;
-grid3d.material.opacity = 0.35;
-grid3d.material.transparent = true;
-scene.add(grid3d);
 
 // 牵引点（地面上的蓝点）
 var anchor3d = new THREE.Mesh(
@@ -464,14 +504,6 @@ scene.add(leashLine);
 // ---------- 猫模型 ----------
 var catGroup = new THREE.Group();
 scene.add(catGroup);
-
-var voxelSize = 0.18;
-var voxelGeom = new THREE.BoxGeometry(voxelSize, voxelSize, voxelSize);
-var catMat = new THREE.MeshStandardMaterial({
-  color: 0x2C2C2A,
-  roughness: 0.65,
-  metalness: 0.05,
-});
 
 // 部位子组（用于骨骼动画）
 var parts = { head: new THREE.Group(), body: new THREE.Group(), tail: new THREE.Group() };
@@ -508,6 +540,14 @@ var PARAMS = {
 var catModel = null;
 var gltfLoader = new GLTFLoader();
 
+// 场景已就绪，开始加载模型
+(function() {
+  var bar = document.getElementById('hint3d-bar');
+  var txt = document.getElementById('hint3d-text');
+  if (bar) bar.style.width = '30%';
+  if (txt) txt.textContent = '准备加载猫模型…';
+})();
+
 function buildCat() {
   // 清空旧模型
   [parts.head, parts.body, parts.tail].concat(legs).forEach(function(g) {
@@ -518,7 +558,13 @@ function buildCat() {
     catModel = null;
   }
 
-  hint.textContent = '正在加载 Blender 猫模型…';
+  // 更新进度提示（不覆盖子元素）
+  var hintBar = document.getElementById('hint3d-bar');
+  var hintText = document.getElementById('hint3d-text');
+  var hintSub = document.getElementById('hint3d-sub');
+  if (hintText) hintText.textContent = '正在下载猫模型…';
+  if (hintSub) hintSub.textContent = '158 KB';
+  if (hintBar) hintBar.style.width = '40%';
   hint.style.display = 'block';
 
   gltfLoader.load(
@@ -591,21 +637,28 @@ function buildCat() {
       if (parts.tailRef) parts.tail.ref = parts.tailRef;
 
       state.loaded = true;
+      if (hintBar) hintBar.style.width = '100%';
+      if (hintText) hintText.textContent = '就绪';
       hint.style.display = 'none';
+      // 模型就绪后重跑自检，否则骨骼/网格检查项会误报失败
+      if (typeof selfCheck === 'function') selfCheck();
       console.log('[cyber-stroll-3d] 猫模型加载完成，部位:', Object.keys(found).join(', '));
       } catch (e) {
         console.error('[cyber-stroll-3d] 模型初始化失败:', e.message);
-        hint.textContent = '模型初始化失败：' + e.message;
+        if (hintText) hintText.textContent = '初始化失败';
+        if (hintSub) hintSub.textContent = e.message;
       }
     },
     function(progress) {
       if (progress.total) {
         var pct = Math.round((progress.loaded / progress.total) * 100);
-        hint.textContent = '加载中 ' + pct + '%';
+        if (hintBar) hintBar.style.width = (40 + pct * 0.5) + '%';
+        if (hintSub) hintSub.textContent = pct + '%';
       }
     },
     function(error) {
-      hint.textContent = '模型加载失败：' + (error && error.message ? error.message : '未知错误');
+      if (hintText) hintText.textContent = '加载失败';
+      if (hintSub) hintSub.textContent = (error && error.message ? error.message : '未知错误');
       console.error('[cyber-stroll-3d] 模型加载失败', error);
     }
   );
@@ -954,9 +1007,9 @@ document.getElementById('btn-cat').addEventListener('click', function() {
   buildCat();
 });
 document.getElementById('btn-camera-reset').addEventListener('click', function() {
-  cameraState.theta = Math.atan2(8, 11);
-  cameraState.phi = Math.atan2(Math.sqrt(8 ** 2 + 11 ** 2), 7);
-  cameraState.dist = Math.sqrt(8 ** 2 + 7 ** 2 + 11 ** 2);
+  cameraState.theta = Math.atan2(CAM_HOME.x, CAM_HOME.z);
+  cameraState.phi = Math.atan2(Math.sqrt(CAM_HOME.x ** 2 + CAM_HOME.z ** 2), CAM_HOME.y);
+  cameraState.dist = Math.sqrt(CAM_HOME.x ** 2 + CAM_HOME.y ** 2 + CAM_HOME.z ** 2);
   updateCamera();
 });
 document.getElementById('btn-mirror').addEventListener('click', function() {
@@ -988,8 +1041,12 @@ document.getElementById('btn-screenshot').addEventListener('click', function() {
 // ---------- 自检 ----------
 function selfCheck() {
   var checks = [
-    ['网格解析', function() { return parseGrid(GRID).length > 50; }],
-    ['部位识别', function() { var r = rigCat(GRID); return r && r.cells.length > 0; }],
+    ['骨骼数量', function() {
+      var n = 0; catGroup.traverse(function(o){ if (o.isBone) n++; }); return n >= 30;
+    }],
+    ['模型网格', function() {
+      var ok = false; catGroup.traverse(function(o){ if (o.isSkinnedMesh) ok = true; }); return ok;
+    }],
     ['Three.js 加载', function() { return typeof THREE.WebGLRenderer === 'function'; }],
     ['WebGL 可用', function() {
       try { var c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); }

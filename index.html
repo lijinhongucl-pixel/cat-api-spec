@@ -63,6 +63,119 @@
     font-family: "PingFang SC", sans-serif;
     letter-spacing: 0.08em;
   }
+
+  /* ===== 观猹大会 · 猫的欢迎 ===== */
+  .watcha-invite {
+    max-width: 940px;
+    margin: 54px auto 0;
+    padding: 0 28px;
+  }
+  .watcha-invite-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 34px;
+    padding: 34px 38px;
+    background: var(--accent);
+    border-radius: 3px;
+    box-shadow: 0 18px 40px -28px rgba(15, 42, 31, 0.55);
+  }
+  .watcha-invite-inner::before {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgba(200, 163, 94, 0.26);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .watcha-kicker {
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 13px;
+  }
+  .watcha-invite h2 {
+    font-family: var(--serif);
+    font-size: 25px;
+    font-weight: 400;
+    color: #FAF8F5;
+    letter-spacing: 0.01em;
+    line-height: 1.5;
+    margin: 0 0 11px;
+    padding-top: 0;
+    border-top: 0;
+  }
+  .watcha-invite p {
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: rgba(250, 248, 245, 0.72);
+    max-width: 560px;
+    margin: 0;
+  }
+  .watcha-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 30px;
+    margin-top: 18px;
+    font-size: 12px;
+    color: rgba(250, 248, 245, 0.62);
+    letter-spacing: 0.01em;
+  }
+  .watcha-meta em {
+    font-style: normal;
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    margin-right: 9px;
+  }
+  .watcha-invite-cta {
+    flex: none;
+    text-align: right;
+  }
+  .watcha-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--gold);
+    color: #1B3A2E;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    border-radius: 2px;
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+  .watcha-btn:hover {
+    background: #d8b876;
+    transform: translateY(-1px);
+  }
+  .watcha-note {
+    margin-top: 13px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: rgba(250, 248, 245, 0.42);
+  }
+  .watcha-note a {
+    color: var(--gold);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(200, 163, 94, 0.4);
+    transition: border-color 0.2s ease;
+  }
+  .watcha-note a:hover { border-bottom-color: var(--gold); }
+  @media (max-width: 760px) {
+    .watcha-invite { margin-top: 38px; }
+    .watcha-invite-inner {
+      flex-direction: column;
+      align-items: flex-start;
+      padding: 28px 24px;
+      gap: 26px;
+    }
+    .watcha-invite h2 { font-size: 21px; }
+    .watcha-invite-cta { text-align: left; }
+  }
   /* ===== 首页专有：把多人联机 HUD 挪出状态机框 =====
      multiplayer.css 的 .mp-hud 是 fixed top:14px right:14px，
      正好压住状态机框右上角的「STATE MACHINE · LIVE」标签和呼吸灯。
@@ -384,13 +497,34 @@
   </div>
 </div>
 
+<!-- ===== 观猹大会 · 猫的欢迎 ===== -->
+<section class="watcha-invite" aria-label="2026 观猹大会">
+  <div class="watcha-invite-inner">
+    <div class="watcha-invite-main">
+      <div class="watcha-kicker">2026 Watcha Conference · 猫的特邀</div>
+      <h2>观猹大会，猫也欢迎你来。</h2>
+      <p>三天，杭州龙坞。好产品、创造者、真实反馈，都放在同一片场地上。<br>猫的意思是：沙发可以空三天，人得去看看别人在造什么。</p>
+      <div class="watcha-meta">
+        <span><em>WHEN</em>2026.10.23 – 10.25</span>
+        <span><em>WHERE</em>杭州茶叶博览会会议会展中心 · 龙坞展馆</span>
+      </div>
+    </div>
+    <div class="watcha-invite-cta">
+      <a class="watcha-btn" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener">
+        报名观猹大会<span aria-hidden="true">→</span>
+      </a>
+      <div class="watcha-note"><a href="tools/watcha.html">猫版导览 →</a> · 金猹奖 · 百展堂 · 猹工坊</div>
+    </div>
+  </div>
+</section>
+
 <div class="tab-bar" role="tablist">
   <button class="tab-btn active" data-tab="spec" role="tab"
           data-desc="正典正文 + 两份 OpenAPI 机器可读描述"
           title="正典正文 + 两份 OpenAPI 机器可读描述">规范 <span class="count">3</span></button>
   <button class="tab-btn" data-tab="tools" role="tab"
           data-desc="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入"
-          title="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入">工具 <span class="count">12</span></button>
+          title="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入">工具 <span class="count">13</span></button>
   <button class="tab-btn" data-tab="games" role="tab"
           data-desc="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记"
           title="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记">游戏 <span class="count">6</span></button>
@@ -405,7 +539,7 @@
           title="文档的两个说话人：编写组给事实，当事猫给结论">声部 <span class="count">2</span></button>
 </div>
 <div class="tab-hint">
-  <span class="tab-hint-lead">32 个入口按类别分组</span>
+  <span class="tab-hint-lead">33 个入口按类别分组</span>
   <span class="tab-hint-sep">·</span>
   <span class="tab-hint-desc" id="tab-desc">正典正文 + 两份 OpenAPI 机器可读描述</span>
 </div>
@@ -435,6 +569,12 @@
 
 <div class="tab-panel" data-panel="tools">
   <div class="grid">
+    <a class="card" href="tools/watcha.html">
+      <div class="kicker">特别入口 · 2026 观猹大会</div>
+      <h3>观猹大会 · 猫版导览</h3>
+      <p>10 月 23—25 日，杭州龙坞。三天议程、六大展区、现场六件事与金猹奖，按猫的动线排了一遍——人照着走就行。</p>
+      <div class="foot">tools/watcha.html · 报名走官网</div>
+    </a>
     <a class="card" href="tools/expression.html">
       <div class="kicker">可运行 · 逐像素确定性</div>
       <h3>表情渲染器</h3>
