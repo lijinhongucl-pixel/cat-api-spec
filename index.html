@@ -21,91 +21,12 @@
 <link rel="stylesheet" href="assets/css/livecat.css">
 <link rel="stylesheet" href="assets/css/multiplayer.css">
 <link rel="stylesheet" href="assets/css/crosspet.css">
-<!-- L3 动效层：GSAP + ScrollTrigger + motion.js -->
-<!-- L1 呼吸层：p5.js + fabric-bg.js（织物网格背景） -->
-<!-- CDN 失败也不影响任何内容展示，会降级为静态画册 -->
+<!-- GSAP 动效层：gsap + ScrollTrigger + motion.js。CDN 失败也不影响任何内容展示。 -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapMissing=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
 <script src="assets/js/motion.js"></script>
-<script src="assets/js/fabric-bg.js"></script>
 <style>
-  /* ===== L0 老钱基底（已有，不动） ===== */
-
-  /* ===== L2 编辑排版升级（中景层） ===== */
-  /* 巨型衬线标题：双行错落，第二行金色斜体 */
-  .hero h1 {
-    font-family: Georgia, "Source Han Serif SC", "Noto Serif SC", serif;
-    font-size: clamp(44px, 6.4vw, 78px);
-    line-height: 1.04;
-    letter-spacing: -0.02em;
-    font-weight: 500;
-    margin: 0 0 26px;
-    color: var(--ink);
-  }
-  .hero h1 .alt {
-    display: block;
-    margin-top: 4px;
-    font-style: italic;
-    font-weight: 400;
-    color: var(--gold-ink);
-    letter-spacing: -0.015em;
-  }
-  /* 首字下沉：lead 段落首字符加粗放大 */
-  .hero .lead::first-letter {
-    font-family: Georgia, serif;
-    font-size: 3.4em;
-    line-height: 0.88;
-    float: left;
-    padding: 6px 12px 0 0;
-    color: var(--gold-ink);
-    font-weight: 600;
-    font-style: italic;
-  }
-  /* 金色装饰刻线：h1 下方 */
-  .hero h1::after {
-    content: "";
-    display: block;
-    width: 56px;
-    height: 1px;
-    background: var(--gold);
-    margin-top: 22px;
-  }
-  /* lead 段落加宽行距，画廊感 */
-  .hero .lead {
-    font-size: 16.5px;
-    line-height: 1.85;
-    max-width: 540px;
-    color: var(--ink);
-    margin: 0 0 30px;
-  }
-  .hero .lead strong {
-    color: var(--accent);
-    font-weight: 600;
-  }
-  /* 数字统计：超大衬线字 */
-  .hero-stats .n {
-    font-family: Georgia, serif;
-    font-size: 44px;
-    line-height: 1;
-    font-weight: 500;
-    color: var(--accent);
-    letter-spacing: -0.02em;
-  }
-  .hero-stats .l {
-    font-size: 11px;
-    letter-spacing: 0.14em;
-    color: var(--cap);
-    margin-top: 6px;
-  }
-  /* 日晷容器：透明背景，让 three.js 透出 */
-  .astrolabe-canvas-wrap { background: transparent !important; }
-  .astrolabe-caption {
-    transition: opacity 0.4s ease;
-  }
-
-  /* ===== L3 已有样式（hero-tag 等，保留） ===== */
   .hero-tag {
     display: inline-block;
     font-size: 11.5px;
