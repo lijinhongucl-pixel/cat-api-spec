@@ -312,8 +312,8 @@
     { n: 8, text: "习惯按 0.86 衰减累积，旧证据会被新证据盖过去。", where: "learner.decay" },
     { n: 9, text: "进化只升不降。它不会变回小时候。", where: "stageFor" },
     { n: 10, text: "同一套匮乏，不同性格的猫走不同的路。", where: "traits 权重" },
-    { n: 11, text: "有活在跑的时候，除了成功和失败，它不叫。", where: "EVENTS.working" },
-    { n: 12, text: "一直失败的时候，它从「盯着你」换成「趴在你旁边」。", where: "WATCH.score · debugger" }
+    { n: 11, text: "有活在跑的时候，反应只来自明确的任务事件，它不自己冒反应。", where: "emit · EVENTS map" },
+    { n: 12, text: "连续失败够多，它把警觉换回困和闷——盯活的劲头慢慢松了。", where: "emit task.fail · streak" }
   ];
 
   /* =======================================================================
@@ -551,7 +551,8 @@
           line: r.lines[Math.floor(rnd() * r.lines.length)]
         };
 
-        // 失败一次以后，警觉拉满；连续失败超过三次，WATCH 接盘
+        // 失败一次以后，警觉拉满；连续失败三次以上，把疲劳抬上去、闷压下去——
+        // 盯活的劲头慢慢松了，猫从 WATCH 自然滑向 LOAF（不是强制切换，是打分倾向变了）
         if (type === "task.fail" && payload.streak >= 3) {
           s.needs.fatigue = clamp(s.needs.fatigue + 0.03, 0, 1);
           s.needs.boredom = clamp(s.needs.boredom - 0.05, 0, 1);

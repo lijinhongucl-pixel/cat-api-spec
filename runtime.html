@@ -417,7 +417,7 @@
       同时它还在学你：几点干活、在哪个目录、跑什么命令、失败率高不高。
       从这些压出三个性格维度（夜行 / 碎步 / 调试）直接进打分公式——
       <strong>同一套匮乏，不同主人的猫走不同的路。</strong>
-      每天零点全部统计乘 0.86，搬了家、换了技术栈，它会跟着变。
+      跨过零点还没访问的时候，统计会按 0.86 的衰减一次性补算——搬了家、换了技术栈，它会跟着变。
     </p>
     <div class="card" style="margin-top:18px">
       <h4>它现在知道什么 <small>catctl learn</small></h4>
@@ -438,6 +438,10 @@
       为什么是 CLI：任何能 fork 一个进程的地方都能养这只猫。
       编辑器插件、CI、make、git hook、WorkBuddy 的 hook、tmux、ssh——都只需要执行一条命令。
     </p>
+    <div class="demo-note" style="margin-top:0;margin-bottom:26px">
+      <strong>先装一下</strong>——零依赖脚本，不用 <code>npm install</code>，一行软链就行：<br>
+      <code style="font-size:12.5px;line-height:1.9;display:inline-block;margin-top:6px">ln -s "$(pwd)/runtime/bin/catctl.js" ~/.local/bin/catctl</code>
+    </div>
     <div class="cmds">
       <div class="cmd"><code>catctl</code><p>看它一眼。状态、匮乏、它在干嘛。</p></div>
       <div class="cmd"><code>catctl watch</code><p>让它动起来。空格摸它，f 喂，l 激光笔，q 退出。</p></div>
