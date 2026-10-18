@@ -440,6 +440,31 @@
 }
 .mp-close-btn:active { transform: scale(0.92); }
 
+/* 猫碗的关闭按钮：放回卡片内右上角，并给 header 留出位置。
+   原来 top/right:4px 正好被「投喂 +1」按钮压住，既看不见也点不到。 */
+.mp-bowl-widget .mp-bowl-header { padding-right: 26px; }
+.mp-bowl-widget .mp-close-btn {
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  color: rgba(60, 60, 60, 0.55);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  z-index: 3;
+}
+.mp-bowl-widget .mp-close-btn:hover {
+  background: rgba(27, 58, 46, 0.08);
+  color: #1B3A2E;
+  transform: none;
+}
+
 /* HUD 关闭按钮位置微调（HUD 整体较小，按钮要更靠边） */
 .mp-hud-close {
   top: -2px;
@@ -511,6 +536,11 @@
     color: #FAF8F5;
     background: rgba(28, 28, 28, 0.94);
     border-color: rgba(200, 163, 94, 0.4);
+  }
+  .mp-bowl-widget .mp-close-btn { color: rgba(220, 220, 220, 0.6); }
+  .mp-bowl-widget .mp-close-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #FAF8F5;
   }
   .mp-bowl-progress {
     background: rgba(200, 163, 94, 0.18);
