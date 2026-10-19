@@ -90,13 +90,16 @@ function help() {
     "  " + c.grey + "它自己" + c.reset,
     "    catctl status [--json]        现在的状态",
     "    catctl learn  [--json]        它学会了什么",
-    "    catctl log                   最近发生过什么",
+    "    catctl log  [--kind test] [--fail] [-n 20]  最近发生过什么（可按类型或失败筛）",
+    "    catctl run -- <命令> [--kind ship]  包住命令；--kind 手动指定活动类型（否则从命令名猜）",
+    "    catctl emit <事件> [--kind <类型>] [--name ..] [--ms ..]  宿主手动报活（WorkBuddy/Codex 用）",
     "    catctl teach <维度> <0..1>    手动作风纠正（少年猫起）",
     "    catctl serve [--port 9177]     开一个只听 127.0.0.1 的 HTTP 口子",
     "    catctl selftest               跑一遍不变量自测",
     "    catctl reset --yes            清空这只猫，重来",
     "",
     "  " + c.grey + "事件" + c.reset + "  task.start · task.ok · task.fail · task.wait · prompt.idle · pet · feed · laser · wake",
+    "  " + c.grey + "类型" + c.reset + "  " + learner.KINDS.map(function (k) { return k + "(" + learner.KIND_LABEL[k] + ")"; }).join(" · "),
     "  " + c.grey + "住址" + c.reset + "  " + store.home(),
     "",
     "  " + c.grey + "没有后台进程。你关掉终端，它就睡在 state.json 里，" +
@@ -244,6 +247,25 @@ function resolveEvent(name) {
   return ALIASES[name] || null;
 }
 
+/**
+ * 宿主传进来的字段统一过一遍：白名单、类型校验、长度截断。
+ * 不认识的 kind 丢弃（交给学习器去猜），detail 限 800 字，exit 必须是整数。
+ */
+function sanitizeMeta(raw) {
+  raw = raw || {};
+  var meta = {};
+  if (typeof raw.dir === "string" && raw.dir) meta.dir = raw.dir.slice(0, 200);
+  if (typeof raw.name === "string" && raw.name) meta.name = raw.name.slice(0, 200);
+  var kind = learner.normalizeKind(raw.kind);
+  if (kind) meta.kind = kind;
+  var ms = typeof raw.ms === "string" ? parseInt(raw.ms, 10) : raw.ms;
+  if (typeof ms === "number" && isFinite(ms) && ms >= 0) meta.ms = Math.round(ms);
+  var exit = typeof raw.exit === "string" ? parseInt(raw.exit, 10) : raw.exit;
+  if (typeof exit === "number" && isFinite(exit)) meta.exit = Math.round(exit);
+  if (typeof raw.detail === "string" && raw.detail.trim()) meta.detail = raw.detail.slice(0, 800);
+  return meta;
+}
+
 function cmdEmit(args) {
   var name = resolveEvent(args.positional[0]);
   if (!name) {
@@ -254,13 +276,19 @@ function cmdEmit(args) {
 
   var s = rt.open();
   var dir = args.flags.dir ? path.resolve(args.flags.dir) : process.cwd();
-  var meta = {
+  if (args.flags.kind && !learner.normalizeKind(args.flags.kind)) {
+    process.stderr.write("不认识这个类型：" + args.flags.kind + "（可用：" + learner.KINDS.join(" · ") + "）\n");
+    return 2;
+  }
+  var meta = sanitizeMeta({
     dir: rt.dirName(dir),
     name: args.flags.name || null,
     kind: args.flags.kind || null,
-    ms: args.flags.ms ? parseInt(args.flags.ms, 10) : null,
-    streak: s.profile.tasks.streakFail
-  };
+    ms: args.flags.ms || null,
+    exit: args.flags.exit || null,
+    detail: args.flags.detail || null
+  });
+  meta.streak = s.profile.tasks.streakFail;
 
   var out = rt.emit(s, name, meta);
   var snap = out.after;
@@ -315,19 +343,44 @@ function cmdRun(args) {
   var kind = learner.inferKind(label, args.flags.kind);
   rt.emit(s, "task.start", { dir: rt.dirName(dir), name: label, kind: kind });
 
-  var child = cp.spawn(cmd[0], cmd.slice(1), { stdio: "inherit", shell: false });
+  // stderr 走管道：原样转发到终端，同时只留最后几行，失败时记进事件，方便 catctl log 看
+  var TAIL_LINES = 6;
+  var tail = [];
+  var partial = "";
+  function keepTail(chunk) {
+    partial += chunk.toString("utf8");
+    var parts = partial.split(/\r?\n/);
+    partial = parts.pop();
+    parts.forEach(function (ln) {
+      if (!ln.trim()) return;
+      tail.push(ln.length > 200 ? ln.slice(0, 200) + "…" : ln);
+      if (tail.length > TAIL_LINES) tail.shift();
+    });
+  }
+
+  var child = cp.spawn(cmd[0], cmd.slice(1), { stdio: ["inherit", "inherit", "pipe"], shell: false });
+  if (child.stderr) {
+    child.stderr.on("data", function (chunk) {
+      process.stderr.write(chunk);
+      keepTail(chunk);
+    });
+  }
 
   function finish(code, signal) {
+    if (partial.trim()) { tail.push(partial.slice(0, 200)); if (tail.length > TAIL_LINES) tail.shift(); partial = ""; }
     var ms = Date.now() - started;
     var s2 = rt.open();
     var ev = code === 0 ? "task.ok" : "task.fail";
+    var exitCode = code == null ? (signal ? 130 : 1) : code;
     var out = rt.emit(s2, ev, {
       dir: rt.dirName(dir), name: label, ms: ms, kind: kind,
+      exit: exitCode,
+      detail: code === 0 ? null : (tail.length ? tail.join("\n") : null),
       streak: s2.profile.tasks.streakFail
     });
     var snap = out.after;
     var line = snap.reaction && snap.reaction.line ? snap.reaction.line : "";
-    var tag = code === 0 ? "完成" : "挂了";
+    var tag = code === 0 ? "完成" : "挂了（退出码 " + exitCode + "）";
     process.stdout.write("\n" + A.C.green + "  /\\_/\\  " + A.C.reset +
       A.C.cream + line + A.C.reset +
       A.C.grey + "   " + tag + " · " + (ms / 1000).toFixed(1) + "s · " + pad2(snap) + A.C.reset + "\n");
@@ -336,16 +389,18 @@ function cmdRun(args) {
     if (cfg.notify && code !== 0) {
       rt.notify((code === 0 ? "成了" : "挂了") + " · " + rt.dirName(dir), line, { sound: cfg.sound });
     }
-    process.exit(code == null ? (signal ? 130 : 1) : code);
+    process.exit(exitCode);
   }
 
   child.on("exit", finish);
   child.on("error", function (err) {
     process.stderr.write("起不来：" + err.message + "\n");
+    tail.push("起不来：" + err.message);
     finish(127);
   });
   return null;
 }
+
 
 /* =========================================================================
  * init —— 接到宿主上
@@ -464,10 +519,11 @@ function snippetFor(host, c) {
     return [
       "  " + c.grey + "WorkBuddy 这边挂在 hook 上。命令只有一条：" + c.reset,
       "",
-      "    " + c.cream + "catctl emit task.ok    # 任务结束" + c.reset,
-      "    " + c.cream + "catctl emit task.wait  # 卡住等你确认（会弹系统通知）" + c.reset,
-      "    " + c.cream + "catctl emit task.fail  # 失败" + c.reset,
+      "    " + c.cream + "catctl emit task.ok --kind test          # 任务结束（告诉它是哪类活）" + c.reset,
+      "    " + c.cream + "catctl emit task.wait --notify           # 卡住等你确认（会弹系统通知）" + c.reset,
+      "    " + c.cream + "catctl emit task.fail --kind build --exit 1 --detail \"$ERR\"  # 失败，附报错" + c.reset,
       "",
+      "  " + c.grey + "--kind 可选：" + learner.KINDS.join(" / ") + "；不写则由 --name 猜。" + c.reset,
       "  " + c.grey + "把上面任意一条写进 WorkBuddy 的 hook 配置里，猫就会报信。" + c.reset,
       "  " + c.grey + "不确定 hook 怎么配的话，先用 run 兜着，它不依赖任何宿主：" + c.reset,
       "    " + c.cream + "catctl run -- <你平时那条命令>" + c.reset
@@ -478,12 +534,12 @@ function snippetFor(host, c) {
       "  " + c.grey + "Codex 没有外挂 hook，但它是跑命令的。两个办法：" + c.reset,
       "",
       "  " + c.cream + "1. 在 AGENTS.md 里加一行，让它每次收尾时执行：" + c.reset,
-      "       " + c.grey + "任务完成后执行 `catctl emit task.ok`，需要我确认时执行 `catctl emit task.wait --notify`" + c.reset,
+      "       " + c.grey + "任务完成后执行 `catctl emit task.ok --kind <类型>`，失败执行 `catctl emit task.fail --kind <类型> --exit <码>`，需要我确认时执行 `catctl emit task.wait --notify`" + c.reset,
       "",
       "  " + c.cream + "2. 套一层外壳，Codex 不用知道猫的存在：" + c.reset,
       "       " + c.grey + "catctl run -- codex" + c.reset,
       "",
-      "  " + c.grey + "我建议两个都上：外层保证退出码，内层保证中途会叫你。" + c.reset
+      "  " + c.grey + "我建议两个都上：外层保证退出码和报错尾巴，内层保证中途会叫你并带上活动类型。" + c.reset
     ].join("\n");
   }
   return [
@@ -571,28 +627,51 @@ function cmdTeach(args) {
 
 function cmdLog(args) {
   var n = parseInt(args.flags.n || "20", 10);
-  var evs = store.readEvents(n);
+  var wantKind = args.flags.kind ? learner.normalizeKind(args.flags.kind) : null;
+  var onlyFail = !!args.flags.fail;
+  if (args.flags.kind && !wantKind) {
+    process.stderr.write("不认识这个类型：" + args.flags.kind + "\n");
+    process.stderr.write("可用：" + learner.KINDS.join(" · ") + "\n");
+    return 2;
+  }
+
+  // 先筛再截断，n 指的是符合条件的最近 n 条
+  var pool = store.readEvents(2000);
+  var evs = pool.filter(function (e) {
+    if (wantKind && e.kind !== wantKind) return false;
+    if (onlyFail && e.type !== "task.fail") return false;
+    return true;
+  }).slice(-n);
+
   var c = A.C;
   if (!evs.length) {
-    process.stdout.write(c.grey + "  还没有记录。\n" + c.reset);
+    process.stdout.write(c.grey + "  " + (wantKind || onlyFail ? "这个条件下没有记录。" : "还没有记录。") + "\n" + c.reset);
     return 0;
   }
   process.stdout.write("\n");
   evs.forEach(function (e) {
     var t = new Date(e.at);
-    var hh = String(t.getHours()).padStart(2, "0") + ":" +
-      String(t.getMinutes()).padStart(2, "0");
+    var hh = String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0") + " " +
+      String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0");
     var mark = e.type === "task.ok" ? c.green + "✓" + c.reset
       : e.type === "task.fail" ? c.red + "✗" + c.reset
       : e.type === "task.wait" ? c.gold + "!" + c.reset
       : c.grey + "·" + c.reset;
+    var kindTag = e.kind ? "  " + c.grey + "[" + (learner.KIND_LABEL[e.kind] || e.kind) + "]" + c.reset : "";
+    var exitTag = e.type === "task.fail" && typeof e.exit === "number" ? c.red + " exit " + e.exit + c.reset : "";
     process.stdout.write("  " + c.grey + hh + c.reset + "  " + mark + "  " +
-      A.pad(e.type, 12) + c.grey + (e.dir || "") +
-      (e.name ? "  " + e.name : "") + c.reset + "\n");
+      A.pad(e.type, 12) + c.grey + (e.dir || "") + c.reset +
+      (e.name ? "  " + e.name : "") + kindTag + exitTag + "\n");
+    if (e.detail) {
+      String(e.detail).split("\n").forEach(function (ln) {
+        process.stdout.write("                  " + c.grey + "│ " + ln + c.reset + "\n");
+      });
+    }
   });
   process.stdout.write("\n");
   return 0;
 }
+
 
 /* =========================================================================
  * reset
@@ -660,7 +739,7 @@ function cmdServe(args) {
         try { j = JSON.parse(body || "{}"); } catch (e) { j = {}; }
         var type = resolveEvent(j.type) || j.type;
         sync();
-        var out = rt.emit(s, type, { dir: j.dir, name: j.name, ms: j.ms, kind: j.kind });
+        var out = rt.emit(s, type, sanitizeMeta(j));
         send(res, 200, { ok: true, event: type, reaction: out.after.reaction, snapshot: out.after });
       });
       return;
@@ -810,6 +889,14 @@ function cmdSelftest(args) {
   ok("无效 kind 回落到猜测", learner.inferKind("npm test", "bogus") === "test");
   ok("猜不出的命令记为 other", learner.inferKind("frobnicate") === "other");
   ok("没有命令名时不记类型", learner.inferKind("") === null);
+
+  /* 4c. 失败详情与日志筛选：只测 learner 的数据形状，不碰真实文件 */
+  var pl = learner.emptyProfile();
+  learner.record(pl, { type: "task.fail", dir: "demo", name: "npm run build", ms: 4000, kind: "build" });
+  learner.record(pl, { type: "task.ok", dir: "demo", name: "npm test", ms: 2000 });
+  ok("失败计入活动类型的失败数", pl.kinds.build.fail === 1 && pl.kinds.build.n === 1, JSON.stringify(pl.kinds));
+  ok("测试类型不被构建失败污染", pl.kinds.test && pl.kinds.test.fail === 0);
+  ok("KIND_LABEL 覆盖全部类型", learner.KINDS.every(function (k) { return !!learner.KIND_LABEL[k]; }));
 
   var pk = learner.emptyProfile();
   for (var kk = 0; kk < 12; kk++) {

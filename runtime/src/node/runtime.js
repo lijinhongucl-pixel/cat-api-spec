@@ -141,7 +141,10 @@ function emit(session, type, meta) {
     type: type,
     dir: meta.dir || dirName(),
     name: meta.name || null,
+    kind: meta.kind || null,
     ms: meta.ms || null,
+    detail: meta.detail || null,
+    exit: typeof meta.exit === "number" ? meta.exit : null,
     behavior: after.behavior,
     reaction: after.reaction ? after.reaction.id : null,
     xp: after.xp

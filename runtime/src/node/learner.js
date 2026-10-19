@@ -365,6 +365,7 @@ var KIND_LABEL = {
 module.exports = {
   DECAY: DECAY,
   KINDS: KINDS,
+  KIND_LABEL: KIND_LABEL,
   inferKind: inferKind,
   normalizeKind: normalizeKind,
   emptyProfile: emptyProfile,

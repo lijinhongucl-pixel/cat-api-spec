@@ -1,0 +1,27 @@
+{
+  "description": "CAT RUNTIME · WorkBuddy 钩子。用户开口时猫开始干活，收工时猫报信。永远 exit 0，不挡宿主。",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/user/.workbuddy/binaries/node/versions/22.22.2-6/bin/node \"${CODEBUDDY_PLUGIN_ROOT}/../hooks/workbuddy-hook.js\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/user/.workbuddy/binaries/node/versions/22.22.2-6/bin/node \"${CODEBUDDY_PLUGIN_ROOT}/../hooks/workbuddy-hook.js\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

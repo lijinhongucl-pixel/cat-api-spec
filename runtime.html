@@ -481,6 +481,7 @@
         ●●●●●  你的活有 68% 落在 21:00–02:00，我按这个点儿调了作息，主要是夜里。<br>
         ●●●●○  最常待的是 cat-api-spec（134 次），那里算主领地，另外还有 3 处会去。<br>
         ●●●●●  「npm test」跑了 41 次，挂掉 44%，一次大约 18 秒。你重试之前我一般不吵。<br>
+        ●●●●○  你最常干的是跑测试（41 次，挂 44%）。这类活容易翻，我多陪一会儿。<br>
         ●●●●●  失败率 44%。我不催你——失败的时候我趴旁边，不盯着屏幕。
       </p>
     </div>
@@ -501,7 +502,9 @@
     <div class="cmds">
       <div class="cmd"><code>catctl</code><p>看它一眼。状态、匮乏、它在干嘛。</p></div>
       <div class="cmd"><code>catctl watch</code><p>让它动起来。空格摸它，f 喂，l 激光笔，q 退出。</p></div>
-      <div class="cmd"><code>catctl run -- npm test</code><p>包住一条命令。退出码原样返回，CI 不会出错。</p></div>
+      <div class="cmd"><code>catctl run -- npm test</code><p>包住一条命令。退出码原样返回，CI 不会出错。挂了的话，最后几行报错会记进日志。</p></div>
+      <div class="cmd"><code>catctl run -- npm run build --kind ship</code><p>活动类型自动从命令名猜（测试、构建、部署、装依赖……），猜错了用 <code style="font-size:12px">--kind</code> 指定。</p></div>
+      <div class="cmd"><code>catctl log --fail</code><p>只看挂掉的。<code style="font-size:12px">--kind test</code> 按类型筛，失败会附上报错尾巴。</p></div>
       <div class="cmd"><code>catctl emit task.ok</code><p>宿主主动汇报。9 种事件，见下表。</p></div>
       <div class="cmd"><code>catctl init --host claude</code><p>写 .claude/settings.json，改之前自动备份。</p></div>
       <div class="cmd"><code>catctl serve --port 9177</code><p>不给开 shell 的宿主一个 HTTP 口子，只听 127.0.0.1。</p></div>

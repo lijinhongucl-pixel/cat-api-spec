@@ -1,0 +1,9 @@
+{
+  "name": "catctl-workbuddy",
+  "description": "CAT RUNTIME：把 WorkBuddy 的对话开始与收工事件转给猫（UserPromptSubmit → task.start，Stop → task.ok）。只传事件名与粗略活动类型，不存整段对话。",
+  "homepage": {
+    "url": null,
+    "type": "none"
+  },
+  "license": "未声明"
+}
