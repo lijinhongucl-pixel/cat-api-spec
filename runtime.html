@@ -893,30 +893,61 @@ POST /emit  {"type":"task.ok"}</pre>
   /* ---- 用引擎模拟这段时间 ----
    * 从选中日的 00:00 开始，用固定种子跑完整一天（2 秒步长，和页面演示一致），
    * 只统计落在所选时段内的行为时长。返回 {总时长, 各行为占比}。 */
-  function simulateWindow(dateKey, fromH, toH) {
-    var key = dateKey + "|" + fromH + "|" + toH;
-    if (simCache[key]) return simCache[key];
-
+  /* 整日只跑一次：每个小时统计各行为的毫秒数，之后任何时段都从这张表里求和。
+   * 同步版本（worker 不可用时的兜底）。 */
+  function simulateDaySync(dateKey) {
     var base = new Date(dateKey + "T00:00:00").getTime();
     var now = base;                            // 引擎通过 clock 读取"现在"
     var eng = E.create({ seed: 20261018, clock: function () { return now; } });
     var STEP = 2000;
-    var counts = {};
-    var total = 0;
-    var steps = (24 * 3600 * 1000) / STEP;
-    for (var n = 0; n < steps; n++) {
+    var hours = [];
+    for (var h = 0; h < 24; h++) hours.push({});
+    for (var n = 0; n < (24 * 3600 * 1000) / STEP; n++) {
       now = base + n * STEP;
       eng.tick(STEP);
-      var h = new Date(now).getHours();
-      if (h >= fromH && h < toH) {
-        var snap = eng.snapshot(false);
-        counts[snap.behavior] = (counts[snap.behavior] || 0) + STEP;
-        total += STEP;
-      }
+      var hour = new Date(now).getHours();
+      var b = eng.snapshot(false).behavior;
+      hours[hour][b] = (hours[hour][b] || 0) + STEP;
     }
-    var out = { total: total, counts: counts };
-    simCache[key] = out;
-    return out;
+    return hours;
+  }
+
+  // 在 Worker 里算，算完回调；Worker 不可用就同步算。结果按日期缓存。
+  var worker = null, workerSeq = 0, pendingDay = {};
+  try {
+    if (window.Worker) worker = new Worker("assets/js/schedule-worker.js");
+  } catch (err) { worker = null; }
+  if (worker) {
+    worker.onmessage = function (e) {
+      var msg = e.data || {};
+      simCache[msg.dateKey] = msg.hours;
+      var cbs = pendingDay[msg.dateKey] || [];
+      delete pendingDay[msg.dateKey];
+      cbs.forEach(function (cb) { cb(); });
+    };
+    worker.onerror = function () { worker = null; };
+  }
+
+  function ensureDay(dateKey, done) {
+    if (simCache[dateKey]) { done(); return; }
+    if (!worker) { simCache[dateKey] = simulateDaySync(dateKey); done(); return; }
+    if (pendingDay[dateKey]) { pendingDay[dateKey].push(done); return; }
+    pendingDay[dateKey] = [done];
+    worker.postMessage({ id: ++workerSeq, dateKey: dateKey });
+  }
+
+  function simulateWindow(dateKey, fromH, toH) {
+    var hours = simCache[dateKey];
+    if (!hours) return null;               // 还没算完，调用方先显示加载态
+    var counts = {};
+    var total = 0;
+    for (var h = fromH; h < toH; h++) {
+      Object.keys(hours[h]).forEach(function (id) {
+        counts[id] = (counts[id] || 0) + hours[h][id];
+        total += hours[h][id];
+      });
+    }
+    return { total: total, counts: counts };
   }
 
   function dateKeyOf(d) {
@@ -938,8 +969,17 @@ POST /emit  {"type":"task.ok"}</pre>
       return;
     }
 
-    var sim = simulateWindow(dateKeyOf(selectedDate), from, to);
-    if (!sim.total) { tsSchedule.innerHTML = ""; return; }
+    var dateKey = dateKeyOf(selectedDate);
+    if (!simCache[dateKey]) {
+      tsSchedule.innerHTML = '<div class="ts-sim-note">正在推演这一天…</div>';
+      ensureDay(dateKey, function () {
+        // 只在用户还停在这一天、且区间没变时才刷新，避免旧结果覆盖新选择
+        if (dateKeyOf(selectedDate) === dateKey && selA >= 0) renderResult(true);
+      });
+      return;
+    }
+    var sim = simulateWindow(dateKey, from, to);
+    if (!sim || !sim.total) { tsSchedule.innerHTML = ""; return; }
 
     // 按占比排序，取前三个
     var rows = Object.keys(sim.counts).map(function (id) {
@@ -989,6 +1029,8 @@ POST /emit  {"type":"task.ok"}</pre>
   buildSlots();
   renderDays();
   paintSelection(false);
+  // 预先在后台推演今天，第一次拖选时大多已经算好
+  ensureDay(dateKeyOf(selectedDate), function () {});
 
   render();
 })();
