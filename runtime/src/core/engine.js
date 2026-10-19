@@ -104,7 +104,7 @@
         if (s.prev === "SLEEP") sc += 0.55;
         return sc;
       },
-      lines: ["呼噜噜…", "zzz…", "别喊。", "…梦见在追一只老鼠", "灯太亮。"]
+      lines: ["呼噜噜…（才没在撒娇）", "zzz…", "别喊，我在睡。", "…梦见抓到了一只老鼠", "灯太亮，关一下。"]
     },
     {
       id: "LOAF", label: "瘫", pose: "loaf",
@@ -115,7 +115,7 @@
         // 这是保底项。什么都不想干的时候，猫就是这个姿势。
         return 0.55 + 0.26 * n.fatigue - 0.22 * n.boredom + 0.08 * s.mood;
       },
-      lines: ["……", "瘫着也是一种工作。", "我不动，但我醒着。", "这个位置有太阳。"]
+      lines: ["……", "瘫着才是我的本职工作。", "我不动，但我醒着，别误会。", "这块太阳是我的了。"]
     },
     {
       id: "GROOM", label: "舔毛", pose: "groom",
@@ -125,7 +125,7 @@
         // 舔毛是在"没别的事"和"心情不错"之间出现的：低成本的自娱
         return 0.30 + 0.46 * (1 - s.needs.boredom) * (1 - s.needs.fatigue * 0.6) + 0.18 * Math.max(0, s.mood);
       },
-      lines: ["从爪子开始。", "顺序不能乱。", "刚才碰过脏东西。", "打结了一根。"]
+      lines: ["从爪子开始，顺序不能乱。", "才不是在害羞。", "刚才碰到了脏东西，得擦掉。", "打结了一根，烦人。"]
     },
     {
       id: "PATROL", label: "巡视", pose: "walk",
@@ -138,7 +138,7 @@
         if (s.traits.sprinter > 0.5) sc += 0.08;  // 你也爱来回走，它跟着
         return sc;
       },
-      lines: ["这间屋子归我。", "刚才那里动了一下。", "沿墙走，别踩键盘。", "检查一遍。"]
+      lines: ["这间屋子归我管。", "刚才那里动了一下，我看见了。", "沿墙走，别踩键盘。", "例行检查，顺便假装没在看你。"]
     },
     {
       id: "PLAY", label: "扑咬", pose: "play",
@@ -148,7 +148,7 @@
         var n = s.needs;
         return 0.08 + 0.82 * n.boredom * (1 - n.fatigue) + 0.50 * n.alertness;
       },
-      lines: ["（扑）", "这个能不能吃。", "抓住你了。", "再丢一次那个点。"]
+      lines: ["（扑！）", "这个能不能吃？", "抓住你了，还不服？", "再丢一次，就一次。"]
     },
     {
       id: "ZOOMIES", label: "疯跑", pose: "run",
@@ -162,14 +162,14 @@
         var n = s.needs;
         return 0.05 + 1.10 * n.boredom * (1 - n.fatigue) - 0.45 * n.loneliness;
       },
-      lines: ["！！！", "（一串模糊的残影）", "三点钟了。", "别问我为什么。"]
+      lines: ["！！！", "（一串模糊的残影）", "凌晨三点，我最有精神。", "别问，问就是跑着玩。"]
     },
     {
       id: "EAT", label: "进食", pose: "eat",
       min: 10000, max: 60000,
       gate: function (s) { return s.needs.hunger > 0.66; },
       score: function (s) { return 0.10 + 1.35 * s.needs.hunger; },
-      lines: ["先闻一下。", "碗底还有。", "吃两口就走。", "这不是我早上剩的。"]
+      lines: ["先闻一下，不是我讨厌它。", "碗底还有，我记得。", "吃两口就走，别催。", "这不是早上剩的吧？"]
     },
     {
       id: "WATCH", label: "盯活", pose: "alert",
@@ -184,21 +184,21 @@
         if (s.traits.debugger > 0.55) sc += 0.18;
         return sc;
       },
-      lines: ["我在看。", "还没跑完。", "别按第二次。", "光标在动。"]
+      lines: ["我在看，别多想。", "还没跑完，我盯着呢。", "别按第二次，我说了我在看。", "光标在动，我的注意力也在动。"]
     },
     {
       id: "STRETCH", label: "伸懒腰", pose: "stretch",
       min: 3000, max: 8000,
       gate: function (s) { return s.prev === "SLEEP" || s.needs.fatigue > 0.45; },
       score: function (s) { return s.prev === "SLEEP" ? 1.25 : 0.10; },
-      lines: ["（前爪推出去）", "咔。", "醒了。"]
+      lines: ["（前爪推出去）", "咔。", "醒了，不是因为想你。"]
     },
     {
       id: "SCRATCH", label: "磨爪", pose: "scratch",
       min: 9000, max: 45000,
       gate: function (s) { return s.needs.fatigue < 0.62; },
       score: function (s) { return 0.16 + 0.55 * s.needs.boredom * (1 - s.needs.fatigue * 0.4); },
-      lines: ["这个角正好。", "（沙沙声）", "不是你的椅子。"]
+      lines: ["这个角正好，不是你的椅子。", "（沙沙声，很有节奏）", "磨爪是正事，别笑。"]
     },
     {
       id: "BOXED", label: "钻箱", pose: "boxed",
@@ -208,14 +208,14 @@
         return s.needs.boredom > 0.45 && s.rnd() < 0.030;
       },
       score: function (s) { return 0.28 + 0.45 * s.needs.boredom; },
-      lines: ["……", "（纸箱里传来一点动静）", "我在这儿，别找。", "尺寸刚好。"]
+      lines: ["……", "（纸箱里传来一点动静）", "我在这儿，别找，找也不给你看。", "尺寸刚好，别来打扰。"]
     },
     {
       id: "KNEAD", label: "踩奶", pose: "knead",
       min: 5000, max: 16000,
       gate: function (s) { return s.mood > 0.30 && s.needs.loneliness > 0.35 && s.needs.fatigue < 0.7; },
       score: function (s) { return 0.08 + 0.70 * Math.max(0, s.mood) * s.needs.loneliness; },
-      lines: ["（左右左右）", "这块软。", "……别动。"]
+      lines: ["（左右左右）", "这块软，我很满意。", "……别动，我还没踩完。"]
     }
   ];
 
@@ -232,12 +232,12 @@
   var REACTIONS = [
     {
       id: "ACK", label: "应声", pose: "perk", dur: [1100, 1900],
-      lines: ["嗯？", "在。", "说。", "听到了。"],
+      lines: ["嗯？", "在。", "说吧，我听着。", "听到了，别喊第二遍。"],
       apply: function (s) { s.needs.alertness = clamp(s.needs.alertness + 0.52, 0, 1); }
     },
     {
       id: "CHEER", label: "得意", pose: "cheer", dur: [1700, 3100],
-      lines: ["成了。", "早说了能行。", "……看，我没骗你。", "这次没白等。"],
+      lines: ["成了！", "早说了能行，我一直都信你。", "……看，我没骗你吧。", "这次没白等，算你有眼光。"],
       apply: function (s) {
         s.mood = clamp(s.mood + 0.48, -1, 1);
         s.needs.alertness = clamp(s.needs.alertness + 0.18, 0, 1);
@@ -246,7 +246,7 @@
     },
     {
       id: "ALARM", label: "炸毛", pose: "alarm", dur: [1300, 2400],
-      lines: ["尾巴炸了。", "……再来一次。", "不是我干的。", "这个报错很丑。"],
+      lines: ["尾巴炸了！", "……再来一次，我不怕。", "不是我干的，我可是看着的。", "这个报错真丑。"],
       apply: function (s) {
         s.mood = clamp(s.mood - 0.38, -1, 1);
         s.needs.alertness = clamp(s.needs.alertness + 0.66, 0, 1);
@@ -255,12 +255,12 @@
     },
     {
       id: "MEW", label: "叫你", pose: "sit", dur: [1900, 2900],
-      lines: ["喵。", "过来看一眼。", "……真的不看看？", "这边。"],
+      lines: ["喵。", "过来看一眼，就一眼。", "……真的不看看？我会生气的。", "这边，别装没听见。"],
       apply: function (s) { s.needs.loneliness = clamp(s.needs.loneliness + 0.12, 0, 1); }
     },
     {
       id: "PURR", label: "呼噜", pose: "loaf", dur: [1500, 2500],
-      lines: ["呼噜呼噜。", "……再一下。", "行了，到此为止。", "（头顶过来）"],
+      lines: ["呼噜呼噜……（才没有很舒服）", "……再一下。", "行了，到此为止，我要面子的。", "（把头顶过来，就一下）"],
       apply: function (s) {
         s.mood = clamp(s.mood + 0.28, -1, 1);
         s.needs.loneliness = clamp(s.needs.loneliness - 0.30, 0, 1);
@@ -268,7 +268,7 @@
     },
     {
       id: "YAWN", label: "打哈欠", pose: "stretch", dur: [1300, 2100],
-      lines: ["……啊——", "等到长蘑菇了。", "还没好？"],
+      lines: ["……啊——（不是无聊）", "等到长蘑菇了。", "还没好？我可以等，但不保证不睡。"],
       apply: function (s) { s.needs.fatigue = clamp(s.needs.fatigue + 0.028, 0, 1); }
     }
   ];
@@ -302,18 +302,18 @@
    * ===================================================================== */
 
   var RULES = [
-    { n: 1, text: "困到 0.34 就必须睡，不挑场合。", where: "SLEEP.gate" },
-    { n: 2, text: "无聊会自己涨；巡视、扑咬、疯跑都拿它当燃料。", where: "NEEDS.boredom.rise" },
-    { n: 3, text: "没人看的时候才会疯跑。", where: "ZOOMIES.gate" },
-    { n: 4, text: "反应可以打断行为，但只是盖在上面一两秒，不替换行为。", where: "tick / reaction" },
-    { n: 5, text: "微动作不算换行为：眨眼、摆尾、耳朵转向，都不进状态机。", where: "renderer (frame)" },
-    { n: 6, text: "夜里不一定睡——主人的作息会改它的作息。", where: "SLEEP.score · nocturnal" },
-    { n: 7, text: "成功让它得意，失败让它警觉；两种都不会持续超过四秒。", where: "CHEER / ALARM.apply" },
-    { n: 8, text: "习惯按 0.86 衰减累积，旧证据会被新证据盖过去。", where: "learner.decay" },
-    { n: 9, text: "进化只升不降。它不会变回小时候。", where: "stageFor" },
-    { n: 10, text: "同一套匮乏，不同性格的猫走不同的路。", where: "traits 权重" },
-    { n: 11, text: "有活在跑的时候，反应只来自明确的任务事件，它不自己冒反应。", where: "emit · EVENTS map" },
-    { n: 12, text: "连续失败够多，它把警觉换回困和闷——盯活的劲头慢慢松了。", where: "emit task.fail · streak" }
+    { n: 1, text: "困到 0.34 就必须睡，不管你在不在忙。", where: "SLEEP.gate" },
+    { n: 2, text: "闲着会闷，巡视、扑咬、疯跑都是它排解无聊的办法。", where: "NEEDS.boredom.rise" },
+    { n: 3, text: "没人看的时候才会疯跑，被你撞见就装作在走路。", where: "ZOOMIES.gate" },
+    { n: 4, text: "反应可以打断它一两秒，但它的事还是那件事，不会因此换一件。", where: "tick / reaction" },
+    { n: 5, text: "眨眼、摆尾、耳朵转动都是小动作，不算换行为，也不进状态机。", where: "renderer (frame)" },
+    { n: 6, text: "夜里不一定睡，它跟着你的作息走，你熬夜它就陪着。", where: "SLEEP.score · nocturnal" },
+    { n: 7, text: "成功让它得意，失败让它炸毛；两种情绪都不会持续超过四秒，它不会一直记仇。", where: "CHEER / ALARM.apply" },
+    { n: 8, text: "习惯按 0.86 衰减累积，旧的印象会被新的盖过去，它不死记硬背。", where: "learner.decay" },
+    { n: 9, text: "进化只升不降。长大了就回不去了，别想它变回小猫。", where: "stageFor" },
+    { n: 10, text: "同一套匮乏，不同性格的猫走不同的路，每只都有自己的脾气。", where: "traits 权重" },
+    { n: 11, text: "有活在跑的时候，它只对明确的任务事件有反应，不会自己瞎起哄。", where: "emit · EVENTS map" },
+    { n: 12, text: "连续失败够多，它也会累，盯活的劲头慢慢松了，懒得再盯着你。", where: "emit task.fail · streak" }
   ];
 
   /* =======================================================================
