@@ -128,7 +128,8 @@ function emit(session, type, meta) {
     type: type,
     dir: meta.dir || dirName(),
     name: meta.name,
-    ms: meta.ms
+    ms: meta.ms,
+    kind: meta.kind
   });
   prof.xp = after.xp;
   prof.stage = after.stage;

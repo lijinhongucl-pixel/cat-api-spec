@@ -144,7 +144,7 @@ function publicProfile(p) {
   return {
     xp: p.xp, stage: p.stage, born: p.born,
     tasks: p.tasks, interactions: p.interactions,
-    projects: p.projects, commands: p.commands,
+    projects: p.projects, commands: p.commands, kinds: p.kinds || {},
     hours: p.hours.map(function (v) { return Math.round(v * 10) / 10; })
   };
 }
@@ -257,6 +257,7 @@ function cmdEmit(args) {
   var meta = {
     dir: rt.dirName(dir),
     name: args.flags.name || null,
+    kind: args.flags.kind || null,
     ms: args.flags.ms ? parseInt(args.flags.ms, 10) : null,
     streak: s.profile.tasks.streakFail
   };
@@ -311,7 +312,8 @@ function cmdRun(args) {
   var s = rt.open();
   var dir = process.cwd();
 
-  rt.emit(s, "task.start", { dir: rt.dirName(dir), name: label });
+  var kind = learner.inferKind(label, args.flags.kind);
+  rt.emit(s, "task.start", { dir: rt.dirName(dir), name: label, kind: kind });
 
   var child = cp.spawn(cmd[0], cmd.slice(1), { stdio: "inherit", shell: false });
 
@@ -320,7 +322,7 @@ function cmdRun(args) {
     var s2 = rt.open();
     var ev = code === 0 ? "task.ok" : "task.fail";
     var out = rt.emit(s2, ev, {
-      dir: rt.dirName(dir), name: label, ms: ms,
+      dir: rt.dirName(dir), name: label, ms: ms, kind: kind,
       streak: s2.profile.tasks.streakFail
     });
     var snap = out.after;
@@ -658,7 +660,7 @@ function cmdServe(args) {
         try { j = JSON.parse(body || "{}"); } catch (e) { j = {}; }
         var type = resolveEvent(j.type) || j.type;
         sync();
-        var out = rt.emit(s, type, { dir: j.dir, name: j.name, ms: j.ms });
+        var out = rt.emit(s, type, { dir: j.dir, name: j.name, ms: j.ms, kind: j.kind });
         send(res, 200, { ok: true, event: type, reaction: out.after.reaction, snapshot: out.after });
       });
       return;
@@ -797,6 +799,25 @@ function cmdSelftest(args) {
     p.tasks.total + " 件");
   ok("能说出至少一条习惯", learner.describe(p).length >= 2,
     learner.describe(p).length + " 条");
+
+  /* 4b. 活动类型：从命令名猜，显式传入优先，猜不出归 other */
+  ok("npm test 归为 test", learner.inferKind("npm test") === "test", learner.inferKind("npm test"));
+  ok("cargo build 归为 build", learner.inferKind("cargo build") === "build", learner.inferKind("cargo build"));
+  ok("git push 归为 ship（push 优先于 git）", learner.inferKind("git push origin main") === "ship",
+    learner.inferKind("git push origin main"));
+  ok("git status 归为 git", learner.inferKind("git status") === "git", learner.inferKind("git status"));
+  ok("显式 kind 覆盖命令名猜测", learner.inferKind("npm test", "ship") === "ship");
+  ok("无效 kind 回落到猜测", learner.inferKind("npm test", "bogus") === "test");
+  ok("猜不出的命令记为 other", learner.inferKind("frobnicate") === "other");
+  ok("没有命令名时不记类型", learner.inferKind("") === null);
+
+  var pk = learner.emptyProfile();
+  for (var kk = 0; kk < 12; kk++) {
+    learner.record(pk, { type: kk % 3 === 0 ? "task.fail" : "task.ok", dir: "demo", name: "deploy prod", ms: 9000 });
+  }
+  ok("活动类型计入 kinds", pk.kinds.ship && pk.kinds.ship.n === 12, JSON.stringify(pk.kinds));
+  ok("活动类型不改命令账", pk.commands["deploy prod"] && pk.commands["deploy prod"].n === 12);
+  ok("习惯里能说出活动类型", learner.describe(pk).some(function (it) { return it.key === "kind"; }));
 
   /* 5. 存档往返 */
   var dump = withEv.engine._state();

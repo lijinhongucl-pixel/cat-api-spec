@@ -41,6 +41,7 @@ function emptyProfile(now) {
     weekdays: new Array(7).fill(0),
     projects: {},
     commands: {},
+    kinds: {},
     interactions: { pet: 0, feed: 0, watch: 0 },
     milestones: []
   };
@@ -58,9 +59,11 @@ function normalize(p) {
   p.interactions = Object.assign({}, base.interactions, p.interactions || {});
   p.projects = p.projects || {};
   p.commands = p.commands || {};
+  p.kinds = p.kinds || {};
   p.milestones = p.milestones || [];
   return p;
 }
+
 
 function load() {
   return normalize(state.loadProfile() || emptyProfile());
@@ -84,6 +87,11 @@ function decayDays(p, days) {
     c.n *= f; c.ok *= f; c.fail *= f; c.ms *= f;
     if (c.n < 0.4) delete p.commands[k];
   });
+  Object.keys(p.kinds || {}).forEach(function (k) {
+    var kk = p.kinds[k];
+    kk.n *= f; kk.ok *= f; kk.fail *= f; kk.ms *= f;
+    if (kk.n < 0.4) delete p.kinds[k];
+  });
   Object.keys(p.projects).forEach(function (k) {
     var pr = p.projects[k];
     pr.hits *= f; pr.ok *= f; pr.fail *= f;
@@ -104,6 +112,44 @@ function maybeDecay(p, now) {
 /* ---------------- 记账 ---------------- */
 
 function bump(o, k, v) { o[k] = (o[k] || 0) + (v == null ? 1 : v); }
+
+/* ---------------- 活动类型 ----------------
+ * 同一条命令，写代码和跑测试对猫来说是两回事。
+ * kind 只是给档案多记一个维度，不参与计分，所以种子序列不变。
+ * 宿主可以显式传 kind；没传就从命令名猜。猜不出就记为 other。
+ */
+var KINDS = ["build", "test", "lint", "ship", "git", "install", "script", "research", "write", "other"];
+
+var KIND_RULES = [
+  { kind: "test",    re: /\b(test|spec|jest|vitest|pytest|mocha|cypress|playwright|selftest|rspec)\b|测试/i },
+  { kind: "lint",    re: /\b(lint|eslint|tslint|prettier|flake8|ruff|mypy|tsc|typecheck|fmt|format|clippy|check)\b/i },
+  { kind: "build",   re: /\b(build|compile|make|cargo\s+build|go\s+build|webpack|vite|rollup|esbuild|gradle|mvn|dev|start|serve)\b/i },
+  { kind: "ship",    re: /\b(deploy|publish|release|upload|push|docker|kubectl|helm|terraform|vercel|netlify|wrangler|scp|rsync)\b/i },
+  { kind: "git",     re: /^git\b|\bgit\s/i },
+  { kind: "install", re: /\b(install|add|npm\s+i|pnpm\s+i|yarn\s+add|pip\s+install|brew|apt|apt-get|cargo\s+add)\b/i },
+  { kind: "research",re: /\b(curl|wget|search|fetch|crawl|scrape)\b/i },
+  { kind: "write",   re: /\b(pandoc|markdown|md2|docx|pdf|latex|typst)\b/i },
+  { kind: "script",  re: /\b(node|python3?|bash|sh|zsh|ruby|perl|php)\b/i }
+];
+
+function normalizeKind(k) {
+  if (!k) return null;
+  k = String(k).toLowerCase().trim();
+  return KINDS.indexOf(k) !== -1 ? k : null;
+}
+
+/**
+ * 从命令名猜活动类型。显式传入的 kind 优先。
+ */
+function inferKind(name, explicit) {
+  var e = normalizeKind(explicit);
+  if (e) return e;
+  var s = String(name || "");
+  for (var i = 0; i < KIND_RULES.length; i++) {
+    if (KIND_RULES[i].re.test(s)) return KIND_RULES[i].kind;
+  }
+  return s ? "other" : null;
+}
 
 /**
  * 把一次事件写进档案。
@@ -138,6 +184,18 @@ function record(p, event) {
       c.n += 1;
       if (event.type === "task.ok") c.ok += 1; else c.fail += 1;
       if (typeof event.ms === "number" && event.ms > 0) c.ms += event.ms;
+    }
+  }
+
+  // 活动类型：同样只在任务结束时记成败和耗时
+  var kind = inferKind(name, event.kind);
+  if (kind && (event.type === "task.start" || event.type === "task.ok" || event.type === "task.fail")) {
+    if (!p.kinds) p.kinds = {};
+    var kk = p.kinds[kind] || (p.kinds[kind] = { n: 0, ok: 0, fail: 0, ms: 0 });
+    if (event.type === "task.ok" || event.type === "task.fail") {
+      kk.n += 1;
+      if (event.type === "task.ok") kk.ok += 1; else kk.fail += 1;
+      if (typeof event.ms === "number" && event.ms > 0) kk.ms += event.ms;
     }
   }
 
@@ -264,6 +322,20 @@ function describe(p) {
     });
   }
 
+  // 活动类型：你最常干哪类活，失败率多少
+  var kindKeys = Object.keys(p.kinds || {}).filter(function (k) { return p.kinds[k].n >= 3; });
+  if (kindKeys.length) {
+    kindKeys.sort(function (a, b) { return p.kinds[b].n - p.kinds[a].n; });
+    var kTop = kindKeys[0], kv = p.kinds[kTop];
+    var kFail = pct(kv.fail, kv.n);
+    out.push({
+      key: "kind",
+      confidence: Math.min(1, kv.n / 20),
+      text: "你最常干的是" + KIND_LABEL[kTop] + "（" + Math.round(kv.n) + " 次，挂 " + kFail + "%）。" +
+        (kFail >= 30 ? "这类活容易翻，我多陪一会儿。" : kTop === "ship" ? "上线的时候我在旁边坐着。" : "")
+    });
+  }
+
   // 关系
   if (p.interactions.pet + p.interactions.feed > 0) {
     out.push({
@@ -284,8 +356,17 @@ function describe(p) {
   return out;
 }
 
+var KIND_LABEL = {
+  build: "构建/启动", test: "跑测试", lint: "代码检查", ship: "部署上线",
+  git: "版本管理", install: "装依赖", script: "跑脚本", research: "抓取查资料",
+  write: "出文档", other: "杂活"
+};
+
 module.exports = {
   DECAY: DECAY,
+  KINDS: KINDS,
+  inferKind: inferKind,
+  normalizeKind: normalizeKind,
   emptyProfile: emptyProfile,
   normalize: normalize,
   load: load,
