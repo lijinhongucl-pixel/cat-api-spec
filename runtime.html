@@ -145,8 +145,19 @@
   .ts-slot.sel:not(.edge-r) { border-right-color: transparent; border-top-right-radius: 0; border-bottom-right-radius: 0; }
   .ts-result { margin-top: 8px; font-size: 11.5px; color: var(--accent); min-height: 18px; }
   /* 时段结果 */
-  .ts-schedule { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.9; }
+  .ts-schedule { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.9; }
   .ts-schedule .st { color: var(--accent); font-weight: 600; }
+  .ts-sim-title { font-size: 11.5px; color: var(--cap); letter-spacing: .04em; margin-bottom: 4px; }
+  .ts-sim-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .ts-sim-row .dot { margin: 0; }
+  .ts-sim-l { width: 36px; color: var(--ink); flex: none; }
+  .ts-sim-bar { flex: 1; height: 6px; background: var(--code-bg); border-radius: 100px; overflow: hidden; display: block; }
+  .ts-sim-bar > span { display: block; height: 100%; border-radius: 100px; transition: width .4s ease; }
+  .ts-sim-p { width: 38px; text-align: right; color: var(--cap); font-variant-numeric: tabular-nums; font-size: 11.5px; }
+  .ts-sim-note { margin-top: 8px; font-size: 11px; color: var(--cap); line-height: 1.7; }
+  /* 触屏上拖动选时段时不让页面滚走 */
+  .ts-grid { touch-action: none; }
+  .ds-pill { opacity: 1; }
 
   /* ---------- 卡片与表格 ---------- */
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 14px; }
@@ -749,7 +760,10 @@ POST /emit  {"type":"task.ok"}</pre>
     });
   }
 
-  /* ---------- 日程探索器：横向日期条 + 拖动选时段 ---------- */
+  /* ---------- 日程探索器：横向日期条 + 拖动选时段 ----------
+   * 选中一段时间后，用同一份引擎在该日该时段里跑一遍模拟（固定种子，2 秒步长），
+   * 统计这段时间里猫大多在干什么。不是硬编码的猜测。
+   * ----------------------------------------------------------------------- */
   var WEEK_NAMES = ["一", "二", "三", "四", "五", "六", "日"];
   var dsRow = document.getElementById("dsRow");
   var dsPill = document.getElementById("dsPill");
@@ -758,26 +772,32 @@ POST /emit  {"type":"task.ok"}</pre>
   var tsResult = document.getElementById("tsResult");
   var tsSchedule = document.getElementById("tsSchedule");
 
-  var SLOT_HOURS = 2;                 // 每格 2 小时，共 12 格覆盖 24 小时
+  var SLOT_HOURS = 2;                       // 每格 2 小时，12 格覆盖 24 小时
   var SLOT_COUNT = 24 / SLOT_HOURS;
-  var weekStart = startOfWeek(new Date());
-  var activeDay = 0;                  // 0..6，周一起算
-  var selA = -1, selB = -1;           // 当前选区（格子索引，闭区间）
+  var today = new Date();
+  var weekStart = startOfWeek(today);       // 当前显示的那一周的周一
+  var selectedDate = startOfDay(today);     // 选中的具体日期（跨周也保持）
+  var selA = -1, selB = -1;                 // 选中的格子区间（闭区间）
   var dragging = false, dragAnchor = -1;
+  var simCache = {};                        // 同一天同一段的模拟结果缓存
+
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
 
   function startOfWeek(d) {
-    var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    var dow = (x.getDay() + 6) % 7;   // 周一为 0
+    var x = startOfDay(d);
+    var dow = (x.getDay() + 6) % 7;         // 周一为 0
     x.setDate(x.getDate() - dow);
     return x;
   }
 
-  function fmtMonth(d) { return (d.getMonth() + 1) + " 月"; }
+  function pad(h) { return (h < 10 ? "0" : "") + h + ":00"; }
 
+  function sameDay(a, b) { return a.toDateString() === b.toDateString(); }
+
+  /* ---- 日期条 ---- */
   function renderDays() {
     if (!dsRow) return;
     dsRow.querySelectorAll(".ds-day").forEach(function (n) { n.remove(); });
-    var today = new Date();
     for (var i = 0; i < 7; i++) {
       var d = new Date(weekStart.getTime());
       d.setDate(d.getDate() + i);
@@ -785,32 +805,36 @@ POST /emit  {"type":"task.ok"}</pre>
       b.type = "button";
       b.className = "ds-day";
       b.setAttribute("data-i", i);
-      var isToday = d.toDateString() === today.toDateString();
+      b.setAttribute("aria-label", "周" + WEEK_NAMES[i] + " " + (d.getMonth() + 1) + " 月 " + d.getDate() + " 日");
       b.innerHTML = '<span class="dw">周' + WEEK_NAMES[i] + "</span>" +
         '<span class="dn">' + d.getDate() + "</span>" +
-        (isToday ? '<span class="dt">今</span>' : "");
-      if (i === activeDay) b.classList.add("on");
+        (sameDay(d, today) ? '<span class="dt">今</span>' : "");
+      if (sameDay(d, selectedDate)) b.classList.add("on");
       b.addEventListener("click", function () {
-        selectDay(parseInt(this.getAttribute("data-i"), 10));
+        var k = parseInt(this.getAttribute("data-i"), 10);
+        var nd = new Date(weekStart.getTime());
+        nd.setDate(nd.getDate() + k);
+        selectedDate = nd;
+        renderDays();
+        renderResult();
       });
       dsRow.appendChild(b);
     }
-    if (dsMonth) dsMonth.textContent = fmtMonth(weekStart);
+    if (dsMonth) dsMonth.textContent = (weekStart.getMonth() + 1) + " 月";
     movePill(false);
-  }
-
-  function selectDay(i) {
-    activeDay = i;
-    Array.prototype.forEach.call(dsRow.querySelectorAll(".ds-day"), function (n, k) {
-      n.classList.toggle("on", k === i);
-    });
-    movePill(true);
   }
 
   function movePill(animate) {
     if (!dsPill) return;
-    var target = dsRow.querySelectorAll(".ds-day")[activeDay];
-    if (!target) return;
+    var idx = -1;
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(weekStart.getTime());
+      d.setDate(d.getDate() + i);
+      if (sameDay(d, selectedDate)) idx = i;
+    }
+    var target = idx >= 0 ? dsRow.querySelectorAll(".ds-day")[idx] : null;
+    if (!target) { dsPill.style.opacity = "0"; return; }
+    dsPill.style.opacity = "1";
     if (!animate) dsPill.style.transition = "none";
     dsPill.style.left = target.offsetLeft + "px";
     dsPill.style.width = target.offsetWidth + "px";
@@ -820,7 +844,7 @@ POST /emit  {"type":"task.ok"}</pre>
     }
   }
 
-  // 横向滑动翻周：超过 50px 翻一周
+  // 横向滑动翻周：超过 50px 翻一周（鼠标与触屏都走 pointer 事件）
   if (dsRow) {
     var rowX = null;
     dsRow.addEventListener("pointerdown", function (e) { rowX = e.clientX; });
@@ -835,7 +859,7 @@ POST /emit  {"type":"task.ok"}</pre>
     dsRow.addEventListener("pointerleave", function () { rowX = null; });
   }
 
-  // 时段格子
+  /* ---- 时段格子 ---- */
   function buildSlots() {
     if (!tsGrid) return;
     tsGrid.innerHTML = "";
@@ -843,12 +867,10 @@ POST /emit  {"type":"task.ok"}</pre>
       var s = document.createElement("div");
       s.className = "ts-slot";
       s.setAttribute("data-i", i);
-      s.textContent = pad(i * SLOT_HOURS);
+      s.textContent = String(i * SLOT_HOURS).padStart(2, "0");
       tsGrid.appendChild(s);
     }
   }
-
-  function pad(h) { return (h < 10 ? "0" : "") + h + ":00"; }
 
   function slotAt(x, y) {
     var el = document.elementFromPoint(x, y);
@@ -856,31 +878,84 @@ POST /emit  {"type":"task.ok"}</pre>
     return s && tsGrid.contains(s) ? parseInt(s.getAttribute("data-i"), 10) : -1;
   }
 
-  function paintSelection() {
-    var slots = tsGrid.querySelectorAll(".ts-slot");
-    slots.forEach(function (s, i) {
+  // simulate=false 时只更新格子与区间文字（拖动中用，保证跟手）；
+  // simulate=true 才跑引擎模拟（松手后用，单次约 0.7 秒）。
+  function paintSelection(simulate) {
+    tsGrid.querySelectorAll(".ts-slot").forEach(function (s, i) {
       var on = selA >= 0 && i >= selA && i <= selB;
       s.classList.toggle("sel", on);
       s.classList.toggle("edge-l", on && i === selA);
       s.classList.toggle("edge-r", on && i === selB);
     });
-    renderResult();
+    renderResult(!!simulate);
   }
 
-  function renderResult() {
+  /* ---- 用引擎模拟这段时间 ----
+   * 从选中日的 00:00 开始，用固定种子跑完整一天（2 秒步长，和页面演示一致），
+   * 只统计落在所选时段内的行为时长。返回 {总时长, 各行为占比}。 */
+  function simulateWindow(dateKey, fromH, toH) {
+    var key = dateKey + "|" + fromH + "|" + toH;
+    if (simCache[key]) return simCache[key];
+
+    var base = new Date(dateKey + "T00:00:00").getTime();
+    var now = base;                            // 引擎通过 clock 读取"现在"
+    var eng = E.create({ seed: 20261018, clock: function () { return now; } });
+    var STEP = 2000;
+    var counts = {};
+    var total = 0;
+    var steps = (24 * 3600 * 1000) / STEP;
+    for (var n = 0; n < steps; n++) {
+      now = base + n * STEP;
+      eng.tick(STEP);
+      var h = new Date(now).getHours();
+      if (h >= fromH && h < toH) {
+        var snap = eng.snapshot(false);
+        counts[snap.behavior] = (counts[snap.behavior] || 0) + STEP;
+        total += STEP;
+      }
+    }
+    var out = { total: total, counts: counts };
+    simCache[key] = out;
+    return out;
+  }
+
+  function dateKeyOf(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function renderResult(simulate) {
     if (!tsResult || !tsSchedule) return;
+    var dayLabel = (selectedDate.getMonth() + 1) + " 月 " + selectedDate.getDate() + " 日";
     if (selA < 0) {
-      tsResult.textContent = "拖动格子选一段时间";
+      tsResult.textContent = dayLabel + " · 拖动格子选一段时间";
       tsSchedule.innerHTML = "";
       return;
     }
     var from = selA * SLOT_HOURS, to = (selB + 1) * SLOT_HOURS;
-    var hours = to - from;
-    tsResult.textContent = "已选 " + pad(from) + " — " + pad(to) + " · 共 " + hours + " 小时";
-    // 按时段给出猫在这段时间内的大致行为倾向（不改变引擎逻辑，仅为提示）
-    var hint = hours >= 8 ? "SLEEP" : from >= 18 ? "WATCH" : from < 8 ? "SLEEP" : "PATROL";
-    tsSchedule.innerHTML = '<span class="dot" style="background:' + colorOf(hint) + '"></span>' +
-      "猫大概率在这段时间：" + hint;
+    tsResult.textContent = dayLabel + " · " + pad(from) + " — " + pad(to) + " · 共 " + (to - from) + " 小时";
+    if (!simulate) {
+      tsSchedule.innerHTML = '<div class="ts-sim-note">松手后查看这段时间猫大多在干什么</div>';
+      return;
+    }
+
+    var sim = simulateWindow(dateKeyOf(selectedDate), from, to);
+    if (!sim.total) { tsSchedule.innerHTML = ""; return; }
+
+    // 按占比排序，取前三个
+    var rows = Object.keys(sim.counts).map(function (id) {
+      return { id: id, pct: Math.round((sim.counts[id] / sim.total) * 100) };
+    }).sort(function (a, b) { return b.pct - a.pct; }).slice(0, 3);
+
+    var html = '<div class="ts-sim-title">这段时间，猫大多在：</div>';
+    rows.forEach(function (r) {
+      var label = (E.BEHAVIOR_MAP[r.id] || {}).label || r.id;
+      html += '<div class="ts-sim-row"><span class="dot" style="background:' + colorOf(r.id) + '"></span>' +
+        '<span class="ts-sim-l">' + label + '</span>' +
+        '<span class="ts-sim-bar"><span style="width:' + r.pct + '%;background:' + colorOf(r.id) + '"></span></span>' +
+        '<span class="ts-sim-p">' + r.pct + '%</span></div>';
+    });
+    html += '<div class="ts-sim-note">按这一天的引擎模拟（同一种子），不是对你真实行为的预测。</div>';
+    tsSchedule.innerHTML = html;
   }
 
   if (tsGrid) {
@@ -891,8 +966,8 @@ POST /emit  {"type":"task.ok"}</pre>
       dragging = true;
       dragAnchor = i;
       selA = selB = i;
-      paintSelection();
-      tsGrid.setPointerCapture && tsGrid.setPointerCapture(e.pointerId);
+      paintSelection(false);
+      if (tsGrid.setPointerCapture) tsGrid.setPointerCapture(e.pointerId);
     });
     tsGrid.addEventListener("pointermove", function (e) {
       if (!dragging) return;
@@ -900,16 +975,20 @@ POST /emit  {"type":"task.ok"}</pre>
       if (i < 0) return;
       selA = Math.min(dragAnchor, i);
       selB = Math.max(dragAnchor, i);
-      paintSelection();
+      paintSelection(false);
     });
-    var endDrag = function () { dragging = false; };
+    var endDrag = function () {
+      if (!dragging) return;
+      dragging = false;
+      if (selA >= 0) paintSelection(true);   // 松手才跑一次模拟
+    };
     tsGrid.addEventListener("pointerup", endDrag);
     tsGrid.addEventListener("pointercancel", endDrag);
   }
 
   buildSlots();
   renderDays();
-  paintSelection();
+  paintSelection(false);
 
   render();
 })();
