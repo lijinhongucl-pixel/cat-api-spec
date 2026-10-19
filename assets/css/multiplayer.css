@@ -378,6 +378,58 @@
 }
 .mp-bowl-stats b { color: #1B3A2E; }
 
+/* ===== 撕线面板：投喂记录 ===== */
+.mp-bowl-tear-handle {
+  margin: 8px -14px -10px;
+  padding: 6px 14px;
+  text-align: center;
+  cursor: grab;
+  border-top: 1.5px dashed #C8A35E;
+  user-select: none;
+  touch-action: none;
+  position: relative;
+}
+.mp-bowl-tear-handle:active { cursor: grabbing; }
+.mp-bowl-tear-text {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #8A6A34;
+  font-weight: 500;
+}
+.mp-bowl-tear-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  margin: 0 -14px -10px;
+}
+.mp-bowl-tear-open .mp-bowl-tear-body {
+  max-height: 180px;
+}
+.mp-bowl-feed-list {
+  padding: 8px 14px 12px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.mp-bowl-feed-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.06);
+}
+.mp-bowl-feed-row:last-child { border-bottom: none; }
+.mp-bowl-feed-row .t { color: #888780; font-family: "SF Mono", Menlo, monospace; font-size: 10px; min-width: 36px; }
+.mp-bowl-feed-row .n { color: #2C2C2A; flex: 1; }
+.mp-bowl-feed-row .d { color: #C8A35E; font-weight: 600; }
+.mp-bowl-feed-empty {
+  text-align: center;
+  padding: 12px 0;
+  font-size: 11px;
+  color: #888780;
+  font-style: italic;
+}
+
 /* 猫碗满了之后的特效：边框变金、按钮变金色 */
 .mp-bowl-widget.mp-bowl-full {
   border-color: #ffd700;

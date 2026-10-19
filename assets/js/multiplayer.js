@@ -740,7 +740,7 @@
   var BOWL_RESET_HOUR = 4;   // 凌晨 4 点重置
   var BOWL_CLOUD_TABLE = 'bowl_feeds';  // 云数据库表名
 
-  var bowlState = { level: 0, totalFed: 0, lastReset: 0, legendaryUnlocked: false };
+  var bowlState = { level: 0, totalFed: 0, lastReset: 0, legendaryUnlocked: false, feedLog: [] };
   var bowlWidgetEl = null;
   var bowlCloudReady = false;  // 云端数据是否已拉取完成
   var bowlCloudSyncing = false;  // 防止并发查询
@@ -793,6 +793,7 @@
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed.level === 'number') {
           bowlState = parsed;
+          if (!Array.isArray(bowlState.feedLog)) bowlState.feedLog = [];
         }
       }
     } catch (e) {}
@@ -804,6 +805,7 @@
       // 过了今天的凌晨 4 点，重置
       bowlState.level = 0;
       bowlState.lastReset = Date.now();
+      bowlState.feedLog = [];  // 清空投喂记录
       saveBowlState();
     } else if (!bowlState.lastReset) {
       bowlState.lastReset = Date.now();
@@ -828,6 +830,35 @@
         renderBowlWidget();
       }
     });
+  }
+
+  function logFeed(delta, name) {
+    if (!bowlState.feedLog) bowlState.feedLog = [];
+    var now = new Date();
+    var hh = String(now.getHours()).padStart(2, '0');
+    var mm = String(now.getMinutes()).padStart(2, '0');
+    bowlState.feedLog.unshift({ t: hh + ':' + mm, n: name, d: delta });
+    if (bowlState.feedLog.length > 12) bowlState.feedLog.length = 12;
+    saveBowlState();
+    renderFeedLog();
+  }
+
+  function renderFeedLog() {
+    if (!bowlWidgetEl) return;
+    var listEl = bowlWidgetEl.querySelector('.mp-bowl-feed-list');
+    if (!listEl) return;
+    var log = bowlState.feedLog || [];
+    if (!log.length) {
+      listEl.innerHTML = '<div class="mp-bowl-feed-empty">今天还没有投喂记录</div>';
+      return;
+    }
+    listEl.innerHTML = log.map(function (f) {
+      return '<div class="mp-bowl-feed-row">' +
+        '<span class="t">' + f.t + '</span>' +
+        '<span class="n">' + (f.n || '路人') + '</span>' +
+        '<span class="d">+' + f.d + '</span>' +
+        '</div>';
+    }).join('');
   }
 
   function saveBowlState() {
@@ -857,6 +888,7 @@
     if (typeof payload.delta !== 'number') return;
     bowlState.totalFed += payload.delta;
     setBowlLevel(bowlState.level + payload.delta, true);
+    logFeed(payload.delta, payload.name || '路人');
     // 不弹 toast——避免每次投喂都刷屏；只在进度条上做视觉反馈
   }
 
@@ -865,6 +897,7 @@
     // 本地乐观更新 + 广播（实时性）
     bowlState.totalFed += delta;
     setBowlLevel(bowlState.level + delta, false);
+    logFeed(delta, '我');
     saveBowlState();
     // 云端持久化（source of truth）——异步 best-effort
     var feederName = (identity && identity.name) || null;
@@ -926,6 +959,12 @@
       '</div>' +
       '<div class="mp-bowl-stats">' +
         '<span class="mp-bowl-total">累计 <b>0</b></span>' +
+      '</div>' +
+      '<div class="mp-bowl-tear-handle" role="button" tabindex="0" aria-label="展开投喂记录">' +
+        '<span class="mp-bowl-tear-text">投喂记录</span>' +
+      '</div>' +
+      '<div class="mp-bowl-tear-body">' +
+        '<div class="mp-bowl-feed-list"></div>' +
       '</div>';
     document.body.appendChild(bowlWidgetEl);
     // 绑定投喂按钮
@@ -942,6 +981,66 @@
         if (bowlWidgetEl) bowlWidgetEl.classList.add('mp-hidden');
       });
     }
+
+    // 撕线面板：下拉展开投喂记录，松手回弹
+    var tearHandle = bowlWidgetEl.querySelector('.mp-bowl-tear-handle');
+    var tearBody = bowlWidgetEl.querySelector('.mp-bowl-tear-body');
+    if (tearHandle && tearBody) {
+      var tearDragging = false, tearStartY = 0, tearCurH = 0;
+      var TEAR_OPEN_H = 180; // 展开高度
+
+      function tearOpen() {
+        bowlWidgetEl.classList.add('mp-bowl-tear-open');
+        tearBody.style.maxHeight = '';
+        renderFeedLog();
+      }
+      function tearClose() {
+        bowlWidgetEl.classList.remove('mp-bowl-tear-open');
+        tearBody.style.maxHeight = '';
+      }
+
+      tearHandle.addEventListener('pointerdown', function (e) {
+        tearDragging = true;
+        tearStartY = e.clientY;
+        tearCurH = bowlWidgetEl.classList.contains('mp-bowl-tear-open') ? TEAR_OPEN_H : 0;
+        tearBody.style.transition = 'none';
+        tearHandle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+      tearHandle.addEventListener('pointermove', function (e) {
+        if (!tearDragging) return;
+        var dy = e.clientY - tearStartY;
+        var h = Math.max(0, Math.min(TEAR_OPEN_H + 20, tearCurH + dy));
+        tearBody.style.maxHeight = h + 'px';
+      });
+      tearHandle.addEventListener('pointerup', function (e) {
+        if (!tearDragging) return;
+        tearDragging = false;
+        tearBody.style.transition = '';
+        var dy = e.clientY - tearStartY;
+        if (bowlWidgetEl.classList.contains('mp-bowl-tear-open')) {
+          if (dy < -30) tearClose();
+        } else {
+          if (dy > 30) tearOpen();
+        }
+        tearBody.style.maxHeight = '';
+      });
+      // 点击也切换（无障碍）
+      tearHandle.addEventListener('click', function () {
+        if (Math.abs(0) < 3) {
+          if (bowlWidgetEl.classList.contains('mp-bowl-tear-open')) tearClose();
+          else tearOpen();
+        }
+      });
+      tearHandle.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (bowlWidgetEl.classList.contains('mp-bowl-tear-open')) tearClose();
+          else tearOpen();
+        }
+      });
+    }
+
     return bowlWidgetEl;
   }
 
