@@ -27,6 +27,16 @@ function today(now) {
   return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
 }
 
+/* daily 的键用零填充格式，方便按字符串比较日期先后 */
+function dayKey(now) {
+  var d = now || new Date();
+  return d.getFullYear() + "-" +
+    String(d.getMonth() + 1).padStart(2, "0") + "-" +
+    String(d.getDate()).padStart(2, "0");
+}
+
+var DAILY_KEEP = 21;
+
 function emptyProfile(now) {
   var d = now || new Date();
   return {
@@ -42,6 +52,8 @@ function emptyProfile(now) {
     projects: {},
     commands: {},
     kinds: {},
+    kindOverrides: {},
+    daily: {},
     interactions: { pet: 0, feed: 0, watch: 0 },
     milestones: []
   };
@@ -60,6 +72,8 @@ function normalize(p) {
   p.projects = p.projects || {};
   p.commands = p.commands || {};
   p.kinds = p.kinds || {};
+  p.kindOverrides = p.kindOverrides || {};
+  p.daily = p.daily || {};
   p.milestones = p.milestones || [];
   return p;
 }
@@ -139,17 +153,23 @@ function normalizeKind(k) {
 }
 
 /**
- * 从命令名猜活动类型。显式传入的 kind 优先。
+ * 从命令名猜活动类型。优先级：显式 kind > 你教过的纠正 > 正则猜测。
+ * overrides 是 { "命令名": "类型" }，由 catctl teach-kind 写入档案。
  */
-function inferKind(name, explicit) {
+function inferKind(name, explicit, overrides) {
   var e = normalizeKind(explicit);
   if (e) return e;
   var s = String(name || "");
+  if (overrides && overrides[s]) {
+    var o = normalizeKind(overrides[s]);
+    if (o) return o;
+  }
   for (var i = 0; i < KIND_RULES.length; i++) {
     if (KIND_RULES[i].re.test(s)) return KIND_RULES[i].kind;
   }
   return s ? "other" : null;
 }
+
 
 /**
  * 把一次事件写进档案。
@@ -188,7 +208,7 @@ function record(p, event) {
   }
 
   // 活动类型：同样只在任务结束时记成败和耗时
-  var kind = inferKind(name, event.kind);
+  var kind = inferKind(name, event.kind, p.kindOverrides);
   if (kind && (event.type === "task.start" || event.type === "task.ok" || event.type === "task.fail")) {
     if (!p.kinds) p.kinds = {};
     var kk = p.kinds[kind] || (p.kinds[kind] = { n: 0, ok: 0, fail: 0, ms: 0 });
@@ -197,6 +217,22 @@ function record(p, event) {
       if (event.type === "task.ok") kk.ok += 1; else kk.fail += 1;
       if (typeof event.ms === "number" && event.ms > 0) kk.ms += event.ms;
     }
+  }
+
+  // 按天记一份，只留最近 DAILY_KEEP 天，供周变化对比
+  if (event.type === "task.ok" || event.type === "task.fail") {
+    if (!p.daily) p.daily = {};
+    var dk = dayKey(now);
+    var day = p.daily[dk] || (p.daily[dk] = { n: 0, ok: 0, fail: 0, kinds: {} });
+    day.n += 1;
+    if (event.type === "task.ok") day.ok += 1; else day.fail += 1;
+    if (kind) {
+      var dkk = day.kinds[kind] || (day.kinds[kind] = { n: 0, ok: 0, fail: 0 });
+      dkk.n += 1;
+      if (event.type === "task.ok") dkk.ok += 1; else dkk.fail += 1;
+    }
+    var days = Object.keys(p.daily).sort();
+    while (days.length > DAILY_KEEP) { delete p.daily[days.shift()]; }
   }
 
   if (event.type === "task.ok" || event.type === "task.fail") {
@@ -243,6 +279,33 @@ function peakHours(p, span) {
 }
 
 function fmtHour(h) { return String(h).padStart(2, "0") + ":00"; }
+
+/**
+ * 把最近 14 天切成「本周」（后 7 天）和「上周」（前 7 天），各自汇总任务数与各类型成败。
+ */
+function weekWindows(p, now) {
+  var keys = [];
+  for (var i = 13; i >= 0; i--) {
+    var d = new Date(now || Date.now());
+    d.setDate(d.getDate() - i);
+    keys.push(dayKey(d));
+  }
+  function sum(ks) {
+    var out = { n: 0, ok: 0, fail: 0, kinds: {} };
+    ks.forEach(function (k) {
+      var day = (p.daily || {})[k];
+      if (!day) return;
+      out.n += day.n; out.ok += day.ok; out.fail += day.fail;
+      Object.keys(day.kinds || {}).forEach(function (kk) {
+        var s = day.kinds[kk];
+        var t = out.kinds[kk] || (out.kinds[kk] = { n: 0, ok: 0, fail: 0 });
+        t.n += s.n; t.ok += s.ok; t.fail += s.fail;
+      });
+    });
+    return out;
+  }
+  return { cur: sum(keys.slice(7)), prev: sum(keys.slice(0, 7)) };
+}
 
 /**
  * 用中文说出它学到了什么。每条带一个置信度，低置信度的话说得轻一点。
@@ -336,6 +399,39 @@ function describe(p) {
     });
   }
 
+  // 周变化：最近 7 天 vs 之前 7 天。猫看得出你这一周有没有变化。
+  var w = weekWindows(p);
+  if (w.cur.n + w.prev.n >= 3) {
+    var parts = [];
+    var dN = w.cur.n - w.prev.n;
+    if (dN >= 1) parts.push("这周干了 " + w.cur.n + " 件，比上周多 " + dN + " 件，没歇着啊");
+    else if (dN <= -1) parts.push("这周只干了 " + w.cur.n + " 件，比上周少 " + (-dN) + " 件。……歇歇也行");
+
+    // 哪类活失败变多了（优先说具体的），否则说总体
+    var worst = null;
+    Object.keys(w.cur.kinds).forEach(function (k) {
+      var c = w.cur.kinds[k];
+      var pv = w.prev.kinds[k] || { n: 0, fail: 0 };
+      var d = c.fail - pv.fail;
+      if (d >= 1 && c.n >= 2 && (!worst || d > worst.d)) worst = { kind: k, d: d };
+    });
+    if (worst) {
+      parts.push("「" + (KIND_LABEL[worst.kind] || worst.kind) + "」多挂了 " + worst.d + " 回，我不问，我趴着");
+    } else {
+      var dFail = w.cur.fail - w.prev.fail;
+      if (dFail >= 1) parts.push("一共多挂了 " + dFail + " 回");
+      else if (dFail <= -1) parts.push("比上周少挂 " + (-dFail) + " 回，手稳了点");
+    }
+
+    if (parts.length) {
+      out.push({
+        key: "weekly",
+        confidence: Math.min(1, (w.cur.n + w.prev.n) / 12),
+        text: parts.join("；") + "。"
+      });
+    }
+  }
+
   // 关系
   if (p.interactions.pet + p.interactions.feed > 0) {
     out.push({
@@ -375,5 +471,7 @@ module.exports = {
   record: record,
   maybeDecay: maybeDecay,
   describe: describe,
+  weekWindows: weekWindows,
+  dayKey: dayKey,
   peakHours: peakHours
 };

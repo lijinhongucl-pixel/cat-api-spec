@@ -46,6 +46,14 @@
 
   function isNight(hour) { return hour >= 23 || hour < 5; }
 
+  // 由种子推一个稳定的 0.25..0.75：还没认识你的时候，每只猫先有个自己的脾气
+  function seedTrait(seed, salt) {
+    if (seed == null) return 0.5;
+    var h = Math.abs(Math.sin(seed * 12.9898 + salt * 78.233) * 43758.5453);
+    var f = h - Math.floor(h);
+    return +(0.25 + f * 0.50).toFixed(3);
+  }
+
   /* =======================================================================
    * 1. 匮乏（needs）
    * -----------------------------------------------------------------------
@@ -113,7 +121,10 @@
       score: function (s) {
         var n = s.needs;
         // 这是保底项。什么都不想干的时候，猫就是这个姿势。
-        return 0.55 + 0.26 * n.fatigue - 0.22 * n.boredom + 0.08 * s.mood;
+        var sc = 0.55 + 0.26 * n.fatigue - 0.22 * n.boredom + 0.08 * s.mood;
+        // 傲娇的猫更爱瘫着，俏皮的多半待不住
+        sc += 0.12 * s.traits.tsundere - 0.10 * s.traits.playful;
+        return sc;
       },
       lines: ["……", "瘫着才是我的本职工作。", "我不动，但我醒着，别误会。", "这块太阳是我的了。"]
     },
@@ -123,7 +134,9 @@
       gate: function (s) { return s.needs.fatigue < 0.80; },
       score: function (s) {
         // 舔毛是在"没别的事"和"心情不错"之间出现的：低成本的自娱
-        return 0.30 + 0.46 * (1 - s.needs.boredom) * (1 - s.needs.fatigue * 0.6) + 0.18 * Math.max(0, s.mood);
+        var sc = 0.30 + 0.46 * (1 - s.needs.boredom) * (1 - s.needs.fatigue * 0.6) + 0.18 * Math.max(0, s.mood);
+        sc += 0.10 * s.traits.tsundere;   // 傲娇的猫靠舔毛装作很忙
+        return sc;
       },
       lines: ["从爪子开始，顺序不能乱。", "才不是在害羞。", "刚才碰到了脏东西，得擦掉。", "打结了一根，烦人。"]
     },
@@ -146,7 +159,8 @@
       gate: function (s) { return s.needs.fatigue < 0.66 && s.needs.boredom > 0.30; },
       score: function (s) {
         var n = s.needs;
-        return 0.08 + 0.82 * n.boredom * (1 - n.fatigue) + 0.50 * n.alertness;
+        return 0.08 + 0.82 * n.boredom * (1 - n.fatigue) + 0.50 * n.alertness +
+          0.14 * s.traits.playful;
       },
       lines: ["（扑！）", "这个能不能吃？", "抓住你了，还不服？", "再丢一次，就一次。"]
     },
@@ -160,7 +174,8 @@
       },
       score: function (s) {
         var n = s.needs;
-        return 0.05 + 1.10 * n.boredom * (1 - n.fatigue) - 0.45 * n.loneliness;
+        return 0.05 + 1.10 * n.boredom * (1 - n.fatigue) - 0.45 * n.loneliness +
+          0.12 * s.traits.playful;
       },
       lines: ["！！！", "（一串模糊的残影）", "凌晨三点，我最有精神。", "别问，问就是跑着玩。"]
     },
@@ -182,6 +197,8 @@
         sc += 0.30 * s.habit;
         // debug 型主人的猫，失败以后不吵，就这么趴着看
         if (s.traits.debugger > 0.55) sc += 0.18;
+        // 傲娇的猫盯着你，但不承认是在看你
+        sc += 0.12 * s.traits.tsundere;
         return sc;
       },
       lines: ["我在看，别多想。", "还没跑完，我盯着呢。", "别按第二次，我说了我在看。", "光标在动，我的注意力也在动。"]
@@ -197,7 +214,10 @@
       id: "SCRATCH", label: "磨爪", pose: "scratch",
       min: 9000, max: 45000,
       gate: function (s) { return s.needs.fatigue < 0.62; },
-      score: function (s) { return 0.16 + 0.55 * s.needs.boredom * (1 - s.needs.fatigue * 0.4); },
+      score: function (s) {
+        return 0.16 + 0.55 * s.needs.boredom * (1 - s.needs.fatigue * 0.4) +
+          0.08 * s.traits.playful;
+      },
       lines: ["这个角正好，不是你的椅子。", "（沙沙声，很有节奏）", "磨爪是正事，别笑。"]
     },
     {
@@ -207,14 +227,18 @@
         // 准则四：进去了就不出来。低概率，但一旦进去就是半小时起
         return s.needs.boredom > 0.45 && s.rnd() < 0.030;
       },
-      score: function (s) { return 0.28 + 0.45 * s.needs.boredom; },
+      score: function (s) { return 0.28 + 0.45 * s.needs.boredom + 0.08 * s.traits.tsundere; },
       lines: ["……", "（纸箱里传来一点动静）", "我在这儿，别找，找也不给你看。", "尺寸刚好，别来打扰。"]
     },
     {
       id: "KNEAD", label: "踩奶", pose: "knead",
       min: 5000, max: 16000,
       gate: function (s) { return s.mood > 0.30 && s.needs.loneliness > 0.35 && s.needs.fatigue < 0.7; },
-      score: function (s) { return 0.08 + 0.70 * Math.max(0, s.mood) * s.needs.loneliness; },
+      score: function (s) {
+        // 踩奶是最不设防的动作：傲娇的猫不肯当你面踩，俏皮的随时踩
+        return 0.08 + 0.70 * Math.max(0, s.mood) * s.needs.loneliness +
+          0.10 * s.traits.playful - 0.16 * s.traits.tsundere;
+      },
       lines: ["（左右左右）", "这块软，我很满意。", "……别动，我还没踩完。"]
     }
   ];
@@ -311,7 +335,7 @@
     { n: 7, text: "成功让它得意，失败让它炸毛；两种情绪都不会持续超过四秒，它不会一直记仇。", where: "CHEER / ALARM.apply" },
     { n: 8, text: "习惯按 0.86 衰减累积，旧的印象会被新的盖过去，它不死记硬背。", where: "learner.decay" },
     { n: 9, text: "进化只升不降。长大了就回不去了，别想它变回小猫。", where: "stageFor" },
-    { n: 10, text: "同一套匮乏，不同性格的猫走不同的路，每只都有自己的脾气。", where: "traits 权重" },
+    { n: 10, text: "同一套匮乏，不同性格的猫走不同的路——傲娇的多瘫着盯活，俏皮的多疯跑撒娇。", where: "traits 权重 · tsundere / playful" },
     { n: 11, text: "有活在跑的时候，它只对明确的任务事件有反应，不会自己瞎起哄。", where: "emit · EVENTS map" },
     { n: 12, text: "连续失败够多，它也会累，盯活的劲头慢慢松了，懒得再盯着你。", where: "emit task.fail · streak" }
   ];
@@ -328,7 +352,7 @@
     opts = opts || {};
     var rnd = mulberry32(opts.seed == null ? (Date.now() % 2147483647) : opts.seed);
     var profile = opts.profile || {};
-    var traits = opts.traits || deriveTraits(profile);
+    var traits = opts.traits || deriveTraits(profile, opts.seed);
     var clock = opts.clock || function () { return Date.now(); };
 
     var s = {
@@ -642,7 +666,7 @@
 
       /* --- 直接读内部（测试用） --- */
       _state: function () { return s; },
-      setProfile: function (p) { profile = p; s.traits = deriveTraits(p); s.habit = habitAt(s.hour); }
+      setProfile: function (p) { profile = p; s.traits = deriveTraits(p, opts.seed); s.habit = habitAt(s.hour); }
     };
 
     return eng;
@@ -673,7 +697,7 @@
    * 没有学习数据时给一组中间值，猫就按"平均人"来活。
    * ===================================================================== */
 
-  function deriveTraits(profile) {
+  function deriveTraits(profile, seed) {
     profile = profile || {};
     var hours = profile.hours || null;
     var nocturnal = 0, total = 0;
@@ -697,10 +721,27 @@
       : 0.12;
     var dbg = clamp(failRate / 0.45, 0, 1);
 
+    // 俏皮：你陪它玩得越多，它越放得开。没数据就按种子。
+    var inter = profile.interactions || {};
+    var played = (inter.pet || 0) + (inter.feed || 0) + (inter.watch || 0);
+    var taskN = (profile.tasks && profile.tasks.total) || 0;
+    var playful = (played + taskN) > 0
+      ? clamp(played / Math.max(6, taskN * 0.6), 0, 1)
+      : seedTrait(seed, 7);
+
+    // 傲娇：老在夜里陪你、老看你失败、或者活儿不断却从不陪它玩的猫，
+    // 都会学会假装不在乎。没数据就按种子。
+    var workNoPlay = clamp(1 - played / Math.max(4, taskN * 0.3), 0, 1);
+    var tsundere = taskN >= 8
+      ? clamp(noct * 0.5 + dbg * 0.3 + workNoPlay * 0.4, 0, 1)
+      : seedTrait(seed, 13);
+
     var traits = {
       nocturnal: +noct.toFixed(3),
       sprinter: +sprinter.toFixed(3),
-      debugger: +dbg.toFixed(3)
+      debugger: +dbg.toFixed(3),
+      playful: +playful.toFixed(3),
+      tsundere: +tsundere.toFixed(3)
     };
     // teach 手动纠正的优先级高于统计推断
     if (profile.override && profile.override.traits) {

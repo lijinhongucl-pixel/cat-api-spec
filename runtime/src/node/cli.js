@@ -93,7 +93,8 @@ function help() {
     "    catctl log  [--kind test] [--fail] [-n 20]  最近发生过什么（可按类型或失败筛）",
     "    catctl run -- <命令> [--kind ship]  包住命令；--kind 手动指定活动类型（否则从命令名猜）",
     "    catctl emit <事件> [--kind <类型>] [--name ..] [--ms ..]  宿主手动报活（WorkBuddy/Codex 用）",
-    "    catctl teach <维度> <0..1>    手动作风纠正（少年猫起）",
+    "    catctl teach <维度> <0..1>    手动作风纠正（少年猫起）：nocturnal/sprinter/debugger/playful/tsundere",
+    "    catctl teach-kind <命令> <类型>  纠正某条命令的活动类型（少年猫起）",
     "    catctl serve [--port 9177]     开一个只听 127.0.0.1 的 HTTP 口子",
     "    catctl selftest               跑一遍不变量自测",
     "    catctl reset --yes            清空这只猫，重来",
@@ -174,14 +175,51 @@ function cmdWatch(args) {
   var running = true;
   var uni = !!args.flags.unicode;
   var dirty = false;
+  var evoStage = s.engine.snapshot().stage;
+  var evo = null;            // 正在演进化时不为 null
+  var microPose = null;      // 正在演的微动作表情
+  var microUntil = 0;
+
+  var FOOT = "  " + A.C.grey + "空格 摸它 · f 喂 · l 激光笔 · q 退出" + A.C.reset + "\n";
+
+  function paint(snap, opts, extra) {
+    process.stdout.write("\u001b[H\u001b[2J" +
+      A.renderPanel(snap, opts) + "\n" + (extra || "") + FOOT);
+  }
+
+  /* 进化仪式：五帧播完再回到正常呼吸帧 */
+  function startEvolution(to) {
+    evo = { frames: A.evolutionFrames(to), i: 0 };
+    var step = function () {
+      if (!evo) return;
+      var f = evo.frames[evo.i];
+      var banner = f.phase === "done"
+        ? "  " + A.C.gold + "进化了！现在是 Lv." + (to + 1) + " " +
+          (s.engine.snapshot().stageName || "") + A.C.reset + "\n"
+        : "  " + A.C.grey + "……它正在变" + A.C.reset + "\n";
+      paint(s.engine.snapshot(), { unicode: uni, frame: 0, sprite: f.lines }, banner);
+      evo.i++;
+      if (evo.i >= evo.frames.length) {
+        setTimeout(function () { evo = null; draw(); }, 900);   // 「进化了」多停一会儿
+      }
+      else setTimeout(step, 420);
+    };
+    step();
+  }
 
   function draw() {
+    if (evo) return;                       // 仪式演着，不抢画面
     var snap = s.engine.snapshot();
+    if (snap.stage !== evoStage) {          // 升级了，先演仪式
+      evoStage = snap.stage;
+      startEvolution(snap.stage);
+      return;
+    }
     frame++;
-    var out = "\u001b[H\u001b[2J" +
-      A.renderPanel(snap, { unicode: uni, frame: Math.floor(frame / 3) % 2 }) + "\n" +
-      "  " + A.C.grey + "空格 摸它 · f 喂 · q 退出" + A.C.reset + "\n";
-    process.stdout.write(out);
+    var opts = { unicode: uni, frame: Math.floor(frame / 3) % 2 };
+    // 微动作：没有反应盖着的时候才演，演完回到原来的事上
+    if (!snap.reaction && microPose && Date.now() < microUntil) opts.pose = microPose;
+    paint(snap, opts, "");
   }
 
   function tick() {
@@ -189,6 +227,11 @@ function cmdWatch(args) {
     var dt = now - lastReal;
     lastReal = now;
     rt.advance(s.engine, dt);
+    // 偶尔做一个微动作表情（准则五：小动作，不进状态机）
+    if (Math.random() < 0.05) {
+      microPose = A.MICRO[Math.floor(Math.random() * A.MICRO.length)];
+      microUntil = now + 2600;
+    }
     if (dirty) { rt.save(s); dirty = false; }
   }
 
@@ -340,7 +383,7 @@ function cmdRun(args) {
   var s = rt.open();
   var dir = process.cwd();
 
-  var kind = learner.inferKind(label, args.flags.kind);
+  var kind = learner.inferKind(label, args.flags.kind, s.profile.kindOverrides);
   rt.emit(s, "task.start", { dir: rt.dirName(dir), name: label, kind: kind });
 
   // stderr 走管道：原样转发到终端，同时只留最后几行，失败时记进事件，方便 catctl log 看
@@ -582,7 +625,9 @@ function cmdLearn(args) {
   var t = s.engine.snapshot().traits;
   process.stdout.write("\n  " + c.grey + "性格  夜行 " + Math.round(t.nocturnal * 100) +
     "% · 碎步 " + Math.round(t.sprinter * 100) +
-    "% · 调试 " + Math.round(t.debugger * 100) + "%" + c.reset + "\n\n");
+    "% · 调试 " + Math.round(t.debugger * 100) +
+    "%\n        傲娇 " + Math.round(t.tsundere * 100) +
+    "% · 俏皮 " + Math.round(t.playful * 100) + "%" + c.reset + "\n\n");
   return 0;
 }
 
@@ -590,13 +635,52 @@ function cmdLearn(args) {
  * teach
  * ======================================================================= */
 
+/* =========================================================================
+ * teach-kind —— 纠正某条命令被猜成的活动类型
+ * ======================================================================= */
+
+function cmdTeachKind(args) {
+  var name = args.positional[0];
+  var kind = args.positional[1];
+
+  if (!name || !kind) {
+    process.stderr.write("用法：catctl teach-kind <命令名> <类型>\n");
+    process.stderr.write("例：catctl teach-kind \"npm run deploy\" ship\n");
+    process.stderr.write("类型：" + learner.KINDS.join(" · ") + "\n");
+    return 2;
+  }
+  if (name.length > 200) {
+    process.stderr.write("命令名太长了，截到 200 字以内。\n");
+    return 2;
+  }
+  var k = learner.normalizeKind(kind);
+  if (!k) {
+    process.stderr.write("不认识这个类型：" + kind + "（可用：" + learner.KINDS.join(" · ") + "）\n");
+    return 2;
+  }
+
+  var s = rt.open();
+  if (s.engine.snapshot().stage < 1) {
+    process.stderr.write("还是奶猫，教不会。多跑几件活（150xp）再来。\n");
+    return 1;
+  }
+
+  s.profile.kindOverrides = s.profile.kindOverrides || {};
+  s.profile.kindOverrides[name] = k;
+  learner.save(s.profile);
+
+  process.stdout.write("  " + A.C.green + "记住了" + A.C.reset + "  「" + name + "」 → " +
+    (learner.KIND_LABEL[k] || k) + "（以后这条命令按这个算）\n");
+  return 0;
+}
+
 function cmdTeach(args) {
   var key = args.positional[0];
   var val = parseFloat(args.positional[1]);
-  var dims = { nocturnal: "夜行", sprinter: "碎步", debugger: "调试" };
+  var dims = { nocturnal: "夜行", sprinter: "碎步", debugger: "调试", playful: "俏皮", tsundere: "傲娇" };
 
   if (!key || !(key in dims)) {
-    process.stderr.write("用法：catctl teach <nocturnal|sprinter|debugger> <0..1>\n");
+    process.stderr.write("用法：catctl teach <" + Object.keys(dims).join("|") + "> <0..1>\n");
     return 2;
   }
   if (!isFinite(val) || val < 0 || val > 1) {
@@ -624,6 +708,12 @@ function cmdTeach(args) {
 /* =========================================================================
  * log
  * ======================================================================= */
+
+/* 命令名在日志里只显示前 n 个字符，完整内容仍保留在事件文件里 */
+function shortName(s, n) {
+  s = String(s || "");
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
 
 function cmdLog(args) {
   var n = parseInt(args.flags.n || "20", 10);
@@ -661,7 +751,7 @@ function cmdLog(args) {
     var exitTag = e.type === "task.fail" && typeof e.exit === "number" ? c.red + " exit " + e.exit + c.reset : "";
     process.stdout.write("  " + c.grey + hh + c.reset + "  " + mark + "  " +
       A.pad(e.type, 12) + c.grey + (e.dir || "") + c.reset +
-      (e.name ? "  " + e.name : "") + kindTag + exitTag + "\n");
+      (e.name ? "  " + shortName(e.name, 60) : "") + kindTag + exitTag + "\n");
     if (e.detail) {
       String(e.detail).split("\n").forEach(function (ln) {
         process.stdout.write("                  " + c.grey + "│ " + ln + c.reset + "\n");
@@ -890,7 +980,14 @@ function cmdSelftest(args) {
   ok("猜不出的命令记为 other", learner.inferKind("frobnicate") === "other");
   ok("没有命令名时不记类型", learner.inferKind("") === null);
 
-  /* 4c. 失败详情与日志筛选：只测 learner 的数据形状，不碰真实文件 */
+  /* 4d. 纠正表：你教过的命令优先于正则，显式 kind 仍最优先 */
+  var ov = { "npm run deploy": "ship" };
+  ok("纠正表覆盖正则猜测", learner.inferKind("npm run deploy", null, ov) === "ship",
+    learner.inferKind("npm run deploy", null, ov));
+  ok("没教过的命令照常猜", learner.inferKind("npm test", null, ov) === "test");
+  ok("显式 kind 仍压过纠正表", learner.inferKind("npm run deploy", "build", ov) === "build");
+  ok("纠正表里的非法类型被忽略", learner.inferKind("npm test", null, { "npm test": "bogus" }) === "test");
+
   var pl = learner.emptyProfile();
   learner.record(pl, { type: "task.fail", dir: "demo", name: "npm run build", ms: 4000, kind: "build" });
   learner.record(pl, { type: "task.ok", dir: "demo", name: "npm test", ms: 2000 });
@@ -906,7 +1003,80 @@ function cmdSelftest(args) {
   ok("活动类型不改命令账", pk.commands["deploy prod"] && pk.commands["deploy prod"].n === 12);
   ok("习惯里能说出活动类型", learner.describe(pk).some(function (it) { return it.key === "kind"; }));
 
-  /* 5. 存档往返 */
+  /* 4e. 周变化：本周 vs 上周，daily 桶只留 21 天 */
+  var pw = learner.emptyProfile();
+  var DAY = 86400000;
+  var now0 = Date.now();
+  function daysAgo(n) { return new Date(now0 - n * DAY).toISOString(); }
+  for (var wa = 0; wa < 3; wa++) {
+    learner.record(pw, { type: "task.fail", at: daysAgo(10 + wa), dir: "demo", name: "npm test", ms: 1000 });
+  }
+  for (var wb = 0; wb < 4; wb++) {
+    learner.record(pw, { type: "task.ok", at: daysAgo(3 + wb), dir: "demo", name: "npm test", ms: 1000 });
+  }
+  var wk = learner.weekWindows(pw);
+  ok("本周/上周窗口分开统计", wk.cur.n === 4 && wk.prev.n === 3, "本周 " + wk.cur.n + " / 上周 " + wk.prev.n);
+  ok("本周没失败、上周全挂", wk.cur.fail === 0 && wk.prev.fail === 3,
+    "本周挂 " + wk.cur.fail + " / 上周挂 " + wk.prev.fail);
+  var weeklyItem = learner.describe(pw).filter(function (it) { return it.key === "weekly"; })[0];
+  ok("能说出周变化", !!weeklyItem && /少挂|手稳/.test(weeklyItem.text), weeklyItem ? weeklyItem.text : "（无）");
+  ok("daily 按天记录", Object.keys(pw.daily).length === 7, Object.keys(pw.daily).length + " 天");
+
+  var pc = learner.emptyProfile();
+  for (var wd = 0; wd < 30; wd++) {
+    learner.record(pc, { type: "task.ok", at: daysAgo(wd), dir: "demo", name: "x", ms: 1 });
+  }
+  ok("daily 只保留 21 天", Object.keys(pc.daily).length === 21, Object.keys(pc.daily).length + " 天");
+
+  /* 4f. 性格偏置：傲娇 / 俏皮两个新维度 */
+  var tA = CatEngine.create({ seed: 42 }).snapshot().traits;
+  var tB = CatEngine.create({ seed: 4242 }).snapshot().traits;
+  ok("不同种子的猫脾气不同", tA.tsundere !== tB.tsundere || tA.playful !== tB.playful,
+    JSON.stringify({ a: [tA.tsundere, tA.playful], b: [tB.tsundere, tB.playful] }));
+  ok("同一只猫的脾气可复现",
+    CatEngine.create({ seed: 42 }).snapshot().traits.tsundere === tA.tsundere);
+  ok("新维度在 0.25..0.75 之间", ["tsundere", "playful"].every(function (k) {
+    return tA[k] >= 0.25 && tA[k] <= 0.75;
+  }), JSON.stringify({ t: tA.tsundere, p: tA.playful }));
+
+  // 傲娇到极致的猫应该更常瘫着，俏皮到极致的应该更常扑咬/疯跑
+  function behaviorShare(overrides) {
+    var e = CatEngine.create({
+      seed: 20261018,
+      traits: Object.assign({ nocturnal: 0.3, sprinter: 0.5, debugger: 0.2 }, overrides)
+    });
+    var hist = {};
+    var steps = 48 * 3600;
+    for (var i = 0; i < steps; i++) {
+      var s = e.tick(1000);
+      hist[s.behavior] = (hist[s.behavior] || 0) + 1;
+    }
+    var total = steps;
+    return { hist: hist, total: total };
+  }
+  var aloof = behaviorShare({ tsundere: 0.75, playful: 0.25 });
+  var silly = behaviorShare({ tsundere: 0.25, playful: 0.75 });
+  var pctShare = function (h, t, ids) {
+    return ids.reduce(function (a, k) { return a + (h[k] || 0); }, 0) / t * 100;
+  };
+  var playAloof = pctShare(aloof.hist, aloof.total, ["PLAY", "SCRATCH"]);
+  var playSilly = pctShare(silly.hist, silly.total, ["PLAY", "SCRATCH"]);
+  ok("俏皮的猫更爱扑咬和磨爪", playSilly > playAloof,
+    "俏皮 " + playSilly.toFixed(1) + "% vs 傲娇 " + playAloof.toFixed(1) + "%");
+  var boxAloof = pctShare(aloof.hist, aloof.total, ["BOXED"]);
+  var boxSilly = pctShare(silly.hist, silly.total, ["BOXED"]);
+  ok("傲娇的猫更爱躲进箱子", boxAloof > boxSilly,
+    "傲娇 " + boxAloof.toFixed(1) + "% vs 俏皮 " + boxSilly.toFixed(1) + "%");
+  ok("偏置后仍能走出至少 5 种行为", Object.keys(aloof.hist).length >= 5 && Object.keys(silly.hist).length >= 5,
+    "傲娇 " + Object.keys(aloof.hist).length + " 种 / 俏皮 " + Object.keys(silly.hist).length + " 种");
+  var diffs = 0;
+  Object.keys(aloof.hist).concat(Object.keys(silly.hist)).forEach(function (k) {
+    var d = Math.abs(pctShare(aloof.hist, aloof.total, [k]) - pctShare(silly.hist, silly.total, [k]));
+    if (d >= 2) diffs++;
+  });
+  ok("两种脾气走的路确实不一样（≥3 种行为差 2 个百分点以上）", diffs >= 3, diffs + " 种");
+
+
   var dump = withEv.engine._state();
   var revived = CatEngine.create({ seed: 1 });
   revived.restore(JSON.parse(JSON.stringify(dump)));
@@ -959,6 +1129,8 @@ function main(argv) {
       return cmdLearn(args);
     case "teach":
       return cmdTeach(args);
+    case "teach-kind":
+      return cmdTeachKind(args);
     case "log":
       return cmdLog(args);
     case "reset":

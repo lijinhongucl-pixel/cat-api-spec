@@ -202,16 +202,40 @@
     font-family: ui-monospace, Menlo, monospace;
   }
 
-  /* ---------- 进化阶梯 ---------- */
-  .ladder { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  /* ---------- 进化链 ---------- */
+  .ladder { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
   .rung {
     background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
-    padding: 18px 14px; text-align: center; position: relative;
+    padding: 16px 12px 18px; text-align: center; position: relative;
+    cursor: pointer; min-width: 0;
+    transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
   }
+  .rung:hover { border-color: var(--gold); transform: translateY(-2px); }
   .rung .lv { font-size: 11px; color: var(--cap); letter-spacing: .1em; }
-  .rung .nm { font-family: var(--serif); font-size: 21px; color: var(--accent); margin: 6px 0 4px; }
+  .rung .mini {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px; line-height: 1.3; color: var(--accent);
+    margin: 10px 0 8px; white-space: pre; text-align: center;
+  }
+  .rung .nm { font-family: var(--serif); font-size: 20px; color: var(--accent); margin: 0 0 3px; }
   .rung .xp { font-size: 11.5px; color: var(--gold-ink); font-variant-numeric: tabular-nums; }
-  .rung .ds { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-top: 9px; }
+  .rung .ds { font-size: 12px; color: var(--muted); line-height: 1.65; margin-top: 8px; }
+  .rung.locked { border-style: dashed; }
+  .rung.locked .mini { color: var(--faint); }
+  .rung.locked .nm { color: var(--cap); }
+  .rung.done .mini { opacity: .45; }
+  .rung.now { border-color: var(--gold); background: var(--gold-soft); }
+  .rung.peeked { border-color: var(--wine); box-shadow: 0 0 0 3px var(--wine-soft); }
+  .rung.now::before {
+    content: "现在"; position: absolute; top: -9px; left: 50%; transform: translateX(-50%);
+    font-size: 10.5px; letter-spacing: .08em; color: #FAF8F5; background: var(--accent);
+    padding: 2px 9px; border-radius: 100px; white-space: nowrap;
+  }
+  /* 形态之间的进化箭头，压在列缝上 */
+  .rung:not(:last-child)::after {
+    content: "→"; position: absolute; left: 100%; top: 54px; margin-left: 1px;
+    font-size: 13px; color: var(--faint); pointer-events: none; line-height: 1;
+  }
 
   /* ---------- 命令 ---------- */
   .cmds { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 0 34px; }
@@ -250,6 +274,7 @@
     h1 { font-size: 34px; }
     .rules { columns: 1; }
     .ladder { grid-template-columns: repeat(2, 1fr); }
+    .rung:not(:last-child)::after { display: none; }
     .hero { padding-top: 48px; }
     .hero-stats { gap: 28px; }
   }
@@ -356,6 +381,7 @@
 
     <div class="demo-note">
       演示按 <strong>2 倍速</strong>跑，好让你看见它换动作。
+      仔细看，它偶尔会自己挤个眼、歪着头好奇、打个哈欠、摊成侧躺——小动作不进状态机，演完接着干自己的事。
       真实使用里它是实时推进的——而且<strong>没有后台进程</strong>：
       你关掉终端它就睡在 <code>~/.cat-api/runtime/state.json</code> 里，
       下次任何一条命令进来，它先把这段时间补算完再回答你。
@@ -468,11 +494,17 @@
       失败也加经验，只是少一点——因为失败确实也学到了东西。
       阶段会改行为：老猫每种动作都待得更久、睡得更沉、疯跑更少。<strong>进化只升不降。</strong>
     </p>
+    <p class="sec-lead" style="margin:-12px 0 24px">
+      形象更是从头到脚重画一遍：耳朵、脑袋、身板、尾巴各换一套——奶猫圆滚滚什么都短，
+      猫又是叉耳、带印、两条尾巴。<strong>点一点链上任意形态</strong>，终端里就预览它那个阶段的样子，没解锁的显示剪影。
+    </p>
     <div class="ladder" id="ladder"></div>
     <p class="sec-lead" style="margin:26px 0 0">
       同时它还在学你：几点干活、在哪个目录、跑什么命令、失败率高不高。
-      从这些压出三个性格维度（夜行 / 碎步 / 调试）直接进打分公式——
+      从这些压出五个性格维度（夜行 / 碎步 / 调试 / 傲娇 / 俏皮）直接进打分公式——
       <strong>同一套匮乏，不同主人的猫走不同的路。</strong>
+      傲娇的猫更爱瘫着舔毛、盯着你不承认，俏皮的多半在扑咬疯跑、随时踩奶。
+      没数据的时候，先按种子给一只猫一个脾气底子，所以每只都不一样。
       跨过零点还没访问的时候，统计会按 0.86 的衰减一次性补算——搬了家、换了技术栈，它会跟着变。
     </p>
     <div class="card" style="margin-top:18px">
@@ -482,6 +514,7 @@
         ●●●●○  最常待的是 cat-api-spec（134 次），那里算主领地，另外还有 3 处会去。<br>
         ●●●●●  「npm test」跑了 41 次，挂掉 44%，一次大约 18 秒。你重试之前我一般不吵。<br>
         ●●●●○  你最常干的是跑测试（41 次，挂 44%）。这类活容易翻，我多陪一会儿。<br>
+        ●●●○○  这周干了 12 件，比上周多 4 件，没歇着啊；「跑测试」多挂了 2 回，我不问，我趴着。<br>
         ●●●●●  失败率 44%。我不催你——失败的时候我趴旁边，不盯着屏幕。
       </p>
     </div>
@@ -509,7 +542,7 @@
       <div class="cmd"><code>catctl init --host claude</code><p>写 .claude/settings.json，改之前自动备份。</p></div>
       <div class="cmd"><code>catctl serve --port 9177</code><p>不给开 shell 的宿主一个 HTTP 口子，只听 127.0.0.1。</p></div>
       <div class="cmd"><code>catctl learn</code><p>它学会了什么，带置信度。错了可以 <code style="font-size:12px">catctl teach</code> 纠正。</p></div>
-      <div class="cmd"><code>catctl selftest</code><p>15 项不变量自测，含 172800 步的确定性断言。</p></div>
+      <div class="cmd"><code>catctl selftest</code><p>45 项不变量自测，含 172800 步的确定性断言。</p></div>
     </div>
     <p class="sec-lead" style="margin-top:24px">
       事件只有这几种：<code>task.start</code> · <code>task.ok</code> · <code>task.fail</code> ·
@@ -612,13 +645,13 @@ POST /emit  {"type":"task.ok"}</pre>
   var timeline = [];
   var lastBehavior = null;
   var flash = null;
+  var peek = null;              // 进化链预览：{ stage, until }
+  var microPose = null;         // 正在演的微动作（眨眼 / 好奇 / 挑衅 / 哈欠 / 侧躺）
+  var microUntil = 0;
 
   /* ---------- 终端渲染 ---------- */
-  function render() {
-    var snap = engine.snapshot();
-    var frame = Math.floor(Date.now() / 700) % 2;
-    var text = A.renderPanel(snap, { color: false, frame: frame ? 1 : 0 });
-
+  function paint(snap, opts) {
+    var text = A.renderPanel(snap, opts);
     var html = "";
     text.split("\n").forEach(function (line) {
       var cut = 15;                      // "  " + 11 字符的猫 + "  "
@@ -637,6 +670,31 @@ POST /emit  {"type":"task.ok"}</pre>
     term.innerHTML = html;
     renderMeters(snap);
   }
+
+  function render() {
+    var snap = engine.snapshot();
+    var frame = Math.floor(Date.now() / 700) % 2;
+    if (microPose && Date.now() > microUntil) microPose = null;
+    if (peek && Date.now() > peek.until) peek = null;
+    var opts = { color: false, frame: frame ? 1 : 0 };
+    if (peek) {
+      // 进化链预览：换成那一阶段的真身，等级行一起换
+      var locked = peek.stage > snap.stage;
+      opts.sprite = A.spriteFor(peek.stage, "loaf", frame ? 1 : 0);
+      opts.lvl = "Lv." + (peek.stage + 1) + " " + E.STAGES[peek.stage].name + (locked ? " · 未解锁" : "");
+      opts.banner = locked ? "……长大以后的样子，再攒点 xp" : "……看清楚没，点终端回去";
+      term.style.cursor = "pointer";
+    } else {
+      term.style.cursor = "";
+      if (!flash && microPose) opts.pose = microPose;   // 反应优先，微动作不抢
+    }
+    paint(snap, opts);
+    paintMinis(snap);
+  }
+
+  term.addEventListener("click", function () {
+    if (peek) { peek = null; render(); }
+  });
 
   function esc(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -692,26 +750,53 @@ POST /emit  {"type":"task.ok"}</pre>
     });
   }
 
+  /* ---------- 进化仪式 ---------- */
+  var lastStage = engine.snapshot().stage;
+  var evo = null;
+  function startEvolution(to) {
+    evo = { frames: A.evolutionFrames(to), i: 0 };
+    paintMinis(engine.snapshot());          // 链上先把新形态点亮
+    var step = function () {
+      if (!evo) return;
+      var f = evo.frames[evo.i];
+      var banner = f.phase === "done"
+        ? "进化了！现在是 Lv." + (to + 1) + " " + E.STAGES[to].name
+        : "……它正在变";
+      paint(engine.snapshot(), { color: false, frame: 0, sprite: f.lines, banner: banner });
+      evo.i++;
+      if (evo.i >= evo.frames.length) {
+        setTimeout(function () { evo = null; render(); }, 900);   // 「进化了」多停一会儿
+      }
+      else setTimeout(step, 430);
+    };
+    step();
+  }
+
   /* ---------- 循环：2 倍速 ---------- */
-  var interval = setInterval(function () {
+  function loop() {
     engine.tick(2000);
     var snap = engine.snapshot();
     pushTimeline(flash ? flash : snap.behavior);
+    if (evo) return;                        // 仪式演着，不抢画面
+    if (snap.stage !== lastStage) {         // 升级了：先演仪式
+      lastStage = snap.stage;
+      startEvolution(snap.stage);
+      return;
+    }
+    // 微动作：偶尔挤个眼、歪个头、打个哈欠，演完回到原来的事上
+    if (!microPose && Math.random() < 0.06) {
+      microPose = A.MICRO[Math.floor(Math.random() * A.MICRO.length)];
+      microUntil = Date.now() + 2600;
+    }
     render();
-    if (flash) flash = null;
-  }, 1000);
+    flash = null;
+  }
+
+  var interval = setInterval(loop, 1000);
 
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) clearInterval(interval);
-    else {
-      interval = setInterval(function () {
-        engine.tick(2000);
-        var snap = engine.snapshot();
-        pushTimeline(flash ? flash : snap.behavior);
-        render();
-        if (flash) flash = null;
-      }, 1000);
-    }
+    else interval = setInterval(loop, 1000);
   });
 
   /* ---------- 按钮 ---------- */
@@ -736,17 +821,44 @@ POST /emit  {"type":"task.ok"}</pre>
     });
   }
 
-  /* ---------- 阶梯 ---------- */
+  /* ---------- 进化链 ---------- */
   var ladder = document.getElementById("ladder");
+  var rungs = [];
   if (ladder) {
     E.STAGES.forEach(function (st, i) {
       var d = document.createElement("div");
       d.className = "rung";
+      d.title = st.note;                    // 悬浮看这一阶段的行为变化
       d.innerHTML = '<div class="lv">LV.' + (i + 1) + "</div>" +
+        '<pre class="mini"></pre>' +
         '<div class="nm">' + st.name + "</div>" +
-        '<div class="xp">' + st.at + " xp</div>" +
-        '<div class="ds">' + st.note + "</div>";
+        '<div class="xp">' + (st.at === 0 ? "初始形态" : st.at + " xp 解锁") + "</div>" +
+        '<div class="ds">' + A.STAGE_BUILD[i].note + "</div>";
       ladder.appendChild(d);
+      rungs.push(d);
+      d.addEventListener("click", function () {
+        if (peek && peek.stage === i) peek = null;
+        else peek = { stage: i, until: Date.now() + 6000 };
+        render();
+      });
+    });
+  }
+
+  /* 链上的小精灵：已解锁的画真身（当前形态跟着终端实时换姿势），
+     没解锁的画剪影。每 900ms 换一帧，让它自己呼吸。 */
+  function paintMinis(snap) {
+    if (!rungs.length) return;
+    var frame = Math.floor(Date.now() / 900) % 2;
+    var peeking = peek && Date.now() < peek.until ? peek.stage : -1;
+    rungs.forEach(function (d, i) {
+      var lines = i < snap.stage ? A.spriteFor(i, "loaf", frame)
+        : i === snap.stage ? A.spriteFor(i, snap.pose || "loaf", frame)
+        : A.silhouetteFor(i);
+      d.querySelector(".mini").textContent = lines.join("\n");
+      d.classList.toggle("done", i < snap.stage);
+      d.classList.toggle("now", i === snap.stage);
+      d.classList.toggle("locked", i > snap.stage);
+      d.classList.toggle("peeked", i === peeking);
     });
   }
 
