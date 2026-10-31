@@ -48,6 +48,13 @@ node ./runtime/bin/catctl.js status
 ln -s "$(pwd)/runtime/bin/catctl.js" ~/.local/bin/catctl
 ```
 
+不想自己动手，就把这句发给你的编码 Agent：
+
+> 读 CAT RUNTIME 的 SETUP.md，帮我把猫装上。
+
+它会先探测你的环境，一次问你一个问题，收齐了给你一份完整计划，你点头了才动手。
+不需要账号，也不需要密钥——它不联网。
+
 猫住在 `~/.cat-api/runtime/`：
 
 ```
