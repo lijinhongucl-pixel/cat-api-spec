@@ -4,7 +4,7 @@
 
 ## 先读这个
 
-改这个仓库之前，按顺序读：
+改这个仓库之前，按顺序读（数字一律以 `facts.json` 为准，改动后跑 `node scripts/check-facts.js`）：
 
 1. `AGENTS.md` — 硬约束、目录职责、验证命令
 2. `llms.txt` — 这份规范是什么、核心认知转变
@@ -12,8 +12,7 @@
 
 ## 四条硬约束
 
-**1. 全站默认离线。** 只有 2 张页面可以出网（`tools/astraflow.html`、`tools/crosspet.html`）。
-新增页面必须拔网线可读。
+**1. 全站默认离线。** 两张页面会主动发请求（`tools/astraflow.html`、`tools/crosspet.html`）；首页另有一个可选云 SDK，加载失败时静默降级。其余页面必须拔网线可读。
 
 **2. 阈值不许写死。** 所有配额、权重、公式从 `assets/js/*.js` 引擎读。
 页面里出现字面数字当配额就是回归。

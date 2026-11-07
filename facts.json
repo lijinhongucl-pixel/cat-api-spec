@@ -1,0 +1,48 @@
+{
+  "version": "0.6.0",
+  "codename": "Cross-Species Sync",
+  "canonical": "https://lijinhongucl-pixel.github.io/cat-api-spec/",
+  "preview": "https://cat-api.app.workbuddy.host/",
+
+  "counts": {
+    "pages": 40,
+    "toolPages": 26,
+    "referencePages": 6,
+    "indexEntries": 32,
+    "chapters": 16,
+    "siteJsFiles": 13,
+    "cliEndpoints": 14,
+    "openapiPaths": 15,
+    "quantifiedPaths": 10
+  },
+
+  "canon": {
+    "_note": "以下来自 spec/cat.html 正文声明，不从文件系统推导。改正典时同步这里。",
+    "states": 27,
+    "opinions": 31,
+    "statusCodes": 13,
+    "expressionStates": 14,
+    "coreEndpoints": 12,
+    "traits": 5,
+    "evolutionStages": 5,
+    "behaviors": 12,
+    "rules": 12,
+    "ownerRoles": 0
+  },
+
+  "endpoints": {
+    "_note": "四个数字都对，口径不同。文档里必须写口径，不许只写一个裸数字。",
+    "coreEndpoints": "llms.txt 表格里那 12 个最该记住的正典接口",
+    "cliEndpoints": "skill/cat-api.js 的 RESOURCES 条目数，含领地协商与跨站串门两个扩展接口",
+    "openapiPaths": "spec/openapi.yaml 的 paths 顶层键数，含两个表情接口",
+    "quantifiedPaths": "spec/quantified-api.yaml 的 paths 顶层键数"
+  },
+
+  "network": {
+    "_note": "核心阅读与工具全部拔网线可读。下面三处是可选增强，失败时静默降级。",
+    "activeFetchPages": ["tools/astraflow.html", "tools/crosspet.html"],
+    "optionalScript": "index.html 加载 WorkBuddy cloud SDK，仅供「今日猫碗」云同步；SDK 缺失时 multiplayer.js 降级为本地数据"
+  },
+
+  "docs": ["README.md", "llms.txt", "AGENTS.md", "CLAUDE.md", "SETUP.md", "runtime/README.md"]
+}

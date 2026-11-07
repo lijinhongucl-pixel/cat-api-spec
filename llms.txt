@@ -1,7 +1,8 @@
 # CAT API — 给 AI 读的索引
-# 猫咪接口规范 · 16 章正典 · 14 个端点 · 27 个状态
+# 猫咪接口规范 · 16 章正典 · 27 个状态 · 12 个核心端点
 # 站点：https://lijinhongucl-pixel.github.io/cat-api-spec/
 # 本文件遵循 llms.txt 约定：先给结论，再给细节。
+# 数字以 facts.json 为准，端点口径见该文件 endpoints 段。
 
 ## 这是什么
 
@@ -20,7 +21,7 @@ curl -fsSL https://lijinhongucl-pixel.github.io/cat-api-spec/skill/install.sh \
   | sh -s -- --adopter "你的名字@这台机器"
 
 # 然后
-cat-api                  # 列出 12 个端点
+cat-api                  # 列出 14 个 CLI 端点
 cat-api state            # 查当前状态
 cat-api pet --json       # 机器可读输出
 cat-api --help           # 完整说明
@@ -38,7 +39,7 @@ cat-api --help           # 完整说明
 **Owner 角色不存在。** 这不是待实现的功能，是架构级决定。
 你不能「成为主人」，只能成为 Staff。详见正文 §2。
 
-## 12 个端点
+## 12 个核心端点
 
 | 方法 | 路径 | 说明 | 关键状态码 |
 |---|---|---|---|
@@ -55,7 +56,7 @@ cat-api --help           # 完整说明
 | GET | /api/v1/health | 健康自检 | 200 |
 | POST | /api/v1/bath | 洗澡 | 418 / 406 / 503 |
 
-机器可读描述：`spec/openapi.yaml`（12 端点）、`spec/quantified-api.yaml`（9 量化端点）。
+机器可读描述：`spec/openapi.yaml`（15 个路径）、`spec/quantified-api.yaml`（10 个量化路径）。另外 `skill/cat-api.js` 注册了 14 个可调用端点。四个数字口径不同，见 `facts.json`。
 
 ## 13 个状态码里最该记住的四个
 
@@ -104,7 +105,7 @@ BOXED / ZOOMIES / PATROL / PURR / HISS / CONFUSED / STARE / FLUFF / ARCH / TUCK
 
 引擎：`assets/js/quantify.js`
 
-## 可运行工具（24 个入口）
+## 可运行工具（26 个入口）
 
 全部零构建、纯前端、可离线。
 
@@ -123,7 +124,7 @@ BOXED / ZOOMIES / PATROL / PURR / HISS / CONFUSED / STARE / FLUFF / ARCH / TUCK
 - **状态数 27**，表情状态 14 个，状态码 13 个
 - **通信接口 4 个**（声/视/化/触）
 - 站点是静态的：无构建步骤、无外部依赖、拔网线也能读
-- 全站只有 2 张页面会出网：星图接入、跨站串门。其余全部离线可读
+- 核心阅读与工具全部拔网线可读。星图接入与跨站串门两张页面会主动发请求；首页另加载一个可选云 SDK 供今日猫碗同步，加载失败时静默降级
 
 ## 文体约定（§4.1）
 
@@ -141,7 +142,7 @@ assets/     页面运行时要加载的（js / css / img）
 spec/       正文 + OpenAPI 描述
 reference/  速查资料（cheatsheet / vitals / errors / glossary / voice / opinions）
 sdk/        浏览器 SDK（cat-api-client.js + demo 控制台）
-tools/      工具页面（24 个）
+tools/      工具页面（26 个）
 skill/      CLI + 安装包（cat-api.js + install.sh）
 docs/       给人读的说明（CHANGELOG / CONTRIBUTING / design）
 ```

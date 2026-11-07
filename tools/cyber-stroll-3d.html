@@ -91,48 +91,7 @@ header .mode-toggle a:hover:not(.active) {
   color: var(--accent);
 }
 
-/* ===== 观猹大会 · 猫的欢迎条 ===== */
-.watcha-strip {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 0 0 16px;
-  padding: 12px 18px;
-  background: var(--accent);
-  border-radius: 6px;
-  text-decoration: none;
-  color: #FAF8F5;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.watcha-strip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px -10px rgba(15, 34, 24, 0.6);
-}
-.watcha-strip-kicker {
-  flex: none;
-  font-size: 10.5px;
-  letter-spacing: 0.16em;
-  color: var(--gold);
-  padding-right: 16px;
-  border-right: 1px solid rgba(200, 163, 94, 0.32);
-}
-.watcha-strip-text {
-  flex: 1;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: rgba(250, 248, 245, 0.78);
-}
-.watcha-strip-cta {
-  flex: none;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--gold);
-}
 @media (max-width: 640px) {
-  .watcha-strip { flex-wrap: wrap; gap: 8px 14px; }
-  .watcha-strip-kicker { border-right: 0; padding-right: 0; }
-  .watcha-strip-text { flex-basis: 100%; }
   header { flex-direction: column; align-items: flex-start; gap: 14px; }
   header h1 { font-size: 24px; }
 }
@@ -322,12 +281,6 @@ header .mode-toggle a:hover:not(.active) {
     <code>←/→</code> 推动猫，<code>Space</code> 坐下，<code>P</code> 扑击。
     全程离线渲染，无任何外部 API 调用。
   </div>
-
-  <a class="watcha-strip" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener">
-    <span class="watcha-strip-kicker">2026 观猹大会</span>
-    <span class="watcha-strip-text">猫说：10 月 23–25 日，杭州龙坞。人去看看别人在造什么，我留下看家。</span>
-    <span class="watcha-strip-cta">报名 →</span>
-  </a>
 
   <div class="stage-frame">
     <canvas id="stage-3d"></canvas>

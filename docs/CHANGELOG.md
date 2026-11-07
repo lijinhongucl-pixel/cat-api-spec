@@ -8,13 +8,21 @@
 
 ---
 
+## 待发布
+
+- 新增 `facts.json` 单一事实源与 `scripts/check-facts.js` 自检，修掉 README / llms.txt / AGENTS.md / CHANGELOG 里互相矛盾的工具页、端点、性格维度数字
+- 端点数按口径拆开：正典核心 12 / CLI 14 / OpenAPI 15 路径 / 量化 10 路径
+- 修正「零 CDN」与「只有 2 页出网」的表述，补上首页可选云 SDK 的说明
+- 站点视觉升级为规范档案方向，并把基础层下沉到共享样式
+- 补齐 AI 可见性基建与全站元数据，CAT RUNTIME 加导出导入与落盘测试
+
 ## v0.6.0 — "Cross-Species Sync" (2026-10-05)
 
 对标 DOG API 完成四个核心功能同步，并新增 AI 接入层与猫狗串门玩法。
 这一版的核心变化是**站点从「给人读」扩展到「给 AI 用」**。
 
 ### 新增：AI 接入层
-- **CLI** `skill/cat-api.js` —— 零依赖，14 个端点全部可调
+- **CLI** `skill/cat-api.js` —— 零依赖，14 个 CLI 端点全部可调
   - 短名调用（`cat-api state`）或完整路径（`cat-api 'DELETE /api/v1/laser'`）
   - `--json` 给 AI / 脚本读，默认给人读
   - 退出码分语义：0 成功 / 1 端点不存在 / 2 被拒绝 / 3 系统不可用

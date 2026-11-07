@@ -12,14 +12,16 @@ CAT API — 猫咪接口规范。一份用工程文体写的猫的接口规范�
 **它同时是三个东西**，改之前先确认你改的是哪个：
 
 1. **规范**（`spec/`）— 16 章正典 + 2 份 OpenAPI。这是内容，改动要慎重
-2. **站点**（`tools/` `reference/` `sdk/` `index.html`）— 24 个工具页面。这是载体，改动要保稳
+2. **站点**（`tools/` `reference/` `sdk/` `index.html`）— 26 个工具页面。这是载体，改动要保稳
 3. **引擎**（`assets/js/`）— 所有计算逻辑。这是地基，改动要跑验证
 
 ## 硬约束（违反了就是 bug，不是风格问题）
 
 ### 1. 不许发网络请求
-全站只有 2 张页面可以出网：`tools/astraflow.html`（星图接入）和 `tools/crosspet.html`（跨站串门）。
-其余每一页都必须拔网线可读。新增页面默认必须是离线的。
+核心阅读与工具全部拔网线可读。三处例外：
+`tools/astraflow.html` 与 `tools/crosspet.html` 会主动发请求；
+`index.html` 加载一个可选云 SDK 供今日猫碗同步，SDK 缺失时 `multiplayer.js` 降级为本地数据。
+新增页面默认必须离线，且任何出网都必须可静默降级。
 
 ### 2. 不许写死配额和阈值
 所有阈值、权重、公式必须从引擎（`assets/js/*.js`）读。
@@ -52,6 +54,7 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 | `spec/` | 规范内容 | Markdown、YAML |
 | `tools/` `reference/` `sdk/` | 给人看的页面 | HTML |
 | `docs/` | 给人读的说明 | Markdown |
+| `scripts/` | 仓库自检脚本 | js |
 | `skill/` | CLI + 安装包 | sh / js |
 
 文件名里**不要**重复系统名（不要 `charts-cat.js`，就写 `charts.js`）。
@@ -92,7 +95,7 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 - 标题用 `--serif`（衬线），正文用 PingFang（无衬线），形成对比
 - 强调用古铜金，**不要**用高饱和红绿
 - 0 数字（Owner 角色数）用反色填充强调——这是首页的视觉锤
-- 边框圆角 8–18px，别更大
+- 常规卡片圆角 8–18px。首页档案层是例外：方章、索引带、图版用 0–2px 直角，靠发丝线分隔而不是圆角
 
 ## 文体纪律
 
@@ -113,6 +116,9 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 改完必须跑：
 
 ```bash
+# 0. 数字一致性：facts.json 与文件系统、六份文档必须对得上
+node scripts/check-facts.js
+
 # 1. JS 语法
 for f in assets/js/*.js sdk/*.js skill/*.js; do node --check "$f" || echo "FAIL $f"; done
 

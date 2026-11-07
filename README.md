@@ -4,6 +4,8 @@
 
 ### 猫咪接口规范 · 把猫写成系统，把系统写成猫
 
+> 所有数字以 [`facts.json`](facts.json) 为准，改动后跑 `node scripts/check-facts.js`。
+
 一份用 RFC 骨架描述猫的工程文体规范。16 章正典、31 条当事猫意见、13 个状态码、14 种表情，以及一只真的住在终端里、会累会闷会记住你作息的猫运行时。
 
 [![Live Site](https://img.shields.io/badge/live-cat--api.app.workbuddy.host-1B3A2E?style=for-the-badge)](https://cat-api.app.workbuddy.host/)
@@ -54,7 +56,7 @@
 
 > **把猫当成一个接口规范来写。** 16 章正文、31 条「当事猫意见」、13 个状态码、14 种表情、一份从 §2 开始就反向定义的权限模型——系统从架构层面**否认 `Owner` 角色的存在**。
 >
-> 外加一只会在你屏幕上走来走去的活猫（LIVECAT v3）、全站多人联机、CrossPet 跨站串门协议、25 个交互式工具页、两份 OpenAPI 3.1 描述，以及新加入的 **CAT RUNTIME**——一只零依赖、无后台进程、接进任何工作台的终端猫。
+> 外加一只会在你屏幕上走来走去的活猫（LIVECAT v3）、全站多人联机、CrossPet 跨站串门协议、26 个交互式工具页、两份 OpenAPI 3.1 描述，以及新加入的 **CAT RUNTIME**——一只零依赖、无后台进程、接进任何工作台的终端猫。
 
 ---
 
@@ -67,10 +69,10 @@
 | 层 | 是什么 | 在哪 |
 |---|---|---|
 | **规范** | 16 章 OpenAPI 风格的猫接口规范 | `spec/cat.html` |
-| **实现** | 25 个交互工具 + 6 个参考页 + SDK + CLI | `tools/` `reference/` `sdk/` `skill/` |
+| **实现** | 26 个交互工具 + 6 个参考页 + SDK + CLI | `tools/` `reference/` `sdk/` `skill/` |
 | **运行时** | 一只跟着你项目走的终端猫（CAT RUNTIME v1.0） | `runtime/` |
 
-**关键数字：** 190+ 次提交 · 40 个页面 · 25 个 JS 引擎 · 零依赖零构建零 CDN
+**关键数字：** 40 个页面 · 26 个工具页 · 13 个站点脚本 · 零构建，核心内容拔网线可读
 
 ---
 
@@ -213,7 +215,7 @@ catctl serve --port 9177
 
 - **5 种匮乏** → 12 种行为 → 6 种反应 → 5 个进化阶段
 - **12 条行为准则**：困到 0.34 就必须睡；没人看的时候才疯跑；反应盖姿势不改行为……
-- **习惯学习**：作息 / 领地 / 手艺 → 3 个性格维度直接进打分公式
+- **习惯学习**：作息 / 领地 / 手艺 → 5 个性格维度直接进打分公式
 - **CLI**：`catctl` 9 种命令 + HTTP 服务
 
 ### 表情引擎 EXPR v1
@@ -234,7 +236,7 @@ catctl serve --port 9177
 
 ---
 
-## 🧰 工具页（25 个）
+## 工具页（26 个）
 
 | 工具 | 做什么 |
 |---|---|
@@ -322,7 +324,7 @@ catctl reset --yes        # 清空这只猫，重来
 
 ### cat-api — 规范端点 CLI
 
-14 个端点全部可以从命令行调。零依赖，不装 npm 包，不联网。
+14 个 CLI 端点全部可以从命令行调。零依赖，不装 npm 包，不联网。
 
 ```bash
 # 安装（一条命令，领养 + 装 CLI）
@@ -351,8 +353,8 @@ cat-api --help             # 完整说明
 | [`AGENTS.md`](AGENTS.md) | AI 编程工具施工说明。硬约束、目录职责、验证命令 |
 | [`CLAUDE.md`](CLAUDE.md) | Claude Code 专用，精简版 + 猫的行为学设定 |
 | [`skill/`](skill/) | CLI + 安装包 |
-| [`spec/openapi.yaml`](spec/openapi.yaml) | 14 个端点的 OpenAPI 3.1 描述 |
-| [`spec/quantified-api.yaml`](spec/quantified-api.yaml) | 9 个量化端点 |
+| [`spec/openapi.yaml`](spec/openapi.yaml) | 15 个路径的 OpenAPI 3.1 描述 |
+| [`spec/quantified-api.yaml`](spec/quantified-api.yaml) | 10 个量化路径 |
 | [`runtime/README.md`](runtime/README.md) | CAT RUNTIME 完整文档 |
 
 让 AI 编程工具读懂这个仓库，只需要让它读 `AGENTS.md`。
@@ -387,17 +389,17 @@ cat-api-spec/
 │   └── README.md               # 完整文档
 ├── spec/                       # 规范正文
 │   ├── cat.html                # 16 章正文
-│   ├── openapi.yaml            # OpenAPI 3.1（14 端点）
-│   └── quantified-api.yaml     # 量化端点（9 端点）
+│   ├── openapi.yaml            # OpenAPI 3.1（15 路径）
+│   └── quantified-api.yaml     # 量化端点（10 路径）
 ├── skill/                      # 命令行 + 安装包
 │   ├── cat-api.js              # 零依赖 CLI
 │   └── install.sh              # 一条 curl 命令安装
-├── tools/                      # 25 个交互式工具
+├── tools/                      # 26 个交互式工具
 ├── reference/                  # 6 个参考页面
 ├── sdk/                        # JavaScript SDK（UMD）
 ├── assets/
 │   ├── css/                    # 主样式 / 活猫 / 多人 / 串门
-│   ├── js/                     # 10 个引擎
+│   ├── js/                     # 13 个脚本
 │   └── img/
 ├── .nojekyll                   # GitHub Pages 不走 Jekyll
 ├── LICENSE                     # MIT

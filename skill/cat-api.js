@@ -338,7 +338,7 @@
     L.push("  CAT API — 猫咪接口规范   v" + VERSION);
     L.push("  " + SPEC);
     L.push("");
-    L.push("  12 个端点。全部纯模拟，不发任何网络请求。");
+    L.push("  14 个端点。全部纯模拟，不发任何网络请求。");
     L.push("");
     var byMethod = {};
     RESOURCES.forEach(function (r) {

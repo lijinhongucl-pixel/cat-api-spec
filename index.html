@@ -21,10 +21,7 @@
 <link rel="stylesheet" href="assets/css/livecat.css">
 <link rel="stylesheet" href="assets/css/multiplayer.css">
 <link rel="stylesheet" href="assets/css/crosspet.css">
-<!-- GSAP 动效层：gsap + ScrollTrigger + motion.js。CDN 失败也不影响任何内容展示。 -->
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" onerror="window.__gsapMissing=true"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<!-- 动效层：零依赖，滚动揭示用 IntersectionObserver，断网也完整可见。 -->
 <script src="assets/js/motion.js"></script>
 <style>
   .hero-tag {
@@ -69,38 +66,230 @@
     letter-spacing: 0.08em;
   }
 
-  /* ===== Hero 右栏：设计者 + 大会 ===== */
-  .hero-row {
+  /* ===== 首页 · 规范档案版式 =====
+     色板沿用全站 tokens，这一层只负责结构、材质与信息层次。
+     结构：发丝线网格 + 页边编号 + 左对齐的不对称分栏。 */
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  [data-rail] { scroll-margin-top: 24px; }
+
+  /* 扉页顶部的元信息条：只写仓库里真实存在的版本与数字 */
+  .folio-head {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 16px 28px 0;
     display: flex;
-    align-items: flex-start;
-    gap: 38px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px 20px;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--cap);
   }
-  .hero-copy { flex: 1 1 auto; min-width: 0; }
-  .hero-aside {
-    flex: 0 0 232px;
+  .folio-head .fh-tag { color: var(--gold-ink); font-weight: 600; }
+  .folio-head .fh-rule {
+    flex: 1 1 40px;
+    height: 1px;
+    background: var(--line);
+    align-self: center;
+  }
+
+  /* 章节刻度尺：贴页边的编号轨，滚动高亮，点击跳到对应区块 */
+  .doc-rail {
+    position: fixed;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 30;
     display: flex;
     flex-direction: column;
-    gap: 26px;
-    padding-top: 8px;
+    gap: 1px;
   }
-  /* 设计者肖像：像扉页上的作者照 */
+  .doc-rail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 6px;
+    text-decoration: none;
+    color: var(--faint);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    transition: color 0.2s ease;
+  }
+  .doc-rail-item .no {
+    width: 18px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .doc-rail-item .ln {
+    width: 14px;
+    height: 1px;
+    background: var(--line);
+    transition: width 0.25s ease, background 0.25s ease;
+  }
+  .doc-rail-item .lb {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .doc-rail-item:hover .lb,
+  .doc-rail-item.on .lb { opacity: 1; transform: none; }
+  .doc-rail-item.on { color: var(--accent); font-weight: 600; }
+  .doc-rail-item.on .no { color: var(--gold-ink); }
+  .doc-rail-item.on .ln { width: 26px; background: var(--gold); }
+  @media (max-width: 1180px) { .doc-rail { display: none; } }
+
+  /* Hero：两栏之间一道发丝线，右栏是扉页上的图版 */
+  .hero { padding-top: 40px; }
+  .hero-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 208px;
+    align-items: start;
+    gap: 34px;
+    border-top: 1px solid var(--line);
+    padding-top: 32px;
+  }
+  .hero-copy { min-width: 0; }
+  .hero-aside {
+    display: block;
+    border-left: 1px solid var(--line);
+    padding: 8px 0 0 24px;
+  }
+  .hero-tag { margin-bottom: 18px; border-radius: 2px; }
+  .hero h1 {
+    font-family: var(--serif);
+    font-size: 52px;
+    letter-spacing: -0.02em;
+    line-height: 1.16;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .hero h1 .alt {
+    display: block;
+    color: var(--ink);
+    font-size: 29px;
+    font-weight: 400;
+    margin: 8px 0 0 52px;
+    letter-spacing: 0;
+  }
+  .hero .lead {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.9;
+    margin: 20px 0 24px;
+  }
+
+  /* CTA：一个主动作，其余降为文字链，减少首屏的按钮噪音 */
+  .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 22px;
+    margin: 18px 0 4px;
+  }
+  .hero-cta .btn:not(.primary) {
+    background: transparent;
+    color: var(--accent);
+    border: none;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    padding: 8px 0;
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+  .hero-cta .btn:not(.primary):hover {
+    background: transparent;
+    border-bottom-color: var(--gold);
+    transform: none;
+  }
+
+  /* 四张白卡换成一条发丝线分隔的索引带，编号和数字是构图元素 */
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    max-width: 680px;
+    margin: 30px 0 8px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-stat {
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-radius: 0;
+    padding: 15px 14px 14px;
+    text-align: left;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+  .hero-stat:last-child { border-right: 0; }
+  .hero-stat:hover { background: var(--accent-soft); border-color: var(--line); }
+  .hero-stat .idx {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-stat .n {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 500;
+    color: var(--accent);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+  .hero-stat .l {
+    font-size: 11.5px;
+    color: var(--cap);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+  }
+  .hero-stat.featured { background: var(--accent); border-right-color: var(--accent); }
+  .hero-stat.featured .idx { color: rgba(250, 248, 245, 0.55); }
+  .hero-stat.featured .n { color: var(--gold); }
+  .hero-stat.featured .l { color: rgba(250, 248, 245, 0.82); }
+  .hero-stat.featured:hover { background: var(--accent-deep); }
+
+  /* 设计者肖像：图版裁切标记，不新增任何文案 */
   .hero-person { margin: 0; }
-  .hero-person picture { display: block; }
+  .hero-person picture { display: block; position: relative; }
+  .hero-person picture::before,
+  .hero-person picture::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--gold);
+    pointer-events: none;
+  }
+  .hero-person picture::before { top: -5px; left: -5px; border-right: 0; border-bottom: 0; }
+  .hero-person picture::after { bottom: -5px; right: -5px; border-left: 0; border-top: 0; }
   .hero-person-art {
     width: 100%;
     height: auto;
     display: block;
     border: 1px solid var(--line);
-    border-radius: 2px;
+    border-radius: 0;
     background: #14140f;
-    transition: transform 0.3s ease, border-color 0.2s ease, box-shadow 0.3s ease;
+    filter: saturate(0.88);
+    transition: transform 0.3s ease, border-color 0.2s ease;
   }
   .hero-person:hover .hero-person-art {
     transform: translateY(-2px);
     border-color: var(--gold-ink);
-    box-shadow: 0 10px 26px -18px rgba(27, 58, 46, 0.55);
   }
-  .hero-person-cap { display: block; margin-top: 10px; }
+  .hero-person-cap {
+    display: block;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
   .hero-person-kicker {
     display: block;
     font-size: 10.5px;
@@ -108,40 +297,22 @@
     color: var(--accent);
     font-weight: 600;
   }
-  .hero-conf {
-    display: block;
-    width: 100%;
-    text-decoration: none;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
+
+  /* 首屏先让读者看清扉页，活物在往下翻的时候再加入。
+     滚过 55vh 解除，组件本身的功能与关闭按钮都不变。 */
+  .lc2-wrap, .lc2-mouse, .lc2-mouse-hint,
+  .mp-bowl-widget, .mp-hud, .mp-toast, .cp-visitor {
+    transition: opacity 0.35s ease;
   }
-  .hero-conf-wordmark {
-    width: 112px;
-    height: auto;
-    display: block;
-    opacity: 0.8;
-    transition: opacity 0.2s ease;
-  }
-  .hero-conf:hover .hero-conf-wordmark { opacity: 1; }
-  .hero-conf-cap { display: block; margin-top: 9px; }
-  .hero-conf-text { display: block; }
-  .hero-conf-more {
-    display: inline-block;
-    margin-top: 7px;
-    font-size: 11.5px;
-    color: var(--accent);
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-    padding-bottom: 1px;
-    border-bottom: 1px solid rgba(27, 58, 46, 0.28);
-    transition: border-color 0.2s ease;
-  }
-  .hero-conf:hover .hero-conf-more { border-bottom-color: var(--accent); }
-  .hero-conf-date {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 0.02em;
+  body.fold-clean .lc2-wrap,
+  body.fold-clean .lc2-mouse,
+  body.fold-clean .lc2-mouse-hint,
+  body.fold-clean .mp-bowl-widget,
+  body.fold-clean .mp-hud,
+  body.fold-clean .mp-toast,
+  body.fold-clean .cp-visitor {
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
 
   /* ===== 项目介绍视频 ===== */
@@ -269,248 +440,51 @@
   }
 
   @media (max-width: 880px) {
-    .hero-row { flex-direction: column; gap: 30px; }
-    .hero-aside { flex: none; width: 100%; max-width: 300px; padding-top: 0; gap: 24px; }
+    .hero-row { grid-template-columns: minmax(0, 1fr); gap: 22px; padding-top: 26px; }
+    .hero-aside {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding: 12px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-person { display: flex; align-items: center; gap: 14px; }
+    .hero-person picture { flex: 0 0 72px; width: 72px; }
+    .hero-person-cap { margin-top: 0; padding-top: 0; border-top: 0; }
+    .hero h1 { font-size: 40px; }
+    .hero h1 .alt { font-size: 24px; margin-left: 28px; }
     .vid-meta { left: 10px; bottom: 9px; font-size: 10.5px; }
     .vid-btn { width: 54px; height: 54px; margin: -27px 0 0 -27px; }
   }
 
-  /* ===== 观猹大会 · 猫的欢迎 ===== */
-  .watcha-invite {
-    max-width: 940px;
-    margin: 54px auto 0;
-    padding: 0 28px;
-  }
-  .watcha-invite-inner {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 34px;
-    padding: 34px 38px;
-    background: var(--accent);
-    border-radius: 3px;
-    box-shadow: 0 18px 40px -28px rgba(15, 42, 31, 0.55);
-  }
-  .watcha-invite-inner::before {
-    content: "";
-    position: absolute;
-    inset: 7px;
-    border: 1px solid rgba(200, 163, 94, 0.26);
-    border-radius: 2px;
-    pointer-events: none;
-  }
-  .watcha-kicker {
-    font-size: 10.5px;
-    letter-spacing: 0.22em;
-    color: var(--gold-ink);
-    text-transform: uppercase;
-    margin-bottom: 13px;
-  }
-  .watcha-invite .watcha-title {
-    margin: 0 0 14px;
-    padding: 0;
-    border: 0;
-    line-height: 0;
-  }
-  .watcha-wordmark {
-    width: 244px;
-    height: auto;
-    display: block;
-  }
-  .watcha-invite h2 {
-    font-family: var(--serif);
-    font-size: 25px;
-    font-weight: 400;
-    color: #FAF8F5;
-    letter-spacing: 0.01em;
-    line-height: 1.5;
-    margin: 0 0 11px;
-    padding-top: 0;
-    border-top: 0;
-  }
-  .watcha-invite p {
-    font-size: 13.5px;
-    line-height: 1.9;
-    color: rgba(250, 248, 245, 0.72);
-    max-width: 560px;
-    margin: 0;
-  }
-  .watcha-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 30px;
-    margin-top: 18px;
-    font-size: 12px;
-    color: rgba(250, 248, 245, 0.62);
-    letter-spacing: 0.01em;
-  }
-  .watcha-meta em {
-    font-style: normal;
-    font-size: 9.5px;
-    letter-spacing: 0.16em;
-    color: var(--gold-ink);
-    margin-right: 9px;
-  }
-  .watcha-invite-cta {
-    flex: none;
-    text-align: right;
-  }
-  .watcha-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 24px;
-    background: var(--gold);
-    color: #1B3A2E;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-decoration: none;
-    border-radius: 2px;
-    transition: background 0.2s ease, transform 0.2s ease;
-  }
-  .watcha-btn:hover {
-    background: #d8b876;
-    transform: translateY(-1px);
-  }
-  .watcha-note {
-    margin-top: 13px;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    color: rgba(250, 248, 245, 0.42);
-  }
-  .watcha-note a {
-    color: var(--gold-ink);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(200, 163, 94, 0.4);
-    transition: border-color 0.2s ease;
-  }
-  .watcha-note a:hover { border-bottom-color: var(--gold-ink); }
-
-  /* ===== 观猹大会议程 ===== */
-  .watcha-days {
-    max-width: 940px;
-    margin: 34px auto 0;
-    padding: 0 28px;
-  }
-  .wd-head {
-    display: flex;
-    align-items: baseline;
-    gap: 18px;
-    flex-wrap: wrap;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--line);
-  }
-  .wd-kicker {
-    font-size: 10px;
-    letter-spacing: 0.22em;
-    color: var(--gold-ink);
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-  .wd-head p {
-    margin: 0;
-    flex: 1 1 360px;
-    font-size: 12.5px;
-    line-height: 1.75;
-    color: var(--muted);
-  }
-  .wd-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .wd-day {
-    padding: 20px 26px 4px 0;
-    border-right: 1px solid var(--line);
-  }
-  .wd-day + .wd-day { padding-left: 26px; }
-  .wd-day:last-child { border-right: 0; padding-right: 0; }
-  .wd-top {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    margin-bottom: 17px;
-  }
-  .wd-no {
-    font-size: 10.5px;
-    letter-spacing: 0.16em;
-    font-weight: 600;
-    color: var(--accent);
-  }
-  .wd-date { font-size: 12px; color: var(--cap); }
-  .wd-list { list-style: none; margin: 0; padding: 0; }
-  .wd-list li { margin-bottom: 17px; }
-  .wd-item-head {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-  }
-  .wd-flag {
-    flex: none;
-    font-size: 9.5px;
-    letter-spacing: 0.04em;
-    padding: 1px 7px;
-    border: 1px solid var(--line);
-    border-radius: 100px;
-    color: var(--muted);
-    white-space: nowrap;
-    line-height: 1.6;
-  }
-  .wd-flag.paid {
-    color: #8a6a2f;
-    border-color: rgba(200, 163, 94, 0.55);
-    background: rgba(200, 163, 94, 0.09);
-  }
-  .wd-t {
-    display: block;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink);
-    line-height: 1.55;
-  }
-  .wd-d {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    line-height: 1.8;
-    color: var(--muted);
-  }
-  .wd-note {
-    margin: 18px 0 0;
-    font-size: 11.5px;
-    line-height: 1.8;
-    color: var(--cap);
-  }
-  .wd-note a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
-  .wd-note a:hover { color: var(--accent); }
-
-  @media (max-width: 760px) {
-    .watcha-invite { margin-top: 38px; }
-    .watcha-invite-inner {
-      flex-direction: column;
-      align-items: flex-start;
-      padding: 28px 24px;
-      gap: 26px;
+  @media (max-width: 600px) {
+    .folio-head { padding: 14px 20px 0; font-size: 10.5px; gap: 6px 14px; }
+    .folio-head .fh-rule { display: none; }
+    .hero { padding: 24px 20px 20px; }
+    .hero-row { padding-top: 22px; }
+    .hero h1 { font-size: 33px; }
+    .hero h1 .alt { font-size: 21px; margin-left: 14px; }
+    .hero .lead { font-size: 15px; line-height: 1.8; margin: 12px 0 14px; }
+    .hero-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+    .hero-cta .btn { justify-content: center; padding: 10px 12px; font-size: 13px; }
+    .hero-cta .btn:not(.primary) {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
     }
-    .watcha-invite h2 { font-size: 21px; }
-    .watcha-wordmark { width: 196px; }
-    .watcha-days { margin-top: 26px; }
-    .wd-grid { grid-template-columns: 1fr; }
-    .wd-day {
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-      padding: 18px 0;
-    }
-    .wd-day + .wd-day { padding-left: 0; }
-    .wd-day:last-child { border-bottom: 0; }
-    .watcha-invite-cta { text-align: left; }
+    .hero-cta .btn:not(.primary):hover { border-color: var(--gold); }
+    .hero-stats { grid-template-columns: 1fr 1fr; margin-top: 18px; }
+    .hero-stat:nth-child(2) { border-right: 0; }
+    .hero-stat:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .hero-stat .n { font-size: 30px; }
+    .hero-person picture { flex-basis: 56px; width: 56px; }
+    .tab-bar, .tab-hint, .grid { padding-left: 20px; padding-right: 20px; }
+    .closing-quote { padding-left: 20px; padding-right: 20px; }
   }
-  /* ===== 首页专有：把多人联机 HUD 挪出状态机框 =====
-     multiplayer.css 的 .mp-hud 是 fixed top:14px right:14px，
-     正好压住状态机框右上角的「STATE MACHINE · LIVE」标签和呼吸灯。
-     首页把它下移，让位给状态机；其他工具页不受影响。 */
-  .mp-hud { top: auto !important; bottom: 14px !important; right: 14px !important; }
+
+  /* HUD 沿用 multiplayer.css 的右上角。首屏浮层已由 fold-clean 收起，
+     往下翻之后再出现，不再压住状态机框的标签。 */
 
   /* ===== Hero 状态机动画 ===== */
   .hero-machine {
@@ -811,7 +785,15 @@
 </head>
 <body>
 
-<div class="hero">
+<div class="folio-head">
+  <span class="fh-tag">CAT API · v0.6.0</span>
+  <span class="fh-rule" aria-hidden="true"></span>
+  <span>16 章 · 27 状态 · 31 条当事猫意见</span>
+  <span class="fh-rule" aria-hidden="true"></span>
+  <span>静态站点 · 无构建步骤</span>
+</div>
+
+<div class="hero" id="sec-00" data-rail="扉页">
   <div class="hero-row">
     <div class="hero-copy">
       <span class="hero-tag">CAT API · v0.6.0 FULL SPEC</span>
@@ -826,7 +808,7 @@
       </p>
 
       <div class="hero-cta">
-        <a class="btn" href="spec/cat.html">阅读 CAT API →</a>
+        <a class="btn primary" href="spec/cat.html">阅读 CAT API →</a>
         <a class="btn ghost" href="https://github.com/lijinhongucl-pixel/cat-api-spec" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;">
           <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" style="flex-shrink:0;">
             <path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0016 8c0-4.42-3.58-8-8-8z"/>
@@ -838,10 +820,10 @@
       </div>
 
       <div class="hero-stats">
-        <div class="hero-stat"><div class="n">16</div><div class="l">章节</div></div>
-        <div class="hero-stat"><div class="n">27</div><div class="l">状态</div></div>
-        <div class="hero-stat"><div class="n">31</div><div class="l">猫意见</div></div>
-        <div class="hero-stat featured"><div class="n">0</div><div class="l">Owner 角色</div></div>
+        <div class="hero-stat"><div class="idx">01</div><div class="n">16</div><div class="l">章节</div></div>
+        <div class="hero-stat"><div class="idx">02</div><div class="n">27</div><div class="l">状态</div></div>
+        <div class="hero-stat"><div class="idx">03</div><div class="n">31</div><div class="l">猫意见</div></div>
+        <div class="hero-stat featured"><div class="idx">04</div><div class="n">0</div><div class="l">Owner 角色</div></div>
       </div>
 
     </div>
@@ -856,22 +838,12 @@
           <span class="hero-person-kicker">CAT API · 设计者</span>
         </figcaption>
       </figure>
-
-      <a class="hero-conf" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener" aria-label="2026 观猹大会 · 前往官网" data-no-munch>
-        <img class="hero-conf-wordmark" src="assets/img/watcha-wordmark-dark.png" alt="观猹大会" width="1000" height="203">
-        <span class="hero-conf-cap">
-          <span class="hero-conf-text">
-            <span class="hero-conf-date">2026.10.23 – 10.25 · 杭州龙坞</span>
-          </span>
-          <span class="hero-conf-more" aria-hidden="true">去官网 →</span>
-        </span>
-      </a>
     </div>
   </div>
 
 </div>
 
-<div class="hero-machine">
+<div class="hero-machine" id="sec-01" data-rail="状态机">
   <div class="machine-frame">
     <svg class="machine-svg" data-cat-state="ZOOMIES" viewBox="0 0 760 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="猫的六状态作息状态机，中心猫随当前状态改变姿态与表情">
       <!-- 轨道：一条闭合椭圆，六个状态均分其上 -->
@@ -1049,7 +1021,7 @@
 </div>
 
 <!-- ===== 项目介绍视频 ===== -->
-<section class="vid" aria-label="项目介绍视频">
+<section class="vid" id="sec-02" data-rail="视频" aria-label="项目介绍视频">
   <h2 class="vid-title">项目介绍视频</h2>
   <p class="vid-sub">
     七十一秒，把这套东西讲一遍：状态机怎么转、表情渲染器怎么画、3D 赛博遛猫怎么走。
@@ -1073,7 +1045,7 @@
 </section>
 
 <!-- ===== CAT RUNTIME 入口 ===== -->
-<section class="rt-tease" aria-label="CAT RUNTIME" data-no-munch>
+<section class="rt-tease" id="sec-03" data-rail="RUNTIME" aria-label="CAT RUNTIME" data-no-munch>
   <div class="rt-tease-inner">
     <div class="rt-tease-copy">
       <span class="rt-tease-kicker">CAT RUNTIME · v1.0.0</span>
@@ -1119,110 +1091,13 @@
 })();
 </script>
 
-<!-- ===== 观猹大会 · 猫的欢迎 ===== -->
-<section class="watcha-invite" aria-label="2026 观猹大会" data-no-munch>
-  <div class="watcha-invite-inner">
-    <div class="watcha-invite-main">
-      <div class="watcha-kicker">2026 Watcha Conference · 猫的特邀</div>
-      <h2 class="watcha-title">
-        <img class="watcha-wordmark" src="assets/img/watcha-wordmark-light.png" alt="观猹大会" width="1000" height="203">
-      </h2>
-      <p>三天，杭州龙坞。好产品、创造者、真实反馈，都放在同一片场地上。<br>猫的意思是：沙发可以空三天，人得去看看别人在造什么。</p>
-      <div class="watcha-meta">
-        <span><em>WHEN</em>2026.10.23 – 10.25</span>
-        <span><em>WHERE</em>杭州茶叶博览会会议会展中心 · 龙坞展馆</span>
-      </div>
-    </div>
-    <div class="watcha-invite-cta">
-      <a class="watcha-btn" href="https://dahui.watcha.cn/#narrative-checkin" target="_blank" rel="noopener">
-        报名观猹大会<span aria-hidden="true">→</span>
-      </a>
-      <div class="watcha-note"><a href="tools/watcha.html">猫版导览 →</a> · 金猹奖 · 百展堂 · 猹工坊</div>
-    </div>
-  </div>
-</section>
-
-<section class="watcha-days" aria-label="观猹大会议程" data-no-munch>
-  <div class="wd-head">
-    <span class="wd-kicker">Agenda · 三天怎么排</span>
-    <p>10 月 24—25 日，场地 A／B 将连续展开主题活动；已确认内容与待公布场次会持续更新。</p>
-  </div>
-
-  <div class="wd-grid">
-    <article class="wd-day">
-      <div class="wd-top">
-        <span class="wd-no">DAY 1</span>
-        <span class="wd-date">10.23</span>
-      </div>
-      <ul class="wd-list">
-        <li>
-          <span class="wd-item-head"><span class="wd-t">观猹大会前哨</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">亚马逊云科技 × 观猹，OPC 创业复兴终极路演。</span>
-        </li>
-      </ul>
-    </article>
-
-    <article class="wd-day">
-      <div class="wd-top">
-        <span class="wd-no">DAY 2</span>
-        <span class="wd-date">10.24</span>
-      </div>
-      <ul class="wd-list">
-        <li>
-          <span class="wd-item-head"><span class="wd-t">金猹奖盛典</span><span class="wd-flag paid">付费</span></span>
-          <span class="wd-d">重磅嘉宾登台颁奖，特别演出点亮现场。好产品的高光时刻，邀你共同见证。</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">百展堂</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">逛产品、试工具、体验互动。把感兴趣的 AI 产品，放进你的逛展清单。</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">AI 能力水平考试</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">50 道由观猹金牌观猹员和共学营讲师出题的考卷，你的 AI 水平，考了才知道。</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">知乎论坛：AI 时代开发者生态 2.0</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">AI 时代，人人真的都是创造者？开发门槛降低，开发的边界在哪里？</span>
-        </li>
-      </ul>
-    </article>
-
-    <article class="wd-day">
-      <div class="wd-top">
-        <span class="wd-no">DAY 3</span>
-        <span class="wd-date">10.25</span>
-      </div>
-      <ul class="wd-list">
-        <li>
-          <span class="wd-item-head"><span class="wd-t">百展堂</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">六大展区照常开放，前两天没逛完的可以补上。</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">猹话会 | 具身智能</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">摘掉舞台滤镜，机器人如何真正走入真实生活？离开预设演示场景，探讨消费级具身智能落地的现实路径。</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">猹话会 | AI×教育</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">AI 时代，我们该如何重新定义自己的位置？当答案随手可得，教育的下一步该往哪走？</span>
-        </li>
-        <li>
-          <span class="wd-item-head"><span class="wd-t">AI 能力水平考试</span><span class="wd-flag">免费</span></span>
-          <span class="wd-d">50 道考卷照常开放，前两天没考成的可以补上。</span>
-        </li>
-      </ul>
-    </article>
-  </div>
-
-  <p class="wd-note">以上按大会官网议程整理。场次与报名以 <a href="https://dahui.watcha.cn/#narrative-agenda" target="_blank" rel="noopener">官网议程</a> 为准。</p>
-</section>
-
-<div class="tab-bar" role="tablist">
+<div class="tab-bar" id="sec-04" data-rail="索引" role="tablist">
   <button class="tab-btn active" data-tab="spec" role="tab"
           data-desc="正典正文 + 两份 OpenAPI 机器可读描述"
           title="正典正文 + 两份 OpenAPI 机器可读描述">规范 <span class="count">3</span></button>
   <button class="tab-btn" data-tab="tools" role="tab"
           data-desc="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入"
-          title="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入">工具 <span class="count">13</span></button>
+          title="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入">工具 <span class="count">12</span></button>
   <button class="tab-btn" data-tab="games" role="tab"
           data-desc="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记"
           title="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记">游戏 <span class="count">6</span></button>
@@ -1237,7 +1112,7 @@
           title="文档的两个说话人：编写组给事实，当事猫给结论">声部 <span class="count">2</span></button>
 </div>
 <div class="tab-hint">
-  <span class="tab-hint-lead">33 个入口按类别分组</span>
+  <span class="tab-hint-lead">32 个入口按类别分组</span>
   <span class="tab-hint-sep">·</span>
   <span class="tab-hint-desc" id="tab-desc">正典正文 + 两份 OpenAPI 机器可读描述</span>
 </div>
@@ -1267,12 +1142,6 @@
 
 <div class="tab-panel" data-panel="tools">
   <div class="grid">
-    <a class="card" href="tools/watcha.html">
-      <div class="kicker">特别入口 · 2026 观猹大会</div>
-      <h3>观猹大会 · 猫版导览</h3>
-      <p>10 月 23—25 日，杭州龙坞。三天议程、六大展区、现场六件事与金猹奖，按猫的动线排了一遍——人照着走就行。</p>
-      <div class="foot">tools/watcha.html · 报名走官网</div>
-    </a>
     <a class="card" href="tools/expression.html">
       <div class="kicker">可运行 · 逐像素确定性</div>
       <h3>表情渲染器</h3>
@@ -1333,12 +1202,12 @@
       <p>领养只有一种形态：装技能。填四元组（领养人/时刻/栖息地/用途），本页当场算出领养 KEY 与领养名，并生成一条 curl 命令——装完算出来的结果与本页逐字节相同。本系统不返回 401，所以那张牌不是通行证，是来源标注。</p>
       <div class="foot">tools/adoption.html</div>
     </a>
-    <a class="card" href="tools/cyber-stroll.html">
+    <div class="card">
       <div class="kicker">图像 → SVG · 全离线 · 含 3D 版</div>
-      <h3>赛博遛猫</h3>
+      <h3><a class="stretched" href="tools/cyber-stroll.html">赛博遛猫</a></h3>
       <p>把一张图片降格成一只网格化的「猫」，用鼠标当牵引绳去遛它。管线四步：像素→网格→部件→路径。导出静态 SVG 或带 SMIL 循环的动态 SVG。<b>新增 3D 版</b>：Three.js 实时体素渲染，可旋转视角、步态动画、牵引绳物理。§8 外设 · PER/LEASH。</p>
       <div class="foot">tools/cyber-stroll.html · <a href="tools/cyber-stroll-3d.html" style="color:var(--gold);">3D 版 →</a></div>
-    </a>
+    </div>
     <a class="card" href="tools/astraflow.html">
       <div class="kicker">唯一出网页 · KEY 不落地</div>
       <h3>星图接入</h3>
@@ -1470,7 +1339,7 @@
   </div>
 </div>
 
-<div class="closing-quote">
+<div class="closing-quote" id="sec-05" data-rail="结语">
   某个系统从架构层面否认你拥有它；<br>
   某个系统为你专门开发了一套叫「喵叫」的外部接口；<br>
   以及，某个系统在你哭的时候坐在你旁边——<br>
@@ -1667,6 +1536,65 @@
     }
     scheduleBlink();
   }
+})();
+</script>
+
+<script>
+// ===== 章节刻度尺：编号和标签都来自页面里真实的区块 =====
+(function() {
+  var marks = Array.prototype.slice.call(document.querySelectorAll('[data-rail]'));
+  if (!marks.length) return;
+
+  var rail = document.createElement('nav');
+  rail.className = 'doc-rail';
+  rail.setAttribute('aria-label', '页面章节');
+
+  var items = marks.map(function(mark, i) {
+    var a = document.createElement('a');
+    a.className = 'doc-rail-item';
+    a.href = '#' + mark.id;
+
+    var no = document.createElement('span');
+    no.className = 'no';
+    no.textContent = ('0' + (i + 1)).slice(-2);
+    var ln = document.createElement('span');
+    ln.className = 'ln';
+    var lb = document.createElement('span');
+    lb.className = 'lb';
+    lb.textContent = mark.getAttribute('data-rail');
+
+    a.appendChild(no);
+    a.appendChild(ln);
+    a.appendChild(lb);
+    rail.appendChild(a);
+    return a;
+  });
+  document.body.appendChild(rail);
+
+  function sync() {
+    var best = 0;
+    var bestD = Infinity;
+    marks.forEach(function(mark, i) {
+      var d = Math.abs(mark.getBoundingClientRect().top - window.innerHeight * 0.28);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    items.forEach(function(item, i) { item.classList.toggle('on', i === best); });
+  }
+
+  sync();
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
+})();
+
+// ===== 首屏浮层让位：翻过扉页，活猫再加入 =====
+(function() {
+  function sync() {
+    var past = window.scrollY > Math.max(240, window.innerHeight * 0.55);
+    document.body.classList.toggle('fold-clean', !past);
+  }
+  sync();
+  window.addEventListener('scroll', sync, { passive: true });
+  window.addEventListener('resize', sync);
 })();
 </script>
 
