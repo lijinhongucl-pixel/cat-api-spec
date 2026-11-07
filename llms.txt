@@ -3,6 +3,7 @@
 # 站点：https://lijinhongucl-pixel.github.io/cat-api-spec/
 # 本文件遵循 llms.txt 约定：先给结论，再给细节。
 # 数字以 facts.json 为准，端点口径见该文件 endpoints 段。
+# 全文：llms-full.txt · 页面清单：sitemap.xml · 施工说明：AGENTS.md
 
 ## 这是什么
 
@@ -145,6 +146,7 @@ sdk/        浏览器 SDK（cat-api-client.js + demo 控制台）
 tools/      工具页面（26 个）
 skill/      CLI + 安装包（cat-api.js + install.sh）
 docs/       给人读的说明（CHANGELOG / CONTRIBUTING / design）
+scripts/    自检脚本与 AI 可见性生成脚本
 ```
 
 ## 边界
@@ -153,4 +155,4 @@ docs/       给人读的说明（CHANGELOG / CONTRIBUTING / design）
 
 ---
 
-正文：`spec/cat.html` · 领养：`tools/adoption.html` · CLI 完整说明：`cat-api --help`
+正文：`spec/cat.html` · 全文：`llms-full.txt` · 事实源：`facts.json` · 领养：`tools/adoption.html` · CLI 完整说明：`cat-api --help`

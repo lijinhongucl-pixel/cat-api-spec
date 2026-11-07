@@ -350,6 +350,9 @@ cat-api --help             # 完整说明
 | 文件 | 面向 |
 |---|---|
 | [`llms.txt`](llms.txt) | AI 索引。端点表、状态码含义、核心公式、工具清单 |
+| [`llms-full.txt`](llms-full.txt) | 16 章正文与参考页的纯文本全文，给 AI 一次读完 |
+| [`facts.json`](facts.json) | 单一事实源，所有数字与端点口径，改完跑 `scripts/check-facts.js` |
+| [`sitemap.xml`](sitemap.xml) | 可索引页面清单 |
 | [`AGENTS.md`](AGENTS.md) | AI 编程工具施工说明。硬约束、目录职责、验证命令 |
 | [`CLAUDE.md`](CLAUDE.md) | Claude Code 专用，精简版 + 猫的行为学设定 |
 | [`skill/`](skill/) | CLI + 安装包 |

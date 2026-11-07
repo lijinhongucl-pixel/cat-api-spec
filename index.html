@@ -70,8 +70,8 @@
      色板沿用全站 tokens，这一层只负责结构、材质与信息层次。
      结构：发丝线网格 + 页边编号 + 左对齐的不对称分栏。 */
 
-  html { scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* 章节跳转只在刻度尺脚本里做一次滚动，不再叠加 CSS scroll-behavior。
+     两层平滑同时生效时，浏览器会延迟启动滚动，首次点击可能没反应。 */
   [data-rail] { scroll-margin-top: 24px; }
 
   /* 扉页顶部的元信息条：只写仓库里真实存在的版本与数字 */
@@ -782,6 +782,163 @@
     .m-group.active .m-halo { animation: none; }
   }
 </style>
+<!-- CAT API GEO:BEGIN -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareSourceCode",
+      "name": "CAT API",
+      "alternateName": "猫咪接口规范",
+      "description": "一份用 RFC 骨架描述猫的工程文体规范，同时是一个零构建静态站点与终端猫运行时。",
+      "url": "https://lijinhongucl-pixel.github.io/cat-api-spec/",
+      "codeRepository": "https://github.com/lijinhongucl-pixel/cat-api-spec",
+      "programmingLanguage": [
+        "JavaScript",
+        "HTML",
+        "CSS"
+      ],
+      "license": "https://lijinhongucl-pixel.github.io/cat-api-spec/LICENSE",
+      "additionalProperty": [
+        {
+          "@type": "PropertyValue",
+          "name": "pages",
+          "value": 40
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "toolPages",
+          "value": 26
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "referencePages",
+          "value": 6
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "indexEntries",
+          "value": 32
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "chapters",
+          "value": 16
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "siteJsFiles",
+          "value": 13
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "cliEndpoints",
+          "value": 14
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "openapiPaths",
+          "value": 15
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "quantifiedPaths",
+          "value": 10
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "states",
+          "value": 27
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "opinions",
+          "value": 31
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "statusCodes",
+          "value": 13
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "expressionStates",
+          "value": 14
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "coreEndpoints",
+          "value": 12
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "traits",
+          "value": 5
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "evolutionStages",
+          "value": 5
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "behaviors",
+          "value": 12
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "rules",
+          "value": 12
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "ownerRoles",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "CAT API 是什么",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "一份用工程文体写的猫的接口规范，16 章正典、31 条当事猫意见，附可运行的工具页、OpenAPI 描述与终端猫运行时。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "这个系统有 Owner 角色吗",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "没有。Owner 角色不存在，这是架构级决定而不是待实现的功能。承认的角色只有 Staff 和入侵者。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "CAT API 有多少个端点",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "看口径：正典核心 12 个，CLI 注册 14 个，OpenAPI 描述 15 个路径，量化描述 10 个路径。四个数字口径不同，见 facts.json。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "CAT RUNTIME 是什么",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "一只零依赖、无后台进程、接进任何工作台的终端猫。任务完成、卡住或失败时它会给出反应，并能记住你的作息。"
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+<!-- CAT API GEO:END -->
 </head>
 <body>
 
@@ -832,7 +989,7 @@
       <figure class="hero-person" data-no-munch>
         <picture>
           <source srcset="assets/img/designer.webp" type="image/webp">
-          <img class="hero-person-art" src="assets/img/designer.jpg" alt="CAT API 设计者肖像" width="412" height="496">
+          <img class="hero-person-art" src="assets/img/designer.jpg" alt="CAT API 设计者肖像" width="412" height="496" fetchpriority="high" decoding="async">
         </picture>
         <figcaption class="hero-person-cap">
           <span class="hero-person-kicker">CAT API · 设计者</span>
@@ -1031,10 +1188,10 @@
     <button class="vid-play" type="button" aria-label="播放 B 站项目介绍视频：把猫写进 OpenAPI">
       <picture>
         <source srcset="assets/img/bili-cover.webp" type="image/webp">
-        <img class="vid-cover" src="assets/img/bili-cover.jpg" alt="CAT API 项目介绍视频封面" width="1280" height="720" loading="lazy">
+        <img class="vid-cover" src="assets/img/bili-cover.jpg" alt="CAT API 项目介绍视频封面" width="1280" height="720" loading="lazy" decoding="async">
       </picture>
       <span class="vid-btn" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M8 4.5v15l12-7.5z"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 4.5v15l12-7.5z"/></svg>
       </span>
       <span class="vid-meta"><span class="vid-time">01:11</span><span>bilibili · 社交名流UCLAI版</span></span>
     </button>
@@ -1092,22 +1249,22 @@
 </script>
 
 <div class="tab-bar" id="sec-04" data-rail="索引" role="tablist">
-  <button class="tab-btn active" data-tab="spec" role="tab"
+  <button class="tab-btn active" id="tab-spec" data-tab="spec" role="tab" aria-selected="true" aria-controls="panel-spec"
           data-desc="正典正文 + 两份 OpenAPI 机器可读描述"
           title="正典正文 + 两份 OpenAPI 机器可读描述">规范 <span class="count">3</span></button>
-  <button class="tab-btn" data-tab="tools" role="tab"
+  <button class="tab-btn" id="tab-tools" data-tab="tools" role="tab" aria-selected="false" aria-controls="panel-tools"
           data-desc="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入"
           title="可运行的计算器与渲染器：表情 / 量化 / 外设 / 图表 / 星图接入">工具 <span class="count">12</span></button>
-  <button class="tab-btn" data-tab="games" role="tab"
+  <button class="tab-btn" id="tab-games" data-tab="games" role="tab" aria-selected="false" aria-controls="panel-games"
           data-desc="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记"
           title="带交互的小游戏与可视化：路径规划 / 谈判 / 燃尽图 / 日记">游戏 <span class="count">6</span></button>
-  <button class="tab-btn" data-tab="reference" role="tab"
+  <button class="tab-btn" id="tab-reference" data-tab="reference" role="tab" aria-selected="false" aria-controls="panel-reference"
           data-desc="一页查完的速查资料：速查卡 / 生理指标 / 状态码 / 术语 / 版本"
           title="一页查完的速查资料：速查卡 / 生理指标 / 状态码 / 术语 / 版本">参考 <span class="count">5</span></button>
-  <button class="tab-btn" data-tab="engine" role="tab"
+  <button class="tab-btn" id="tab-engine" data-tab="engine" role="tab" aria-selected="false" aria-controls="panel-engine"
           data-desc="开发向：SDK 控制台 / 跨站串门 / 猫的 404 日志 / Breaking Changes"
           title="开发向：SDK 控制台 / 跨站串门 / 猫的 404 日志 / Breaking Changes">引擎 <span class="count">4</span></button>
-  <button class="tab-btn" data-tab="voice" role="tab"
+  <button class="tab-btn" id="tab-voice" data-tab="voice" role="tab" aria-selected="false" aria-controls="panel-voice"
           data-desc="文档的两个说话人：编写组给事实，当事猫给结论"
           title="文档的两个说话人：编写组给事实，当事猫给结论">声部 <span class="count">2</span></button>
 </div>
@@ -1117,7 +1274,7 @@
   <span class="tab-hint-desc" id="tab-desc">正典正文 + 两份 OpenAPI 机器可读描述</span>
 </div>
 
-<div class="tab-panel active" data-panel="spec">
+<div class="tab-panel active" id="panel-spec" role="tabpanel" aria-labelledby="tab-spec" data-panel="spec">
   <div class="grid">
     <a class="card featured" href="spec/cat.html">
       <div class="kicker">正典 · 主入口</div>
@@ -1140,7 +1297,7 @@
   </div>
 </div>
 
-<div class="tab-panel" data-panel="tools">
+<div class="tab-panel" id="panel-tools" role="tabpanel" aria-labelledby="tab-tools" data-panel="tools">
   <div class="grid">
     <a class="card" href="tools/expression.html">
       <div class="kicker">可运行 · 逐像素确定性</div>
@@ -1217,7 +1374,7 @@
   </div>
 </div>
 
-<div class="tab-panel" data-panel="games">
+<div class="tab-panel" id="panel-games" role="tabpanel" aria-labelledby="tab-games" data-panel="games">
   <div class="grid">
     <a class="card" href="tools/petting-router.html">
       <div class="kicker">可运行 · 交互式</div>
@@ -1258,7 +1415,7 @@
   </div>
 </div>
 
-<div class="tab-panel" data-panel="reference">
+<div class="tab-panel" id="panel-reference" role="tabpanel" aria-labelledby="tab-reference" data-panel="reference">
   <div class="grid">
     <a class="card" href="reference/cheatsheet.html">
       <div class="kicker">一页看完</div>
@@ -1293,7 +1450,7 @@
   </div>
 </div>
 
-<div class="tab-panel" data-panel="engine">
+<div class="tab-panel" id="panel-engine" role="tabpanel" aria-labelledby="tab-engine" data-panel="engine">
   <div class="grid">
     <a class="card" href="sdk/demo.html">
       <div class="kicker">可运行 · 纯模拟</div>
@@ -1322,7 +1479,7 @@
   </div>
 </div>
 
-<div class="tab-panel" data-panel="voice">
+<div class="tab-panel" id="panel-voice" role="tabpanel" aria-labelledby="tab-voice" data-panel="voice">
   <div class="grid">
     <a class="card" href="reference/voice.html">
       <div class="kicker">定义口径</div>
@@ -1368,7 +1525,8 @@
 
 <script src="assets/js/expression.js"></script>
 <script src="assets/js/jev.js"></script>
-<!-- jev-config.js 是本地文件，不入仓（.gitignore 排除）。提供 CAT_API_CONFIG.jevKey -->
+<!-- jev-config.js 是本地文件，不入仓。线上默认没有 KEY，AI 决策层不启用。
+     只有本地放了配置文件，或浏览器自己存了 KEY，这一段才会跑。 -->
 <script src="assets/js/jev-config.js" onerror="window.CAT_API_CONFIG=null"></script>
 <script src="assets/js/jev-brain.js"></script>
 <script src="assets/js/livecat.js"></script>
@@ -1402,9 +1560,13 @@
     });
     btn.addEventListener('click', function() {
       var target = btn.getAttribute('data-tab');
-      tabs.forEach(function(t) { t.classList.remove('active'); });
+      tabs.forEach(function(t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
       panels.forEach(function(p) { p.classList.remove('active'); });
       btn.classList.add('active');
+      btn.setAttribute('aria-selected', 'true');
       var panel = document.querySelector('.tab-panel[data-panel="' + target + '"]');
       if (panel) panel.classList.add('active');
       committed = btn.getAttribute('data-desc') || '';
@@ -1431,7 +1593,9 @@
   } catch(e) {}
 })();
 
-// Jev AI 决策默认常开（密钥从本地 jev-config.js 读取，不暴露在站点上）
+// 本地可选增强，不是线上功能。
+// 只有 window.CAT_API_CONFIG.jevKey 或 localStorage 里有 KEY 才启用，
+// 线上两者都没有，整段静默跳过。站点上不显示任何开关。
 (function() {
   // 隐藏调试入口：URL 加 ?jev=0 可临时关闭（仅开发者用）
   var params = new URLSearchParams(location.search);
@@ -1566,6 +1730,14 @@
     a.appendChild(no);
     a.appendChild(ln);
     a.appendChild(lb);
+    // 刻度尺是索引工具，点击就立刻到位：不把跳转托付给 CSS 平滑或动画帧，
+    // 这两者在低帧 / 无头环境里会延迟启动，首次点击可能完全没反应。
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - 24);
+      window.scrollTo(0, top);
+      history.replaceState(null, '', '#' + mark.id);
+    });
     rail.appendChild(a);
     return a;
   });

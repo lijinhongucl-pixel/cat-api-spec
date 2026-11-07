@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
 <title>不让猫进的那扇门 — CAT API</title>
+<!-- CAT API GEO:BEGIN -->
+<meta name="description" content="不让猫进的那扇门 — CAT API">
+<meta property="og:type" content="website">
+<meta property="og:title" content="不让猫进的那扇门 — CAT API">
+<meta property="og:description" content="不让猫进的那扇门 — CAT API">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/door-negotiator.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="不让猫进的那扇门 — CAT API">
+<meta name="twitter:description" content="不让猫进的那扇门 — CAT API">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<!-- CAT API GEO:END -->
+
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/door-negotiator.html">
 <link rel="stylesheet" href="../assets/css/spec.css">
 <style>
   body { background: var(--bg); }
@@ -236,7 +251,7 @@
     var html = '';
 
     // 门场景
-    html += '<div class="door-scene"><svg class="door-svg' + (state.resolve > 60 ? ' shaking' : '') + '" viewBox="0 0 200 260">' +
+    html += '<div class="door-scene"><svg class="door-svg' + (state.resolve > 60 ? ' shaking' : '') + '" viewBox="0 0 200 260" role="img" aria-label="不让猫进的那扇门 图示">' +
       '<!-- 门框 -->' +
       '<rect x="15" y="20" width="170" height="230" fill="none" stroke="#3a3a38" stroke-width="3" rx="4"/>' +
       '<!-- 门板 -->' +
@@ -311,7 +326,7 @@
 
   function renderEnding() {
     var html = '<div class="ending">';
-    html += '<div class="door-scene"><svg class="door-svg' + (state.opened ? ' opening' : '') + '" viewBox="0 0 200 260">' +
+    html += '<div class="door-scene"><svg class="door-svg' + (state.opened ? ' opening' : '') + '" viewBox="0 0 200 260" role="img" aria-label="不让猫进的那扇门 图示">' +
       '<rect x="15" y="20" width="170" height="230" fill="none" stroke="#3a3a38" stroke-width="3" rx="4"/>' +
       '<g class="door-panel">' +
         '<rect x="20" y="25" width="160" height="220" fill="#8b6f4e" stroke="#3a3a38" stroke-width="2" rx="3"/>' +

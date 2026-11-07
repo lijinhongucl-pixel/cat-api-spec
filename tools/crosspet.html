@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/svg+xml" href="../assets/img/favicon.svg">
 <title>CrossPet 串门中心 — CAT API</title>
+<!-- CAT API GEO:BEGIN -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="CrossPet 串门中心 — CAT API">
+<meta property="og:description" content="跨站宠物串门协议的可视化控制台。召唤访客、查看互动记录、了解如何接入 CrossPet Protocol。">
+<meta property="og:url" content="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/crosspet.html">
+<meta property="og:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<meta property="og:site_name" content="CAT API">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CrossPet 串门中心 — CAT API">
+<meta name="twitter:description" content="跨站宠物串门协议的可视化控制台。召唤访客、查看互动记录、了解如何接入 CrossPet Protocol。">
+<meta name="twitter:image" content="https://lijinhongucl-pixel.github.io/cat-api-spec/assets/img/favicon.svg">
+<!-- CAT API GEO:END -->
+
+<link rel="canonical" href="https://lijinhongucl-pixel.github.io/cat-api-spec/tools/crosspet.html">
 <meta name="description" content="跨站宠物串门协议的可视化控制台。召唤访客、查看互动记录、了解如何接入 CrossPet Protocol。">
 <link rel="stylesheet" href="../assets/css/spec.css">
 <link rel="stylesheet" href="../assets/css/multiplayer.css">
@@ -388,12 +402,12 @@
 
   /* ---- 图标：细描边内联 SVG，不用 emoji ---- */
   var ICON = {
-    dog: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3.2 3 1.5v3M12 3.2l1-1.7v3"/><path d="M3 6.5C3 4.6 5.1 3.2 8 3.2s5 1.4 5 3.3c0 3.4-2.2 6.3-5 6.3s-5-2.9-5-6.3z"/><path d="M6.2 7.2h.01M9.8 7.2h.01"/><path d="M8 9.4v.9"/></svg>',
-    cat: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4 3.2 1.4 5.6 3M12 4l.8-2.6L10.4 3"/><path d="M2.8 7.2C2.8 5 5.1 3.4 8 3.4s5.2 1.6 5.2 3.8c0 3.3-2.3 5.9-5.2 5.9s-5.2-2.6-5.2-5.9z"/><path d="M5.8 7h.01M10.2 7h.01M8 8.6v.8"/></svg>',
-    hamster: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="4.4" r="1.7"/><circle cx="11" cy="4.4" r="1.7"/><path d="M3.4 9.6C3.4 6.9 5.5 5 8 5s4.6 1.9 4.6 4.6c0 2.3-2.1 3.6-4.6 3.6s-4.6-1.3-4.6-3.6z"/><path d="M6.6 8.6h.01M9.4 8.6h.01"/><path d="M8 10.4v.7"/></svg>',
-    paw: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="10.4" rx="3.4" ry="2.6"/><ellipse cx="3.6" cy="6.4" rx="1.5" ry="1.9"/><ellipse cx="7" cy="4.2" rx="1.5" ry="2"/><ellipse cx="12.4" cy="6.4" rx="1.5" ry="1.9"/></svg>',
-    out: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.4H13.6v10.2H9"/><path d="M11.6 8H2.4M4.8 5.4 2.4 8l2.4 2.6"/></svg>',
-    meet: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6.4 9.6 4.8 11.2a1.8 1.8 0 0 1-2.6-2.6l1.6-1.6a1.8 1.8 0 0 1 2.6 0"/><path d="M9.6 6.4l1.6-1.6a1.8 1.8 0 0 1 2.6 2.6l-1.6 1.6a1.8 1.8 0 0 1-2.6 0"/><path d="M6.6 9.4 9.4 6.6"/></svg>'
+    dog: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3.2 3 1.5v3M12 3.2l1-1.7v3"/><path d="M3 6.5C3 4.6 5.1 3.2 8 3.2s5 1.4 5 3.3c0 3.4-2.2 6.3-5 6.3s-5-2.9-5-6.3z"/><path d="M6.2 7.2h.01M9.8 7.2h.01"/><path d="M8 9.4v.9"/></svg>',
+    cat: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4 3.2 1.4 5.6 3M12 4l.8-2.6L10.4 3"/><path d="M2.8 7.2C2.8 5 5.1 3.4 8 3.4s5.2 1.6 5.2 3.8c0 3.3-2.3 5.9-5.2 5.9s-5.2-2.6-5.2-5.9z"/><path d="M5.8 7h.01M10.2 7h.01M8 8.6v.8"/></svg>',
+    hamster: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5" cy="4.4" r="1.7"/><circle cx="11" cy="4.4" r="1.7"/><path d="M3.4 9.6C3.4 6.9 5.5 5 8 5s4.6 1.9 4.6 4.6c0 2.3-2.1 3.6-4.6 3.6s-4.6-1.3-4.6-3.6z"/><path d="M6.6 8.6h.01M9.4 8.6h.01"/><path d="M8 10.4v.7"/></svg>',
+    paw: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="8" cy="10.4" rx="3.4" ry="2.6"/><ellipse cx="3.6" cy="6.4" rx="1.5" ry="1.9"/><ellipse cx="7" cy="4.2" rx="1.5" ry="2"/><ellipse cx="12.4" cy="6.4" rx="1.5" ry="1.9"/></svg>',
+    out: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3.4H13.6v10.2H9"/><path d="M11.6 8H2.4M4.8 5.4 2.4 8l2.4 2.6"/></svg>',
+    meet: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.4 9.6 4.8 11.2a1.8 1.8 0 0 1-2.6-2.6l1.6-1.6a1.8 1.8 0 0 1 2.6 0"/><path d="M9.6 6.4l1.6-1.6a1.8 1.8 0 0 1 2.6 2.6l-1.6 1.6a1.8 1.8 0 0 1-2.6 0"/><path d="M6.6 9.4 9.4 6.6"/></svg>'
   };
 
 

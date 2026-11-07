@@ -177,8 +177,13 @@
 
     // 兜底：不滚也能看到全部内容。4 秒足够正常读者滚到第一屏以下，
     // 同时保证截图、打印、锚点直达时页面是完整的。
+    // 兜底要立刻生效，不能再等 0.8s 的 CSS 过渡，否则整页截图仍会抓到半透明。
     setTimeout(function () {
-      pending.forEach(function (node) { node.classList.add("in-view"); });
+      pending.forEach(function (node) {
+        if (node.classList.contains("in-view")) return;
+        node.style.transition = "none";
+        node.classList.add("in-view");
+      });
       io.disconnect();
     }, 4000);
   }

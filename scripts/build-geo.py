@@ -14,7 +14,6 @@
 
 import json
 import re
-import datetime
 from pathlib import Path
 from bs4 import BeautifulSoup
 
@@ -65,8 +64,9 @@ def patch_meta():
         s = p.read_text()
         original = s
 
-        # 移除上一次生成的块，保证幂等
-        s = re.sub(re.escape(BEGIN) + r"[\s\S]*?" + re.escape(END) + r"\n?", "", s)
+        # 移除上一次生成的块，连同插入时加的换行一起吃掉，保证幂等
+        s = re.sub(r"\n*" + re.escape(BEGIN) + r"[\s\S]*?" +
+                   re.escape(END) + r"\n*", "\n", s)
 
         soup = BeautifulSoup(s, "html.parser")
         title = soup.title.get_text(strip=True) if soup.title else "CAT API"
@@ -146,14 +146,16 @@ def write_sitemap():
             priority = "0.6"
         else:
             priority = "0.5"
-        lastmod = datetime.date.fromtimestamp(p.stat().st_mtime).isoformat()
-        urls.append((BASE + ("" if rel == "index.html" else rel), lastmod, priority))
+        # 不用文件 mtime：checkout 会重置它，CI 的生成物一致性检查会误报
+        changefreq = "daily" if rel == "index.html" else (
+            "weekly" if rel == "spec/cat.html" else "monthly")
+        urls.append((BASE + ("" if rel == "index.html" else rel), changefreq, priority))
 
     lines = ['<?xml version="1.0" encoding="UTF-8"?>',
              '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    for loc, lastmod, priority in urls:
+    for loc, changefreq, priority in urls:
         lines += ["  <url>", "    <loc>%s</loc>" % loc,
-                  "    <lastmod>%s</lastmod>" % lastmod,
+                  "    <changefreq>%s</changefreq>" % changefreq,
                   "    <priority>%s</priority>" % priority, "  </url>"]
     lines.append("</urlset>")
     (ROOT / "sitemap.xml").write_text("\n".join(lines) + "\n")
@@ -349,7 +351,7 @@ if __name__ == "__main__":
                   "url: https://opensource.org/license/mit")
     oapi.write_text(t)
 
-    print("元数据：改了 %d 页，补了 %d 个标签" % (patched, added))
+    print("元数据：本次调整 %d 页，维护 %d 个标签" % (patched, added))
     print("sitemap.xml / robots.txt：%d 个 URL" % n_urls)
     print("llms-full.txt：%d 字符" % size)
     print("JSON-LD：index.html 与 spec/cat.html 已注入")

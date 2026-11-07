@@ -41,8 +41,9 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 ```
 
 ### 4. 不许发网络请求的 AI 决策也不能泄密
-首页的 `autoEnable()` 从 `window.CAT_API_CONFIG.jevKey` 读密钥，站点上不显示任何开关。
-`?jev=0` 是隐藏的开发者入口，不是用户功能。
+首页的 `autoEnable()` 是**本地可选增强，不是线上功能**：只有本地
+`jev-config.js` 或浏览器 `localStorage` 里存了 KEY 才会启用，线上两者都没有，整段静默跳过。
+`?jev=0` 是隐藏的开发者入口，不是用户功能。站点上不显示任何开关，也不要加。
 
 ## 目录职责
 
@@ -95,7 +96,9 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 - 标题用 `--serif`（衬线），正文用 PingFang（无衬线），形成对比
 - 强调用古铜金，**不要**用高饱和红绿
 - 0 数字（Owner 角色数）用反色填充强调——这是首页的视觉锤
-- 常规卡片圆角 8–18px。首页档案层是例外：方章、索引带、图版用 0–2px 直角，靠发丝线分隔而不是圆角
+- 全站已下沉档案化基础层（`assets/css/spec.css` 的 `--rule` / `--folio` / `--square` / `--card-radius`）
+- 卡片 4px 直角，hover 用左侧金色竖条，不用上浮和投影；方章与索引带用 0–2px 直角
+- 靠发丝线分隔，不靠圆角和阴影。新页面直接用 `.archive-head` / `.fact-band`
 
 ## 文体纪律
 
@@ -110,6 +113,7 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 - 不用破折号（——），改用逗号或句号
 - 中文引号用「」，不用英文双引号
 - 不用 emoji 做功能性标记，图标用内联 SVG（`stroke-width:1.8`, `stroke-linecap:round`）
+- 每个内联 SVG 必须带 `aria-hidden="true"`（图标）或 `role="img"` 加 `aria-label`（数据图），不允许裸 `<svg>`
 
 ## 验证命令
 
@@ -119,8 +123,9 @@ git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'   # 必须无输出
 # 0. 数字一致性：facts.json 与文件系统、六份文档必须对得上
 node scripts/check-facts.js
 
-# 1. JS 语法
+# 1. JS 语法（独立文件 + 页面内联脚本，两段都要跑）
 for f in assets/js/*.js sdk/*.js skill/*.js; do node --check "$f" || echo "FAIL $f"; done
+node scripts/check-inline.js
 
 # 2. HTML 结构（每个页面七项：html/head/body/lang/charset/viewport/title）
 for f in tools/*.html reference/*.html; do

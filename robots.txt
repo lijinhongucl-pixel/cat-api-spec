@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /docs/design/
+
+Sitemap: https://lijinhongucl-pixel.github.io/cat-api-spec/sitemap.xml

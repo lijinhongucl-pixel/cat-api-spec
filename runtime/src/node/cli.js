@@ -7,6 +7,8 @@
  *   catctl run -- npm test    包住一条命令
  *   catctl emit task.ok       告诉它发生了什么
  *   catctl init --host claude 接到工作台上
+ *   catctl export 猫.json       把这只猫打包带走
+ *   catctl import 猫.json --yes 在另一台机器上续养
  *
  * 为什么是 CLI：任何能 fork 一个进程的地方都能养这只猫。
  * 编辑器插件、CI、make、git hook、WorkBuddy 的 hook、tmux、ssh——
@@ -97,6 +99,8 @@ function help() {
     "    catctl teach-kind <命令> <类型>  纠正某条命令的活动类型（少年猫起）",
     "    catctl serve [--port 9177]     开一个只听 127.0.0.1 的 HTTP 口子",
     "    catctl selftest               跑一遍不变量自测",
+    "    catctl export [文件]          打包成画像（不写文件就打到 stdout）",
+    "    catctl import <文件> --yes    换机续养，旧档自动备份",
     "    catctl reset --yes            清空这只猫，重来",
     "",
     "  " + c.grey + "事件" + c.reset + "  task.start · task.ok · task.fail · task.wait · prompt.idle · pet · feed · laser · wake",
@@ -107,6 +111,115 @@ function help() {
       "下次一条命令进来，它先把这几天补算完再回答你。" + c.reset,
     ""
   ].join("\n");
+}
+
+/* =========================================================================
+ * 换机续养：export / import
+ *
+ * 画像是一份自描述的 JSON，包含引擎状态、学习档案与最近 200 条事件。
+ * 导入前会做三件事：格式校验、引擎试恢复、把旧档完整备份。
+ * 没有 --yes 一律不动手，避免误覆盖一只养了很久的猫。
+ * ======================================================================= */
+
+var PORTRAIT_FORMAT = "cat-runtime-portrait";
+var PORTRAIT_VERSION = 1;
+
+function cmdExport(args) {
+  var session = rt.open();
+  rt.save(session);                 // 先把离开这段时间补算完再打包
+  var payload = {
+    format: PORTRAIT_FORMAT,
+    version: PORTRAIT_VERSION,
+    exportedAt: new Date().toISOString(),
+    engine: CatEngine.VERSION,
+    state: store.loadState(),
+    profile: store.loadProfile(),
+    events: store.readEvents(200)
+  };
+  var text = JSON.stringify(payload, null, 2) + "\n";
+  var out = args.flags.out || args.positional[0] || null;
+
+  if (!out) {
+    process.stdout.write(text);
+    return 0;
+  }
+  var target = path.resolve(String(out));
+  try {
+    fs.writeFileSync(target, text, "utf8");
+  } catch (e) {
+    process.stderr.write("写不进去：" + target + "（" + e.message + "）\n");
+    return 1;
+  }
+  process.stdout.write("  画像已导出到 " + target + "\n");
+  process.stdout.write("  新机器上跑：catctl import " + target + " --yes\n\n");
+  return 0;
+}
+
+function cmdImport(args) {
+  var src = args.positional[0] || args.flags.file || null;
+  if (!src) {
+    process.stderr.write("给一个画像文件路径：catctl import <文件> --yes\n");
+    return 2;
+  }
+
+  var raw, data;
+  try { raw = fs.readFileSync(path.resolve(String(src)), "utf8"); }
+  catch (e) { process.stderr.write("读不到这个文件：" + src + "\n"); return 1; }
+  try { data = JSON.parse(raw); }
+  catch (e) { process.stderr.write("这不是一份 JSON 画像。\n"); return 1; }
+
+  if (!data || data.format !== PORTRAIT_FORMAT || data.version !== PORTRAIT_VERSION) {
+    process.stderr.write("画像格式不对，需要 " + PORTRAIT_FORMAT +
+      " v" + PORTRAIT_VERSION + "。\n");
+    return 1;
+  }
+  if (!data.state || !data.state.state || !data.profile || typeof data.profile !== "object") {
+    process.stderr.write("画像缺 state 或 profile，拒绝导入。\n");
+    return 1;
+  }
+
+  // 让引擎先验一遍，坏档不能写进家目录
+  var probe = CatEngine.create({ seed: 1 });
+  try { probe.restore(JSON.parse(JSON.stringify(data.state.state))); }
+  catch (e) {
+    process.stderr.write("画像里的状态引擎读不懂：" + e.message + "\n");
+    return 1;
+  }
+
+  if (!args.flags.yes && !args.flags.y) {
+    process.stdout.write(
+      "\n  导入会覆盖这台机器上现在的猫。\n" +
+      "  确认请加 --yes。旧档会自动备份到 " + store.home() + " 下的 backup-<时间戳>/。\n\n");
+    return 1;
+  }
+
+  var backup = path.join(store.home(), "backup-" + Date.now());
+  try {
+    fs.mkdirSync(backup, { recursive: true });
+    ["state.json", "profile.json", "events.jsonl", "config.json"].forEach(function (n) {
+      try { fs.copyFileSync(store.file(n), path.join(backup, n)); } catch (e) {}
+    });
+  } catch (e) {
+    process.stderr.write("备份没做成，为了安全先不导入：" + e.message + "\n");
+    return 1;
+  }
+
+  store.withLock(function () {
+    store.writeJSON("state.json", data.state);
+    store.writeJSON("profile.json", data.profile);
+    var events = Array.isArray(data.events) ? data.events : [];
+    fs.writeFileSync(store.file("events.jsonl"),
+      events.map(function (e) { return JSON.stringify(e); }).join("\n") +
+      (events.length ? "\n" : ""), "utf8");
+  });
+
+  var snap = probe.snapshot();
+  var tasks = data.profile.tasks ? Math.round(data.profile.tasks.total) : 0;
+  process.stdout.write(
+    "\n  续上了。Lv." + (snap.stage + 1) + " " + (snap.stageName || "") +
+    " · " + Math.round(snap.xp) + " xp · " + tasks + " 件活\n" +
+    "  旧档备份在 " + backup + "\n\n");
+  return 0;
 }
 
 /* =========================================================================
@@ -1133,6 +1246,10 @@ function main(argv) {
       return cmdTeachKind(args);
     case "log":
       return cmdLog(args);
+    case "export":
+      return cmdExport(args);
+    case "import":
+      return cmdImport(args);
     case "reset":
       return cmdReset(args);
     case "serve":

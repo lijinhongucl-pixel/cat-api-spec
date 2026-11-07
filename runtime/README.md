@@ -289,9 +289,29 @@ catctl status               现在的状态
 catctl learn                它学会了什么
 catctl log                  最近发生过什么
 catctl teach <维度> <0..1>  手动作风纠正
+catctl export [文件]        打包成画像，换机带走
+catctl import <文件> --yes  续养，旧档自动备份
 catctl selftest             跑一遍不变量自测
 catctl reset --yes          清空这只猫
 ```
+
+---
+
+## 换机续养
+
+猫住在 `~/.cat-api/runtime/`。换机器不用从头再养一次。
+
+```sh
+catctl export 猫.json        # 不带文件名就打到 stdout，自己重定向
+catctl import 猫.json --yes  # 新机器上续上
+```
+
+画像是一份 `cat-runtime-portrait` v1 的 JSON，装着引擎状态、学习档案和最近 200 条事件。
+导入前会做三件事：校验格式、让引擎试恢复一遍、把旧档完整备份到 `backup-<时间戳>/`。
+没有 `--yes` 只提示，不动任何文件。
+
+`catctl status --json` 的字段契约在 [`STATUS-SCHEMA.md`](STATUS-SCHEMA.md)，
+给脚本和编码 Agent 读，1.x 内字段名与类型不变。
 
 ---
 
@@ -312,10 +332,15 @@ catctl reset --yes          清空这只猫
 ## 自测
 
 ```sh
-catctl selftest
+catctl selftest                    # 引擎不变量，跟着 CLI 走
+node runtime/test/run.js           # 落盘回归，从仓库根目录跑
 ```
 
-45 项不变量，包括：确定性、匮乏不越界、行为不卡死、反应会撤掉、
+`run.js` 另外覆盖 16 项：220 个 sprite 的 11 列不变量、进化仪式帧、周变化、
+`status --json` 契约、export 与 import 往返、导入安全、WorkBuddy hook 冒烟。
+两项都过才算可以改引擎。
+
+`catctl selftest` 跑的是 45 项不变量，包括：确定性、匮乏不越界、行为不卡死、反应会撤掉、
 学习会记账（含活动类型与周变化）、性格偏置真的起作用、存档能往返。
 
 ```

@@ -142,6 +142,28 @@ allHtml.forEach(function (abs) {
   }
 });
 
+// ---- 5. 每页都要有最小元数据，JSON-LD 必须能解析 ----
+allHtml.forEach(function (abs) {
+  var rel = path.relative(ROOT, abs);
+  var text = fs.readFileSync(abs, "utf8");
+  [
+    ['name="description"', "description"],
+    ['property="og:title"', "og:title"],
+    ['name="twitter:card"', "twitter:card"]
+  ].forEach(function (pair) {
+    checks++;
+    if (text.indexOf(pair[0]) < 0) failures.push(rel + " 缺 " + pair[1]);
+  });
+});
+
+["index.html", "spec/cat.html"].forEach(function (rel) {
+  checks++;
+  var m = read(rel).match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  if (!m) { failures.push(rel + " 缺 JSON-LD"); return; }
+  try { JSON.parse(m[1]); }
+  catch (e) { failures.push(rel + " JSON-LD 解析失败：" + e.message); }
+});
+
 // ---- 输出 ----
 if (failures.length) {
   console.log("事实自检未通过（" + failures.length + " 项）：");

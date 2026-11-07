@@ -1,0 +1,57 @@
+name: CAT API 自检
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 装生成器依赖
+        run: python3 -m pip install --quiet beautifulsoup4
+
+      - name: 事实一致性
+        run: node scripts/check-facts.js
+
+      - name: GEO 生成物没有漂移
+        run: |
+          python3 scripts/build-geo.py
+          git diff --exit-code
+
+      - name: JS 语法
+        run: |
+          for f in assets/js/*.js sdk/*.js skill/*.js \
+                   runtime/src/core/*.js runtime/src/node/*.js \
+                   runtime/bin/*.js runtime/hooks/*.js runtime/test/*.js \
+                   scripts/*.js; do
+            node --check "$f" || exit 1
+          done
+
+      - name: HTML 内联脚本语法
+        run: node scripts/check-inline.js
+
+      - name: CAT RUNTIME 落盘回归
+        run: node runtime/test/run.js
+
+      - name: CAT RUNTIME 引擎自测
+        run: CATCTL_HOME="$(mktemp -d)" node runtime/src/node/cli.js selftest
+
+      - name: 密钥泄漏
+        run: |
+          if git grep -nE 'sk-[a-f0-9]{32,}' -- . ':!*.md'; then
+            echo "发现疑似密钥"
+            exit 1
+          fi
